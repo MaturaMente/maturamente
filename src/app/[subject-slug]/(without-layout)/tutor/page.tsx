@@ -1,10 +1,11 @@
 import PdfChat from "@/app/components/tutor/pdf-chat";
 
-export default function TutorPage({
+export default async function TutorPage({
   params,
 }: {
-  params: { "subject-slug"?: string };
+  params: Promise<{ "subject-slug"?: string }>;
 }) {
-  const subject = params?.["subject-slug"]; // pass down to the chat for RAG filters
+  const resolvedParams = await params;
+  const subject = resolvedParams?.["subject-slug"]; // pass down to the chat for RAG filters
   return <PdfChat subject={subject} />;
 }
