@@ -491,20 +491,29 @@ export default function PdfViewer({
           <Button
             variant="ghost"
             size="sm"
-            onClick={reloadPDF}
-            title="Reload PDF"
+            onClick={
+              onToggleMobileFullscreen
+                ? onToggleMobileFullscreen
+                : toggleFullscreen
+            }
+            title={
+              onToggleMobileFullscreen
+                ? mobileFullscreen
+                  ? "Esci a schermo intero"
+                  : "Schermo intero"
+                : fullscreen
+                ? "Exit Fullscreen"
+                : "Fullscreen"
+            }
             className="h-8 w-8 p-0"
           >
-            <RotateCw className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleFullscreen}
-            title={fullscreen ? "Exit Fullscreen" : "Fullscreen"}
-            className="h-8 w-8 p-0"
-          >
-            {fullscreen ? (
+            {onToggleMobileFullscreen ? (
+              mobileFullscreen ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )
+            ) : fullscreen ? (
               <Minimize2 className="h-4 w-4" />
             ) : (
               <Maximize2 className="h-4 w-4" />

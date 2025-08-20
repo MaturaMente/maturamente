@@ -5,6 +5,7 @@ import PdfViewer from "@/app/components/shared/renderer/pdf-renderer";
 import { MessageCircle, AlertCircle } from "lucide-react";
 import type { Note } from "@/types/notesTypes";
 import { LoadingSpinner } from "@/app/components/shared/loading/skeletons/loading-spinner";
+import PdfChat from "@/app/components/tutor/pdf-chat";
 
 interface PDFComponentProps {
   note: Note;
@@ -132,25 +133,12 @@ export function ChatComponent({}: ChatComponentProps) {
       <div className="border-b p-4">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-muted-foreground" />
-          <h2 className="font-medium text-foreground">AI Tutor</h2>
+          <h2 className="font-medium text-foreground">Chat sul PDF</h2>
         </div>
       </div>
 
       {/* Chat Content Placeholder */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="text-center space-y-4 max-w-sm">
-          <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
-            <MessageCircle className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <div className="space-y-2">
-            <h3 className="font-medium text-foreground">AI Chat</h3>
-            <p className="text-sm text-muted-foreground">
-              Presto potrai chattare con l'AI per ottenere aiuto con questo
-              appunto.
-            </p>
-          </div>
-        </div>
-      </div>
+      <PdfChat />
     </div>
   );
 }

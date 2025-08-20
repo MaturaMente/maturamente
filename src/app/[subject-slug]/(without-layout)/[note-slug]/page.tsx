@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getNoteBySlug } from "@/utils/notes-data";
-import { SingleNoteLayout } from "../../../components/subject/notes/single-note/single-note-layout";
+import { SingleNoteLayout } from "@/app/components/subject/notes/single-note/single-note-layout";
 import { LoadingSpinner } from "@/app/components/shared/loading/skeletons/loading-spinner";
 import { connection } from "next/server";
 

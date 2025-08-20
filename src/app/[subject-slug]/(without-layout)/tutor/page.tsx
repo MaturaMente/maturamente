@@ -1,4 +1,4 @@
-import PdfChat from "@/app/components/tutor/pdf-chat";
+import SubjectChat from "@/app/components/tutor/subject-chat";
 
 export default async function TutorPage({
   params,
@@ -7,5 +7,5 @@ export default async function TutorPage({
 }) {
   const resolvedParams = await params;
   const subject = resolvedParams?.["subject-slug"]; // pass down to the chat for RAG filters
-  return <PdfChat subject={subject} />;
+  return <SubjectChat subject={subject} />;
 }

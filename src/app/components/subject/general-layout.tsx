@@ -23,7 +23,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import DashboardFooter from "../shared/navigation/footer";
 import Link from "next/link";
 
 // Dynamic imports for non-critical components
@@ -84,11 +83,7 @@ export const getNavLinks = (subjectSlug: string, maturita: boolean = true) => {
   return [...baseLinks, ...maturitaLinks];
 };
 
-export default function ChatLayoutClient({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function GeneralLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -150,33 +145,32 @@ export default function ChatLayoutClient({
 
   return (
     <>
-      <section
-        className={cn(
-          "grid min-h-screen w-full",
-          collapsed
-            ? "md:grid-cols-[64px_1fr] lg:grid-cols-[64px_1fr]"
-            : "md:grid-cols-[280px_1fr] lg:grid-cols-[280px_1fr]"
-        )}
-      >
-        {/* Desktop Sidebar */}
-        <div className="hidden md:block">
-          <Suspense
-            fallback={
-              <div className="bg-background h-screen w-full border-r" />
-            }
-          >
-            <SubjectSidebar
-              collapsed={collapsed}
-              setCollapsed={setCollapsed}
-              onItemClick={() => {}}
-              navLinks={navLinks}
-              currentSubject={currentSubject}
-            />
-          </Suspense>
-        </div>
+      {/* Fixed desktop sidebar to guarantee stickiness across all pages */}
+      <div className="hidden md:block fixed top-0 left-0 h-screen z-40">
+        <Suspense
+          fallback={
+            <div className="bg-background h-screen w-[280px] border-r" />
+          }
+        >
+          <SubjectSidebar
+            collapsed={collapsed}
+            setCollapsed={setCollapsed}
+            onItemClick={() => {}}
+            navLinks={navLinks}
+            currentSubject={currentSubject}
+          />
+        </Suspense>
+      </div>
 
-        <div className="flex flex-col">
-          <div className="bg-background sticky top-0 z-40">
+      {/* Content area shifted by sidebar width on desktop */}
+      <section className="min-h-screen w-full bg-background">
+        <div
+          className={cn(
+            "flex flex-col bg-background",
+            collapsed ? "md:ml-[64px]" : "md:ml-[240px]"
+          )}
+        >
+          <div className="bg-background sticky top-0 z-30">
             <header className="flex h-14 items-center gap-4 px-6 lg:h-[60px] lg:px-6 border-b">
               {/* Theme toggle on mobile - placed where the logo was */}
               <div className="md:hidden">

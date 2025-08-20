@@ -21,7 +21,9 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
   const [isDescriptionTruncatable, setIsDescriptionTruncatable] =
     useState(false);
   const [isMobileFullscreen, setIsMobileFullscreen] = useState(false);
+  const [isDesktopFullscreen, setIsDesktopFullscreen] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement | null>(null);
+  const desktopContainerRef = useRef<HTMLDivElement | null>(null);
 
   const router = useRouter();
   const params = useParams();
@@ -93,10 +95,22 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
     };
   }, [isMobileFullscreen]);
 
+  // On desktop, auto-scroll main split view into focus on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isDesktop = window.innerWidth >= 768;
+    if (isDesktop && desktopContainerRef.current) {
+      desktopContainerRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, []);
+
   return (
-    <div className="flex flex-col h-[100dvh]">
+    <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="border-b pb-2 pt-1 px-4 overflow-x-hidden">
+      <div className="border-b md:p-8 p-4">
         {/* Back button */}
         <div className="mb-2">
           <Button
@@ -213,17 +227,29 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
       </div>
 
       {/* Desktop Side-by-Side Layout */}
-      <div className="hidden md:flex flex-1 bg-background border-b">
+      <div
+        ref={desktopContainerRef}
+        className={cn(
+          "hidden md:flex flex-1 border-b",
+          isDesktopFullscreen
+            ? "fixed inset-0 z-50 bg-background"
+            : "bg-background"
+        )}
+      >
         {/* Left section - PDF Viewer */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* PDF Viewer */}
           <div className="flex-1 relative min-h-0 overflow-hidden">
-            <PDFComponent note={note} />
+            <PDFComponent
+              note={note}
+              mobileFullscreen={isDesktopFullscreen}
+              onToggleMobileFullscreen={() => setIsDesktopFullscreen((p) => !p)}
+            />
           </div>
         </div>
 
         {/* Right section - AI Chat */}
-        <div className="w-80 lg:w-96 border-l bg-background flex flex-col min-h-0">
+        <div className="w-[420px] lg:w-[480px] border-l bg-background flex flex-col min-h-0">
           <div className="flex-1 min-h-0 overflow-hidden">
             <ChatComponent />
           </div>

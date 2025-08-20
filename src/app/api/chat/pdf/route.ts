@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   };
   const { messages } = body;
 
-  // subject can arrive via header or request body
+  // Subject and note slug can arrive via headers or request body/metadata
   const subjectFromHeader = req.headers.get("x-subject") ?? undefined;
   const subject: string | undefined =
     subjectFromHeader ??
@@ -23,21 +23,28 @@ export async function POST(req: Request) {
     body?.body?.subject ??
     undefined;
 
-  // optional list of selected note slugs for targeted retrieval
-  // Prefer extracting from the latest user message metadata so it also works with regenerate()
-  let selectedNoteSlugs: string[] | undefined = undefined;
+  const noteSlugFromHeader = req.headers.get("x-note-slug") ?? undefined;
+
+  // Extract a single note slug from the latest user message metadata; fall back to header
+  let noteSlug: string | undefined = noteSlugFromHeader;
   try {
     const lastUserWithMeta = [...(body?.messages || [])]
       .reverse()
       .find((m: any) => m?.role === "user" && (m as any)?.metadata);
     const meta: any = (lastUserWithMeta as any)?.metadata || undefined;
-    if (meta && Array.isArray(meta.selectedNoteSlugs)) {
-      selectedNoteSlugs = meta.selectedNoteSlugs as string[];
+    if (!noteSlug && meta) {
+      if (typeof meta.noteSlug === "string" && meta.noteSlug.length > 0) {
+        noteSlug = meta.noteSlug;
+      } else if (
+        Array.isArray(meta.selectedNoteSlugs) &&
+        meta.selectedNoteSlugs.length > 0
+      ) {
+        noteSlug = meta.selectedNoteSlugs[0];
+      }
     }
   } catch {}
 
-  // Keep a short-term history so the model has immediate context without
-  // sending the entire conversation every time.
+  // Keep a short-term history
   const SHORT_HISTORY_LIMIT = 12;
   const recentMessages = messages.slice(-SHORT_HISTORY_LIMIT);
 
@@ -50,11 +57,10 @@ export async function POST(req: Request) {
         .join(" ")
     : "";
 
-  // RAG
+  // RAG strictly scoped to the single note
   let contextText = "";
   try {
-    const shouldUseRag =
-      Array.isArray(selectedNoteSlugs) && selectedNoteSlugs.length > 0;
+    const shouldUseRag = typeof noteSlug === "string" && noteSlug.length > 0;
     if (
       shouldUseRag &&
       process.env.PINECONE_API_KEY &&
@@ -75,37 +81,24 @@ export async function POST(req: Request) {
       const SUBJECT_METADATA_KEY =
         process.env.PINECONE_SUBJECT_KEY || "subject";
 
-      // To avoid API incompatibilities, do not use server-side subject filters.
-      // Only include a source $in filter if present; otherwise pass no filter.
-      const filter =
-        selectedNoteSlugs && selectedNoteSlugs.length > 0
-          ? { source: { $in: selectedNoteSlugs.map((s) => `${s}.pdf`) } }
-          : undefined;
+      const allowedSources = noteSlug ? [`${noteSlug}.pdf`] : [];
+      const filter = allowedSources.length
+        ? { source: { $in: allowedSources } }
+        : undefined;
+
       let docs: any[] = [];
       try {
-        // Pass the filter directly (LangChain's PineconeStore expects the filter object as the 3rd arg)
-        docs = await vectorStore.similaritySearch(lastUserQuery, 6, filter);
+        docs = await vectorStore.similaritySearch(lastUserQuery, 8, filter);
       } catch (filterErr) {
         console.error(
           "Pinecone filtered search failed, retrying without filter",
           filterErr
         );
-        // Retry without filter to avoid hard failures during debugging
-        docs = await vectorStore.similaritySearch(lastUserQuery, 6);
+        docs = await vectorStore.similaritySearch(lastUserQuery, 8);
       }
-      console.log("RAG query", {
-        index: indexName,
-        subject,
-        filter,
-        k: 6,
-        returned: docs?.length,
-      });
-      if (docs?.[0]?.metadata) {
-        console.log("RAG first doc metadata", docs[0].metadata);
-      }
-      // Hard filter by subject and selected sources in case the vector store or index ignores/loosens the server-side filter
+
+      // Hard filter by subject and exact source in case the vector store ignores the server-side filter
       const subjectLower = subject?.toLowerCase();
-      const allowedSources = (selectedNoteSlugs || []).map((s) => `${s}.pdf`);
       const filteredDocs = docs.filter((d: any) => {
         const bySubject = subjectLower
           ? (d.metadata?.[SUBJECT_METADATA_KEY] ?? "")
@@ -120,17 +113,19 @@ export async function POST(req: Request) {
       contextText = filteredDocs.map((d: any) => d.pageContent).join("\n---\n");
     }
   } catch (err) {
-    // If retrieval fails, continue without context
-    console.error("RAG retrieval failed", err);
+    console.error("PDF chat RAG retrieval failed", err);
   }
 
   const systemPrompt =
-    `Sei un tutor amichevole e competente. Rispondi SEMPRE in italiano.
-Se disponibili, usa le informazioni pertinenti dal seguente contesto per rispondere in modo accurato.
-Se il contesto non contiene informazioni utili, rispondi basandoti sulla tua conoscenza generale e dichiara chiaramente che la risposta è basata sulla tua conoscenza.
+    `Sei un assistente di chat per PDF. Rispondi SEMPRE in italiano.
+Il tuo compito è rispondere partendo esclusivamente dai contenuti del PDF fornito.
+- Cita sempre in modo esplicito i passaggi rilevanti (tra virgolette) o indica la sezione/pagina quando possibile.
+- Mantieni la risposta ancorata al testo. Se una parte della risposta non proviene dal PDF, dillo chiaramente e separala come "Conoscenza generale".
+- Se il PDF non contiene informazioni sufficienti, dichiaralo esplicitamente e fornisci, se utile, un breve suggerimento su come cercare nel documento (sezioni, parole chiave, ecc.).
 ${subject ? `Soggetto corrente: ${subject}` : ""}
+${noteSlug ? `Nota corrente: ${noteSlug}` : ""}
 
-Contesto (potrebbe essere vuoto):\n${contextText}`.trim();
+Contesto estratto dal PDF (potrebbe essere parziale):\n${contextText}`.trim();
 
   const result = streamText({
     model: deepseek("deepseek-chat"),

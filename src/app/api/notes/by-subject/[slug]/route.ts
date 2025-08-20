@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getSubjectNotes } from "@/utils/notes-data";
+import { getSubjectNotes, getRecentStudiedNotes } from "@/utils/notes-data";
 
 export async function GET(
   request: NextRequest,
@@ -24,7 +24,13 @@ export async function GET(
       is_favorite: n.is_favorite,
       created_at: n.created_at,
     }));
-    return NextResponse.json({ notes });
+    // recent studied notes (limit to a few for UI)
+    const recentNotes = await getRecentStudiedNotes(
+      session.user.id,
+      data.subject.id
+    );
+
+    return NextResponse.json({ notes, recentNotes });
   } catch (err) {
     console.error("Error fetching notes by subject:", err);
     return NextResponse.json(

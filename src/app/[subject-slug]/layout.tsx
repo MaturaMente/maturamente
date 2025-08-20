@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getUserSubjectBySlug } from "@/utils/subjects-data";
-import ChatLayoutClient from "../../components/subject/chat-layout";
+import GeneralLayout from "@/app/components/subject/general-layout";
 import { connection } from "next/server";
 
 // Force dynamic rendering for authentication
@@ -26,7 +26,7 @@ export default async function DashboardLayout({
 
   // If no user session, let middleware handle the redirect
   if (!session?.user?.id) {
-    return <ChatLayoutClient>{children}</ChatLayoutClient>;
+    return <GeneralLayout>{children}</GeneralLayout>;
   }
 
   // Check if the subject exists for this user
@@ -39,7 +39,7 @@ export default async function DashboardLayout({
 
   return (
     <div>
-      <ChatLayoutClient>{children}</ChatLayoutClient>
+      <GeneralLayout>{children}</GeneralLayout>
     </div>
   );
 }
