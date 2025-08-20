@@ -6,7 +6,29 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MarkdownRenderer from "../shared/renderer/markdown-renderer";
-import { ArrowUp, Copy, Pencil, Plus, RefreshCw, Square } from "lucide-react";
+import {
+  ArrowUp,
+  Copy,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Square,
+  FileText,
+  X,
+  Star,
+  Search,
+  Circle,
+  CircleCheck,
+} from "lucide-react";
+
+type UINote = {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string | null;
+  n_pages?: number | null;
+  is_favorite?: boolean;
+};
 
 export default function Page({ subject }: { subject?: string }) {
   const { messages, sendMessage, status, stop, setMessages, regenerate } =
@@ -21,6 +43,13 @@ export default function Page({ subject }: { subject?: string }) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
+  const [showNotesOverlay, setShowNotesOverlay] = useState(false);
+  const [notes, setNotes] = useState<UINote[]>([]);
+  const [notesSearch, setNotesSearch] = useState("");
+  const [selectedNoteSlugs, setSelectedNoteSlugs] = useState<string[]>([]);
+  const chipsRef = useRef<HTMLDivElement | null>(null);
+  const [chipsExpanded, setChipsExpanded] = useState(false);
+  const [chipsCanCollapse, setChipsCanCollapse] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -59,7 +88,11 @@ export default function Page({ subject }: { subject?: string }) {
     setMessages((prev) =>
       prev.map((m: any) =>
         m.id === editingMessageId
-          ? { ...m, parts: [{ type: "text", text: editingValue }] }
+          ? {
+              ...m,
+              parts: [{ type: "text", text: editingValue }],
+              metadata: { ...(m.metadata || {}), selectedNoteSlugs },
+            }
           : m
       )
     );
@@ -78,16 +111,128 @@ export default function Page({ subject }: { subject?: string }) {
     cancelEdit();
   };
 
+  const openNotesOverlay = async () => {
+    if (!subject) return setShowNotesOverlay(true);
+    try {
+      if (notes.length === 0) {
+        const res = await fetch(`/api/notes/by-subject/${subject}`);
+        if (res.ok) {
+          const data = await res.json();
+          // expect { notes: MinimalNote[] }
+          setNotes(data?.notes || []);
+        }
+      }
+    } catch {
+      // ignore fetching errors; overlay will still show
+    } finally {
+      setShowNotesOverlay(true);
+    }
+  };
+
+  const toggleNote = (slug: string) => {
+    setSelectedNoteSlugs((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
+    );
+  };
+
+  const getTitlesFromSlugs = (slugs: string[]): string[] => {
+    return slugs
+      .map((s) => notes.find((n) => n.slug === s)?.title?.trim())
+      .filter(Boolean) as string[];
+  };
+
+  const regenerateWithCurrentSelection = (assistantId: string) => {
+    // Ensure the closest previous user message carries current selection metadata
+    setMessages((prev: any[]) => {
+      const idx = prev.findIndex((m) => m.id === assistantId);
+      if (idx <= 0) return prev;
+      const before = [...prev];
+      for (let i = idx - 1; i >= 0; i--) {
+        if (before[i].role === "user") {
+          const meta = { ...(before[i].metadata || {}), selectedNoteSlugs };
+          before[i] = { ...before[i], metadata: meta };
+          break;
+        }
+      }
+      return before;
+    });
+    regenerate({ messageId: assistantId });
+  };
+
+  const usePrompt = (text: string) => {
+    setInput(text);
+  };
+
+  useEffect(() => {
+    const el = chipsRef.current;
+    if (!el) {
+      setChipsCanCollapse(false);
+      return;
+    }
+    const SINGLE_ROW_MAX_PX = 100;
+    const canCollapse = el.scrollHeight > SINGLE_ROW_MAX_PX + 1;
+    setChipsCanCollapse(canCollapse);
+    if (!canCollapse) setChipsExpanded(false);
+  }, [selectedNoteSlugs, notes]);
+
   return (
     <div className="flex h-[calc(100vh-100px)] flex-col bg-background">
       <div
-        className="flex-1 overflow-y-auto p-8 space-y-2"
+        className="flex-1 overflow-y-auto p-8 space-y-2 md:px-[12%]"
         aria-live="polite"
         aria-busy={status !== "ready"}
       >
         {messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            Start the conversation by typing a message below.
+          <div className="flex h-[98%] items-center justify-center">
+            <div className="text-center max-w-2xl">
+              <div className="flex flex-col md:flex-wrap items-center justify-center gap-4">
+                <div className="w-full flex flex-col md:flex-row gap-2 justify-center">
+                  <Button
+                    className="rounded-full"
+                    variant="outline"
+                    onClick={() =>
+                      usePrompt(
+                        "Spiegami questi argomenti come se avessi 12 anni, usando esempi semplici"
+                      )
+                    }
+                  >
+                    Spiegami in modo semplice
+                  </Button>
+                  <Button
+                    className="rounded-full"
+                    variant="outline"
+                    onClick={() =>
+                      usePrompt(
+                        "Riassumi i concetti principali dagli appunti selezionati"
+                      )
+                    }
+                  >
+                    Riassumi gli appunti selezionati
+                  </Button>
+
+                  <Button
+                    className="rounded-full"
+                    variant="outline"
+                    onClick={() =>
+                      usePrompt(
+                        "Crea 5 domande a risposta multipla basate sugli appunti selezionati, con soluzioni"
+                      )
+                    }
+                  >
+                    Crea quiz dai documenti
+                  </Button>
+                </div>
+                <Button
+                  className="rounded-full"
+                  variant="default"
+                  size="lg"
+                  onClick={openNotesOverlay}
+                  title="Seleziona gli appunti"
+                >
+                  Scegli gli appunti
+                </Button>
+              </div>
+            </div>
           </div>
         ) : (
           messages.map((message) => {
@@ -98,24 +243,94 @@ export default function Page({ subject }: { subject?: string }) {
                 key={message.id}
                 className={`flex ${isUser ? "justify-end" : "justify-start"}`}
               >
-                <div className="group relative max-w-[80%]">
+                <div
+                  className={`group relative flex flex-col ${
+                    isUser ? "items-end" : "items-start"
+                  }`}
+                >
                   <div
-                    className={`inline-block px-4 ${
+                    className={`px-4 ${
                       isUser
                         ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
                         : "bg-none text-foreground w-full"
                     }`}
                   >
-                    {message.parts.map((part, index) =>
-                      part.type === "text" ? (
-                        <MarkdownRenderer content={part.text} key={index} />
-                      ) : null
+                    {editingMessageId === message.id && isUser ? (
+                      <div className="w-full">
+                        <textarea
+                          autoFocus
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                              e.preventDefault();
+                              saveEdit();
+                            } else if (e.key === "Escape") {
+                              e.preventDefault();
+                              cancelEdit();
+                            }
+                          }}
+                          className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
+                          placeholder="Modifica il messaggio"
+                        />
+                        <div className="mt-2 flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={cancelEdit}
+                          >
+                            Cancella
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={saveEdit}
+                            variant="secondary"
+                            disabled={status !== "ready"}
+                          >
+                            Invia
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        {/* RAG disclaimer for assistant messages */}
+                        {!isUser &&
+                          (() => {
+                            const idx = messages.findIndex(
+                              (m) => m.id === message.id
+                            );
+                            const prevUser = messages
+                              .slice(0, idx)
+                              .reverse()
+                              .find((m) => m.role === "user");
+                            const used = ((prevUser as any)?.metadata
+                              ?.selectedNoteSlugs || []) as string[];
+                            if (Array.isArray(used) && used.length > 0) {
+                              const titles = getTitlesFromSlugs(used);
+                              if (titles.length > 0) {
+                                return (
+                                  <div className="mb-2 text-xs text-muted-foreground italic">
+                                    {`Risposta generata partendo da: ${titles.join(
+                                      ", "
+                                    )}`}
+                                  </div>
+                                );
+                              }
+                            }
+                            return null;
+                          })()}
+                        {message.parts.map((part, index) =>
+                          part.type === "text" ? (
+                            <MarkdownRenderer content={part.text} key={index} />
+                          ) : null
+                        )}
+                      </div>
                     )}
                   </div>
 
                   {/* hover actions below bubble, outside */}
                   <div
-                    className={`pointer-events-auto mt-2 px-4 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${
+                    className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${
                       isUser ? "justify-end" : "justify-start"
                     }`}
                   >
@@ -127,7 +342,7 @@ export default function Page({ subject }: { subject?: string }) {
                           className="h-8 px-2 text-xs"
                           onClick={() => handleCopy(messageText)}
                         >
-                          <Copy className="mr-1 h-4 w-4" />
+                          <Copy className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
@@ -136,7 +351,7 @@ export default function Page({ subject }: { subject?: string }) {
                           disabled={status !== "ready"}
                           onClick={() => beginEdit(message.id)}
                         >
-                          <Pencil className="mr-1 h-4 w-4" />
+                          <Pencil className="h-4 w-4" />
                         </Button>
                       </>
                     ) : (
@@ -147,44 +362,24 @@ export default function Page({ subject }: { subject?: string }) {
                           className="h-8 px-2 text-xs"
                           onClick={() => handleCopy(messageText)}
                         >
-                          <Copy className="mr-1 h-4 w-4" />
+                          <Copy className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
                           className="h-8 px-2 text-xs"
                           disabled={!(status === "ready" || status === "error")}
-                          onClick={() => regenerate({ messageId: message.id })}
+                          onClick={() =>
+                            regenerateWithCurrentSelection(message.id)
+                          }
                         >
-                          <RefreshCw className="mr-1 h-4 w-4" />
+                          <RefreshCw className="h-4 w-4" />
                         </Button>
                       </>
                     )}
                   </div>
 
-                  {editingMessageId === message.id && (
-                    <div className="mt-3 flex items-center gap-2">
-                      <Input
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        className="h-9"
-                      />
-                      <Button
-                        size="sm"
-                        onClick={saveEdit}
-                        disabled={status !== "ready"}
-                      >
-                        Save
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={cancelEdit}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
+                  {/* edit controls moved inside bubble */}
                 </div>
               </div>
             );
@@ -198,56 +393,249 @@ export default function Page({ subject }: { subject?: string }) {
           e.preventDefault();
           if (status !== "ready") return;
           if (input.trim()) {
-            sendMessage({ text: input });
+            sendMessage({ text: input, metadata: { selectedNoteSlugs } });
             setInput("");
           }
         }}
-        className="sticky bottom-0 z-10 w-full bg-gradient-to-t from-background via-background/80 to-transparent px-6 py-6"
+        className="sticky bottom-0 z-10 w-full bg-transparent px-6 pb-3"
       >
         <div className="mx-auto w-full max-w-3xl">
-          <div className="flex items-center gap-2 rounded-full border bg-muted/30 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-muted/40">
-            {/* left mock notes button */}
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-10 w-10 rounded-full"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
+          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-muted/30 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-muted/40">
+            {selectedNoteSlugs.length > 0 && (
+              <div className="mb-2 w-full">
+                <div
+                  ref={chipsRef}
+                  className={`flex flex-wrap px-2 md:px-0 py-2 gap-2 w-full overflow-hidden transition-[max-height] duration-200 ${
+                    chipsExpanded ? "max-h-[999px]" : "max-h-[64px]"
+                  }`}
+                >
+                  {selectedNoteSlugs.map((slug) => {
+                    const note = notes.find((n) => n.slug === slug);
 
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask anything"
-              className="h-10 flex-1 border-0 bg-transparent px-3 focus-visible:ring-0 focus-visible:ring-offset-0"
-              disabled={status !== "ready"}
-            />
+                    // Parse title to extract main title and subtitle
+                    const parseTitle = (title: string) => {
+                      const separatorIndex = title.indexOf(" - ");
+                      if (separatorIndex !== -1) {
+                        return {
+                          mainTitle: title.substring(0, separatorIndex),
+                          subtitle: title.substring(separatorIndex + 3),
+                        };
+                      }
+                      return {
+                        mainTitle: title,
+                        subtitle: null,
+                      };
+                    };
 
-            {/* send / stop toggle */}
-            {status === "ready" ? (
-              <Button
-                type="submit"
-                size="icon"
-                className="h-10 w-10 rounded-full text-white"
-                variant={input.trim() ? "default" : "secondary"}
-              >
-                <ArrowUp className="h-5 w-5" />
-              </Button>
-            ) : (
+                    const { mainTitle, subtitle } = parseTitle(
+                      note?.title || ""
+                    );
+
+                    return (
+                      <div
+                        key={slug}
+                        className="relative flex items-center gap-3 rounded-2xl border bg-background px-3 py-2"
+                      >
+                        <div className="flex p-1 items-center justify-center rounded-xl">
+                          <FileText
+                            className="h-5 w-5"
+                            style={{ color: "var(--subject-color)" }}
+                          />
+                        </div>
+                        <div className="leading-tight pr-2">
+                          <div className="font-medium max-w-[220px] line-clamp-1">
+                            {mainTitle}
+                          </div>
+                          {subtitle && (
+                            <div className="text-xs text-muted-foreground line-clamp-1">
+                              {subtitle}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          aria-label={`Rimuovi ${mainTitle}`}
+                          className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-gray-700 dark:bg-gray-300 text-background shadow"
+                          onClick={() => toggleNote(slug)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {chipsCanCollapse && (
+                  <button
+                    type="button"
+                    className="mt-1 text-xs text-muted-foreground hover:underline"
+                    onClick={() => setChipsExpanded((v) => !v)}
+                  >
+                    {chipsExpanded ? "Mostra meno" : "Mostra tutti"}
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="flex-1 min-w-0 flex items-center gap-2 w-full">
+              {/* open notes overlay for RAG selection */}
               <Button
                 type="button"
                 size="icon"
-                variant="secondary"
+                variant="ghost"
                 className="h-10 w-10 rounded-full"
-                onClick={() => stop()}
+                onClick={openNotesOverlay}
+                title="Seleziona appunti per il RAG"
               >
-                <Square className="h-5 w-5" />
+                <Plus className="h-5 w-5" />
               </Button>
-            )}
+
+              <div className="flex-1 min-w-0">
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Cosa vuoi chiedere?"
+                  className="h-10 w-full border-0 bg-transparent px-3 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  disabled={status !== "ready"}
+                />
+              </div>
+
+              {/* send / stop toggle */}
+              {status === "ready" ? (
+                <Button
+                  type="submit"
+                  size="icon"
+                  className="h-10 w-10 rounded-full text-white"
+                  variant={input.trim() ? "default" : "secondary"}
+                >
+                  <ArrowUp className="h-5 w-5" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="secondary"
+                  className="h-10 w-10 rounded-full"
+                  onClick={() => stop()}
+                >
+                  <Square className="h-5 w-5" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </form>
+      {showNotesOverlay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl rounded-xl border bg-background shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Scegli gli appunti da usare</span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {selectedNoteSlugs.length} selezionati
+              </div>
+            </div>
+            <div className="p-5">
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={notesSearch}
+                  onChange={(e) => setNotesSearch(e.target.value)}
+                  placeholder="Cerca appunti..."
+                  className="pl-9 rounded-full "
+                />
+              </div>
+              <div className="max-h-[50vh] overflow-auto space-y-2 pr-1">
+                {(notesSearch
+                  ? notes.filter((n) =>
+                      n.title.toLowerCase().includes(notesSearch.toLowerCase())
+                    )
+                  : notes
+                )
+                  .slice()
+                  .sort(
+                    (a: any, b: any) =>
+                      (b.is_favorite ? 1 : 0) - (a.is_favorite ? 1 : 0)
+                  )
+                  .map((n: any) => (
+                    <div
+                      key={n.id}
+                      role="checkbox"
+                      aria-checked={selectedNoteSlugs.includes(n.slug)}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggleNote(n.slug);
+                        }
+                      }}
+                      onClick={() => toggleNote(n.slug)}
+                      className="relative flex items-start gap-3 p-3  bg-[var(--subject-color)]/2 border border-[var(--subject-color)]/10 rounded-lg hover:shadow-sm/5 hover:border-[var(--subject-color)]/30 transition-all duration-200 cursor-pointer"
+                    >
+                      <div className="flex-1 min-w-0">
+                        {(() => {
+                          const title: string = n.title || "";
+                          const sep = title.indexOf(" - ");
+                          const mainTitle =
+                            sep !== -1 ? title.slice(0, sep) : title;
+                          const subTitle =
+                            sep !== -1 ? title.slice(sep + 3) : "";
+                          const isSelected = selectedNoteSlugs.includes(n.slug);
+                          return (
+                            <>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-4">
+                                  {isSelected ? (
+                                    <CircleCheck className="h-6 w-6 text-[var(--subject-color)]" />
+                                  ) : (
+                                    <Circle className="h-6 w-6 text-[var(--subject-color)]/70" />
+                                  )}
+                                  <div>
+                                    <div className="font-medium truncate">
+                                      {mainTitle}
+                                    </div>
+                                    {subTitle && (
+                                      <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                        {subTitle}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                {n.is_favorite && (
+                                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  ))}
+                {notes.length === 0 && (
+                  <div className="text-sm text-muted-foreground">
+                    Nessun appunto trovato.
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2 px-5 py-4 border-t">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setSelectedNoteSlugs([]);
+                  setShowNotesOverlay(false);
+                }}
+              >
+                Cancella
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={() => setShowNotesOverlay(false)}>
+                  Continua
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

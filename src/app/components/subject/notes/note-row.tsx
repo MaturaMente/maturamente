@@ -75,7 +75,7 @@ export function NoteRow({
             <button
               onClick={handleToggleFavorite}
               disabled={isLoading}
-              className="flex-shrink-0 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="flex-shrink-0 p-1 rounded-full dark:hover:bg-gray-800 transition-colors"
               aria-label={
                 note.is_favorite
                   ? "Rimuovi dai preferiti"

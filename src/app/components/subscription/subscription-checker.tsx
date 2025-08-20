@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSubscriptionStatus } from "@/utils/subscription-utils";
+// Fetch subscription status via API to avoid using server-only utilities on the client
 
 interface SubscriptionCheckerProps {
   userId: string;
@@ -20,6 +20,18 @@ export function SubscriptionChecker({
   useEffect(() => {
     async function checkSubscription() {
       try {
+        async function fetchSubscriptionStatus() {
+          try {
+            const response = await fetch("/api/user/subscription-status", {
+              cache: "no-store",
+            });
+            if (!response.ok) return null;
+            return (await response.json()) as { isActive?: boolean } | null;
+          } catch (_) {
+            return null;
+          }
+        }
+
         // If returning from Stripe checkout success on /dashboard, bypass once
         if (typeof window !== "undefined") {
           const url = new URL(window.location.href);
@@ -46,19 +58,27 @@ export function SubscriptionChecker({
         }
 
         // Check actual subscription status
-        const subscriptionStatus = await getSubscriptionStatus(userId);
+        const subscriptionStatus = await fetchSubscriptionStatus();
 
         if (subscriptionStatus?.isActive) {
           setHasAccess(true);
         } else {
-          // Redirect to pricing if no active subscription and no bypass
-          router.push("/pricing");
-          return;
+          // Small delay and re-check before redirecting to pricing
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          const refreshedStatus = await fetchSubscriptionStatus();
+          if (refreshedStatus?.isActive) {
+            setHasAccess(true);
+          } else {
+            router.push("/pricing");
+            return;
+          }
         }
       } catch (error) {
         console.error("Error checking subscription:", error);
-        // On error, redirect to pricing to be safe
+        // Small delay before redirecting on error
+        await new Promise((resolve) => setTimeout(resolve, 500));
         router.push("/pricing");
+        console.log("Redirecting to pricing");
         return;
       } finally {
         setIsChecking(false);

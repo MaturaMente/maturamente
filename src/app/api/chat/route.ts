@@ -23,6 +23,19 @@ export async function POST(req: Request) {
     body?.body?.subject ??
     undefined;
 
+  // optional list of selected note slugs for targeted retrieval
+  // Prefer extracting from the latest user message metadata so it also works with regenerate()
+  let selectedNoteSlugs: string[] | undefined = undefined;
+  try {
+    const lastUserWithMeta = [...(body?.messages || [])]
+      .reverse()
+      .find((m: any) => m?.role === "user" && (m as any)?.metadata);
+    const meta: any = (lastUserWithMeta as any)?.metadata || undefined;
+    if (meta && Array.isArray(meta.selectedNoteSlugs)) {
+      selectedNoteSlugs = meta.selectedNoteSlugs as string[];
+    }
+  } catch {}
+
   // Keep a short-term history so the model has immediate context without
   // sending the entire conversation every time.
   const SHORT_HISTORY_LIMIT = 12;
@@ -40,7 +53,10 @@ export async function POST(req: Request) {
   // RAG
   let contextText = "";
   try {
+    const shouldUseRag =
+      Array.isArray(selectedNoteSlugs) && selectedNoteSlugs.length > 0;
     if (
+      shouldUseRag &&
       process.env.PINECONE_API_KEY &&
       process.env.HUGGINGFACEHUB_API_KEY &&
       lastUserQuery
@@ -58,14 +74,17 @@ export async function POST(req: Request) {
 
       const SUBJECT_METADATA_KEY =
         process.env.PINECONE_SUBJECT_KEY || "subject";
-      const filter = subject
-        ? { [SUBJECT_METADATA_KEY]: { $eq: subject } }
-        : undefined;
+
+      // To avoid API incompatibilities, do not use server-side subject filters.
+      // Only include a source $in filter if present; otherwise pass no filter.
+      const filter =
+        selectedNoteSlugs && selectedNoteSlugs.length > 0
+          ? { source: { $in: selectedNoteSlugs.map((s) => `${s}.pdf`) } }
+          : undefined;
       let docs: any[] = [];
       try {
-        docs = await vectorStore.similaritySearch(lastUserQuery, 6, {
-          filter,
-        });
+        // Pass the filter directly (LangChain's PineconeStore expects the filter object as the 3rd arg)
+        docs = await vectorStore.similaritySearch(lastUserQuery, 6, filter);
       } catch (filterErr) {
         console.error(
           "Pinecone filtered search failed, retrying without filter",
@@ -84,16 +103,20 @@ export async function POST(req: Request) {
       if (docs?.[0]?.metadata) {
         console.log("RAG first doc metadata", docs[0].metadata);
       }
-      // Hard filter by subject in case the vector store or index ignores/loosens the server-side filter
+      // Hard filter by subject and selected sources in case the vector store or index ignores/loosens the server-side filter
       const subjectLower = subject?.toLowerCase();
-      const filteredDocs = subjectLower
-        ? docs.filter((d: any) => {
-            const value = (d.metadata?.[SUBJECT_METADATA_KEY] ?? "")
+      const allowedSources = (selectedNoteSlugs || []).map((s) => `${s}.pdf`);
+      const filteredDocs = docs.filter((d: any) => {
+        const bySubject = subjectLower
+          ? (d.metadata?.[SUBJECT_METADATA_KEY] ?? "")
               .toString()
-              .toLowerCase();
-            return value === subjectLower;
-          })
-        : docs;
+              .toLowerCase() === subjectLower
+          : true;
+        const bySource = allowedSources.length
+          ? allowedSources.includes((d.metadata?.source ?? "").toString())
+          : true;
+        return bySubject && bySource;
+      });
       contextText = filteredDocs.map((d: any) => d.pageContent).join("\n---\n");
     }
   } catch (err) {
