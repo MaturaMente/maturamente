@@ -34,7 +34,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
   const { messages, sendMessage, status, stop, setMessages, regenerate } =
     useChat({
       transport: new DefaultChatTransport({
-        api: "/api/chat",
+        api: "/api/chat/subject",
         // pass subject as a header so every request (including regenerate) carries it
         headers: subject ? { "x-subject": subject } : undefined,
       }),
@@ -498,7 +498,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
         className="sticky bottom-0 z-10 w-full bg-transparent px-6 pb-3"
       >
         <div className="mx-auto w-full max-w-3xl">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-muted/30 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-muted/40">
+          <div className="flex items-center gap-3 rounded-full border border-foreground/10 bg-background/70 px-4 py-2 md:py-3 shadow-xs supports-[backdrop-filter]:bg-background/60">
             {selectedNoteSlugs.length > 0 && (
               <div className="mb-2 w-full">
                 <div
@@ -612,7 +612,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                   }}
                   placeholder="Cosa vuoi chiedere?"
                   rows={1}
-                  className="outline-none w-full max-h-48 border-0 bg-transparent px-3 py-3 text-base leading-6 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
+                  className="outline-none w-full max-h-48 border-0 bg-transparent px-2 md:px-3 py-3 text-base leading-6 placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
                   disabled={status !== "ready"}
                 />
               </div>

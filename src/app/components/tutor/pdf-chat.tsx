@@ -344,50 +344,48 @@ export default function PdfChat() {
         className="sticky bottom-0 z-10 w-full bg-transparent pb-8 md:pb-4 px-8"
       >
         <div className="w-full">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-muted/30 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-muted/40">
-            <div className="flex-1 min-w-0 flex items-end gap-2 w-full">
-              <div className="flex-1 min-w-0">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      if (status === "ready" && input.trim()) {
-                        setIsThinking(true);
-                        sendMessage({ text: input, metadata: { noteSlug } });
-                        setInput("");
-                      }
+          <div className="flex items-center gap-3 rounded-full border border-foreground/10 bg-background/70 px-4 py-2 md:py-3 shadow-xs supports-[backdrop-filter]:bg-background/60">
+            <div className="flex-1 min-w-0 flex items-center gap-2 w-full">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (status === "ready" && input.trim()) {
+                      setIsThinking(true);
+                      sendMessage({ text: input, metadata: { noteSlug } });
+                      setInput("");
                     }
-                  }}
-                  placeholder="Chiedi qualcosa sul PDF..."
-                  rows={1}
-                  className="outline-none w-full max-h-48 border-0 bg-transparent px-3 py-3 text-base leading-6 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
-                  disabled={status !== "ready"}
-                />
-              </div>
-              {status === "ready" ? (
-                <Button
-                  type="submit"
-                  size="icon"
-                  className="h-10 w-10 rounded-full text-white"
-                  variant={input.trim() ? "default" : "secondary"}
-                >
-                  <ArrowUp className="h-5 w-5" />
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="secondary"
-                  className="h-10 w-10 rounded-full"
-                  onClick={() => stop()}
-                >
-                  <Square className="h-5 w-5" />
-                </Button>
-              )}
+                  }
+                }}
+                placeholder="Chiedi qualcosa sul PDF..."
+                rows={1}
+                className="outline-none w-full max-h-48 border-0 bg-transparent px-2 md:px-3 py-3 text-base leading-7 placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
+                disabled={status !== "ready"}
+              />
             </div>
+            {status === "ready" ? (
+              <Button
+                type="submit"
+                size="icon"
+                className="h-10 w-10 rounded-full text-white"
+                variant={input.trim() ? "default" : "secondary"}
+              >
+                <ArrowUp className="h-5 w-5" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="icon"
+                variant="secondary"
+                className="h-10 w-10 rounded-full"
+                onClick={() => stop()}
+              >
+                <Square className="h-5 w-5" />
+              </Button>
+            )}
           </div>
         </div>
       </form>
