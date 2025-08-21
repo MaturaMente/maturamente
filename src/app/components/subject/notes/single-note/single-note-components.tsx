@@ -5,7 +5,7 @@ import PdfViewer from "@/app/components/shared/renderer/pdf-renderer";
 import { MessageCircle, AlertCircle } from "lucide-react";
 import type { Note } from "@/types/notesTypes";
 import { LoadingSpinner } from "@/app/components/shared/loading/skeletons/loading-spinner";
-import PdfChat from "@/app/components/tutor/pdf-chat";
+import PdfChat from "@/app/components/chat/pdf-chat";
 
 interface PDFComponentProps {
   note: Note;

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import MarkdownRenderer from "../shared/renderer/markdown-renderer";
 import {
   ArrowUp,
+  ArrowDown,
   Copy,
   Pencil,
   Plus,
@@ -65,10 +66,50 @@ export default function SubjectChat({ subject }: { subject?: string }) {
   const [chipsExpanded, setChipsExpanded] = useState(false);
   const [chipsCanCollapse, setChipsCanCollapse] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
+  // Smart auto-scroll: only scroll to bottom if user is already at the bottom
   useEffect(() => {
+    if (!scrollContainerRef.current || isUserScrolledUp) return;
+
+    const container = scrollContainerRef.current;
+    const isAtBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      100;
+
+    if (isAtBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      setShowScrollToBottom(true);
+    }
+  }, [messages, isUserScrolledUp]);
+
+  // Track user scroll position
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+
+      setIsUserScrolledUp(!isAtBottom);
+      if (isAtBottom) {
+        setShowScrollToBottom(false);
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    setShowScrollToBottom(false);
+    setIsUserScrolledUp(false);
+  };
 
   const extractTextFromMessage = (message: any) => {
     return message.parts
@@ -157,6 +198,10 @@ export default function SubjectChat({ subject }: { subject?: string }) {
       .filter(Boolean) as string[];
   };
 
+  const clearAllSelectedNotes = () => {
+    setSelectedNoteSlugs([]);
+  };
+
   const regenerateWithCurrentSelection = (assistantId: string) => {
     if (selectedNoteSlugs.length > 0) {
       setIsRetrieving(true);
@@ -221,8 +266,9 @@ export default function SubjectChat({ subject }: { subject?: string }) {
   }, [input]);
 
   return (
-    <div className="flex h-[calc(100vh-100px)] flex-col bg-background">
+    <div className="flex h-[calc(100vh-100px)] flex-col bg-background relative">
       <div
+        ref={scrollContainerRef}
         className="flex-1 overflow-y-auto p-8 space-y-2 md:px-[12%]"
         aria-live="polite"
         aria-busy={status !== "ready"}
@@ -479,6 +525,22 @@ export default function SubjectChat({ subject }: { subject?: string }) {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Scroll to bottom button */}
+      {showScrollToBottom && (
+        <div className="absolute bottom-20 right-8 z-10">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="rounded-full shadow-lg bg-background border border-border hover:bg-accent"
+            onClick={scrollToBottom}
+            title="Scorri verso il basso"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -498,7 +560,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
         className="sticky bottom-0 z-10 w-full bg-transparent px-6 pb-3"
       >
         <div className="mx-auto w-full max-w-3xl">
-          <div className="flex items-center gap-3 rounded-full border border-foreground/10 bg-background/70 px-4 py-2 md:py-3 shadow-xs supports-[backdrop-filter]:bg-background/60">
+          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-muted/10 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-muted/10">
             {selectedNoteSlugs.length > 0 && (
               <div className="mb-2 w-full">
                 <div
@@ -612,7 +674,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                   }}
                   placeholder="Cosa vuoi chiedere?"
                   rows={1}
-                  className="outline-none w-full max-h-48 border-0 bg-transparent px-2 md:px-3 py-3 text-base leading-6 placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
+                  className="outline-none w-full max-h-48 border-0 bg-transparent px-3 py-3 text-base leading-6 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
                   disabled={status !== "ready"}
                 />
               </div>
@@ -645,22 +707,91 @@ export default function SubjectChat({ subject }: { subject?: string }) {
       {showNotesOverlay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-2xl rounded-xl border bg-background shadow-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">Scegli gli appunti da usare</span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {selectedNoteSlugs.length} selezionati
-              </div>
-            </div>
             <div className="p-5">
+              {/* Selected Notes Section - Always Visible */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">
+                    {selectedNoteSlugs.length > 0
+                      ? `Appunti selezionati - ${selectedNoteSlugs.length}`
+                      : "Appunti selezionati"}
+                  </span>
+                  {selectedNoteSlugs.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAllSelectedNotes}
+                      className="text-xs h-7 px-2"
+                    >
+                      Rimuovi Tutti
+                    </Button>
+                  )}
+                </div>
+                {selectedNoteSlugs.length > 0 ? (
+                  <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
+                    {selectedNoteSlugs.map((slug) => {
+                      const note = notes.find((n) => n.slug === slug);
+                      const parseTitle = (title: string) => {
+                        const separatorIndex = title.indexOf(" - ");
+                        if (separatorIndex !== -1) {
+                          return {
+                            mainTitle: title.substring(0, separatorIndex),
+                            subtitle: title.substring(separatorIndex + 3),
+                          };
+                        }
+                        return { mainTitle: title, subtitle: null };
+                      };
+                      const { mainTitle, subtitle } = parseTitle(
+                        note?.title || ""
+                      );
+
+                      return (
+                        <div
+                          key={slug}
+                          className="flex-shrink-0 relative flex items-center gap-2 rounded-lg border bg-[var(--subject-color)]/2 border-[var(--subject-color)]/10 hover:shadow-xs/2 hover:border-[var(--subject-color)]/30 transition-all duration-200 min-w-[200px] max-w-[250px] px-3 py-2"
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <FileText className="h-4 w-4 flex-shrink-0 text-[var(--subject-color)]" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium text-sm line-clamp-1">
+                                {mainTitle}
+                              </div>
+                              {subtitle && (
+                                <div className="text-xs text-muted-foreground line-clamp-1">
+                                  {subtitle}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleNote(slug)}
+                            className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--subject-color)]/90 text-background shadow"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-20 border border-dashed border-border/60 rounded-lg bg-muted/20 p-3 flex items-center justify-center">
+                    <div className="text-sm text-muted-foreground">
+                      Nessun appunto selezionato
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Search Bar */}
               <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   value={notesSearch}
                   onChange={(e) => setNotesSearch(e.target.value)}
                   placeholder="Cerca appunti..."
-                  className="pl-9 py-6 rounded-full "
+                  className="pl-9 py-6 rounded-xl"
                 />
               </div>
               {(() => {
@@ -747,7 +878,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                         <div className="text-sm font-medium text-muted-foreground">
                           Studiati di recente
                         </div>
-                        {recentFiltered.map((n) => renderRow(n))}
+                        {recentFiltered.slice(0, 3).map((n) => renderRow(n))}
                         <div className="h-px w-full bg-border my-1" />
                       </div>
                     )}

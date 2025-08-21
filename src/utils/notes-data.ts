@@ -325,6 +325,232 @@ export const getRecentStudiedNotes = cache(
 );
 
 /**
+ * Get all notes for all user's subscribed subjects with favorite status
+ * For dashboard chat functionality
+ */
+export const getAllUserNotes = cache(
+  async (
+    userId: string
+  ): Promise<{
+    allNotes: Note[];
+    favoriteNotes: Note[];
+    subjects: Array<{
+      id: string;
+      name: string;
+      color: string;
+      slug: string;
+    }>;
+  }> => {
+    try {
+      // Get all notes for all user's subscribed subjects with favorite information
+      const notesWithFavorites = await db
+        .select({
+          id: notesTable.id,
+          title: notesTable.title,
+          description: notesTable.description,
+          storage_path: notesTable.storage_path,
+          subject_id: notesTable.subject_id,
+          n_pages: notesTable.n_pages,
+          slug: notesTable.slug,
+          created_at: notesTable.created_at,
+          is_favorite: flaggedNotesTable.id,
+          subject_name: subjectsTable.name,
+          subject_color: subjectsTable.color,
+          subject_slug: subjectsTable.slug,
+        })
+        .from(notesTable)
+        .innerJoin(subjectsTable, eq(notesTable.subject_id, subjectsTable.id))
+        .innerJoin(
+          relationSubjectsUserTable,
+          and(
+            eq(relationSubjectsUserTable.subject_id, subjectsTable.id),
+            eq(relationSubjectsUserTable.user_id, userId)
+          )
+        )
+        .leftJoin(
+          flaggedNotesTable,
+          and(
+            eq(flaggedNotesTable.note_id, notesTable.id),
+            eq(flaggedNotesTable.user_id, userId)
+          )
+        )
+        .orderBy(desc(notesTable.created_at));
+
+      // Get unique subjects
+      const subjectsMap = new Map();
+      notesWithFavorites.forEach((row) => {
+        if (!subjectsMap.has(row.subject_id)) {
+          subjectsMap.set(row.subject_id, {
+            id: row.subject_id,
+            name: row.subject_name,
+            color: row.subject_color,
+            slug: row.subject_slug,
+          });
+        }
+      });
+      const subjects = Array.from(subjectsMap.values());
+
+      // Transform to Note objects
+      const allNotes: Note[] = notesWithFavorites.map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description || "",
+        storage_path: row.storage_path,
+        subject_id: row.subject_id || "",
+        n_pages: row.n_pages || 1,
+        slug: row.slug || "",
+        created_at: row.created_at,
+        is_favorite: !!row.is_favorite,
+      }));
+
+      // Filter favorite notes
+      const favoriteNotes = allNotes.filter((note) => note.is_favorite);
+
+      return {
+        allNotes,
+        favoriteNotes,
+        subjects,
+      };
+    } catch (error) {
+      console.error("Error fetching all user notes:", error);
+      throw new Error("Failed to fetch user notes");
+    }
+  }
+);
+
+/**
+ * Get recent studied notes for a user across all subjects
+ * Returns unique notes with their most recent study session
+ */
+export const getAllRecentStudiedNotes = cache(
+  async (userId: string): Promise<RecentNote[]> => {
+    try {
+      // First, get the most recent study session for each note across all subjects
+      const latestSessionsSubquery = db
+        .select({
+          note_id: noteStudySessionsTable.note_id,
+          latest_active_at:
+            sql<Date>`MAX(${noteStudySessionsTable.last_active_at})`.as(
+              "latest_active_at"
+            ),
+        })
+        .from(noteStudySessionsTable)
+        .innerJoin(
+          notesTable,
+          eq(noteStudySessionsTable.note_id, notesTable.id)
+        )
+        .innerJoin(subjectsTable, eq(notesTable.subject_id, subjectsTable.id))
+        .innerJoin(
+          relationSubjectsUserTable,
+          and(
+            eq(relationSubjectsUserTable.subject_id, subjectsTable.id),
+            eq(relationSubjectsUserTable.user_id, userId)
+          )
+        )
+        .where(eq(noteStudySessionsTable.user_id, userId))
+        .groupBy(noteStudySessionsTable.note_id)
+        .as("latest_sessions");
+
+      // Then join with the original tables to get the complete note information
+      const recentStudiedNotesQuery = await db
+        .select({
+          note_id: notesTable.id,
+          note_title: notesTable.title,
+          note_slug: notesTable.slug,
+          subject_name: subjectsTable.name,
+          subject_slug: subjectsTable.slug,
+          last_studied_at: latestSessionsSubquery.latest_active_at,
+          session_started_at: noteStudySessionsTable.started_at,
+        })
+        .from(latestSessionsSubquery)
+        .innerJoin(
+          notesTable,
+          eq(latestSessionsSubquery.note_id, notesTable.id)
+        )
+        .innerJoin(
+          noteStudySessionsTable,
+          and(
+            eq(noteStudySessionsTable.note_id, latestSessionsSubquery.note_id),
+            eq(
+              noteStudySessionsTable.last_active_at,
+              latestSessionsSubquery.latest_active_at
+            )
+          )
+        )
+        .innerJoin(subjectsTable, eq(notesTable.subject_id, subjectsTable.id))
+        .orderBy(desc(latestSessionsSubquery.latest_active_at))
+        .limit(10); // Limit to 10 most recent
+
+      // For each note, aggregate the total study time spent on the SAME DAY
+      // as the latest session (sum of all overlapping sessions within that day)
+      const results: RecentNote[] = await Promise.all(
+        recentStudiedNotesQuery.map(async (row) => {
+          const latestSessionDate = new Date(row.last_studied_at);
+          const dayStart = new Date(latestSessionDate);
+          dayStart.setHours(0, 0, 0, 0);
+          const dayEnd = new Date(latestSessionDate);
+          dayEnd.setHours(23, 59, 59, 999);
+
+          // Fetch all sessions for this note and user that overlap the day
+          const sessionsForDay = await db
+            .select({
+              started_at: noteStudySessionsTable.started_at,
+              last_active_at: noteStudySessionsTable.last_active_at,
+            })
+            .from(noteStudySessionsTable)
+            .where(
+              and(
+                eq(noteStudySessionsTable.user_id, userId),
+                eq(noteStudySessionsTable.note_id, row.note_id),
+                // Overlap condition: session intersects [dayStart, dayEnd]
+                sql`${noteStudySessionsTable.started_at} <= ${dayEnd} AND ${noteStudySessionsTable.last_active_at} >= ${dayStart}`
+              )
+            );
+
+          // Sum milliseconds across all overlapping sessions (clip to day bounds)
+          let totalDurationMs = 0;
+          for (const session of sessionsForDay) {
+            const sessionStart = new Date(session.started_at);
+            const sessionEnd = new Date(session.last_active_at);
+            const effectiveStart =
+              sessionStart < dayStart ? dayStart : sessionStart;
+            const effectiveEnd = sessionEnd > dayEnd ? dayEnd : sessionEnd;
+            const ms = Math.max(
+              0,
+              effectiveEnd.getTime() - effectiveStart.getTime()
+            );
+            totalDurationMs += ms;
+          }
+
+          const studyTimeMinutes = Math.max(
+            1,
+            Math.round(totalDurationMs / (1000 * 60))
+          );
+
+          return {
+            id: row.note_id,
+            title: row.note_title,
+            date: new Date(row.last_studied_at).toLocaleDateString("it-IT"),
+            subjectName: row.subject_name,
+            slug: row.note_slug || "",
+            type: "note" as const,
+            studyTimeMinutes,
+          };
+        })
+      );
+
+      return results;
+    } catch (error) {
+      console.error(
+        "Error fetching recent studied notes across subjects:",
+        error
+      );
+      return [];
+    }
+  }
+);
+
+/**
  * Get notes statistics for a specific user and subject
  */
 export const getNotesStatistics = cache(

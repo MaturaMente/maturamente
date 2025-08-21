@@ -6,7 +6,14 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "../shared/renderer/markdown-renderer";
-import { ArrowUp, Copy, Pencil, RefreshCw, Square } from "lucide-react";
+import {
+  ArrowUp,
+  ArrowDown,
+  Copy,
+  Pencil,
+  RefreshCw,
+  Square,
+} from "lucide-react";
 
 export default function PdfChat() {
   const params = useParams();
@@ -33,10 +40,50 @@ export default function PdfChat() {
     null
   );
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
+  // Smart auto-scroll: only scroll to bottom if user is already at the bottom
   useEffect(() => {
+    if (!scrollContainerRef.current || isUserScrolledUp) return;
+
+    const container = scrollContainerRef.current;
+    const isAtBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      100;
+
+    if (isAtBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      setShowScrollToBottom(true);
+    }
+  }, [messages, isUserScrolledUp]);
+
+  // Track user scroll position
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+
+      setIsUserScrolledUp(!isAtBottom);
+      if (isAtBottom) {
+        setShowScrollToBottom(false);
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    setShowScrollToBottom(false);
+    setIsUserScrolledUp(false);
+  };
 
   const extractTextFromMessage = (message: any) => {
     return message.parts
@@ -132,8 +179,9 @@ export default function PdfChat() {
   }, [input]);
 
   return (
-    <div className="flex h-[calc(100vh-100px)] flex-col bg-background">
+    <div className="flex h-[calc(100vh-100px)] flex-col bg-background relative">
       <div
+        ref={scrollContainerRef}
         className="flex-1 overflow-y-auto p-8 space-y-2"
         aria-live="polite"
         aria-busy={status !== "ready"}
@@ -331,6 +379,22 @@ export default function PdfChat() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Scroll to bottom button */}
+      {showScrollToBottom && (
+        <div className="absolute bottom-20 right-8 z-10">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="rounded-full shadow-lg bg-background border border-border hover:bg-accent"
+            onClick={scrollToBottom}
+            title="Scorri verso il basso"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -344,53 +408,53 @@ export default function PdfChat() {
         className="sticky bottom-0 z-10 w-full bg-transparent pb-8 md:pb-4 px-8"
       >
         <div className="w-full">
-          <div className="flex items-center gap-3 rounded-full border border-foreground/10 bg-background/70 px-4 py-2 md:py-3 shadow-xs supports-[backdrop-filter]:bg-background/60">
-            <div className="flex-1 min-w-0 flex items-center gap-2 w-full">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (status === "ready" && input.trim()) {
-                      setIsThinking(true);
-                      sendMessage({ text: input, metadata: { noteSlug } });
-                      setInput("");
+          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-muted/10 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-muted/10">
+            <div className="flex-1 min-w-0 flex items-end gap-2 w-full">
+              <div className="flex-1 min-w-0">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (status === "ready" && input.trim()) {
+                        setIsThinking(true);
+                        sendMessage({ text: input, metadata: { noteSlug } });
+                        setInput("");
+                      }
                     }
-                  }
-                }}
-                placeholder="Chiedi qualcosa sul PDF..."
-                rows={1}
-                className="outline-none w-full max-h-48 border-0 bg-transparent px-2 md:px-3 py-3 text-base leading-7 placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
-                disabled={status !== "ready"}
-              />
+                  }}
+                  placeholder="Chiedi qualcosa sul PDF..."
+                  rows={1}
+                  className="outline-none w-full max-h-48 border-0 bg-transparent px-3 py-3 text-base leading-6 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
+                  disabled={status !== "ready"}
+                />
+              </div>
+              {status === "ready" ? (
+                <Button
+                  type="submit"
+                  size="icon"
+                  className="h-10 w-10 rounded-full text-white"
+                  variant={input.trim() ? "default" : "secondary"}
+                >
+                  <ArrowUp className="h-5 w-5" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="secondary"
+                  className="h-10 w-10 rounded-full"
+                  onClick={() => stop()}
+                >
+                  <Square className="h-5 w-5" />
+                </Button>
+              )}
             </div>
-            {status === "ready" ? (
-              <Button
-                type="submit"
-                size="icon"
-                className="h-10 w-10 rounded-full text-white"
-                variant={input.trim() ? "default" : "secondary"}
-              >
-                <ArrowUp className="h-5 w-5" />
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                size="icon"
-                variant="secondary"
-                className="h-10 w-10 rounded-full"
-                onClick={() => stop()}
-              >
-                <Square className="h-5 w-5" />
-              </Button>
-            )}
           </div>
         </div>
       </form>
     </div>
   );
 }
-
-// duplicate default export leftover removed

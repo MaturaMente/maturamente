@@ -1,5 +1,5 @@
-import { GeneralNavbar } from "../components/shared/navigation/general-navbar";
-import DashboardFooter from "../components/shared/navigation/footer";
+import { GeneralNavbar } from "../../components/shared/navigation/general-navbar";
+import DashboardFooter from "../../components/shared/navigation/footer";
 
 export default function DashboardMaturamenteLayout({
   children,
@@ -12,7 +12,6 @@ export default function DashboardMaturamenteLayout({
         <GeneralNavbar variant="dashboard" />
       </div>
       <div>{children}</div>
-      <DashboardFooter />
     </div>
   );
 }

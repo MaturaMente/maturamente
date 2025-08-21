@@ -1,4 +1,4 @@
-import SubjectChat from "@/app/components/tutor/subject-chat";
+import SubjectChat from "@/app/components/chat/subject-chat";
 
 export default async function TutorPage({
   params,

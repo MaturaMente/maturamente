@@ -19,14 +19,6 @@ export async function POST(req: Request) {
   };
   const { messages } = body;
 
-  // subject can arrive via header or request body
-  const subjectFromHeader = req.headers.get("x-subject") ?? undefined;
-  const subject: string | undefined =
-    subjectFromHeader ??
-    body?.data?.subject ??
-    body?.body?.subject ??
-    undefined;
-
   // optional list of selected note slugs for targeted retrieval
   // Prefer extracting from the latest user message metadata so it also works with regenerate()
   let selectedNoteSlugs: string[] | undefined = undefined;
@@ -79,34 +71,33 @@ export async function POST(req: Request) {
       const SUBJECT_METADATA_KEY =
         process.env.PINECONE_SUBJECT_KEY || "subject";
 
-      // To avoid API incompatibilities, do not use server-side subject filters.
+      // For dashboard chat, we allow documents from any subject since the user
+      // can select notes from multiple subjects
       // Only include a source $in filter if present; otherwise pass no filter.
       const filter =
         selectedNoteSlugs && selectedNoteSlugs.length > 0
           ? { source: { $in: selectedNoteSlugs.map((s) => `${s}.pdf`) } }
           : undefined;
       try {
-        // Use balanced retrieval to ensure fair representation from each selected PDF
+        // Use balanced retrieval for multi-document queries across subjects
         const balancedResult = await balancedSimilaritySearch(
           vectorStore,
           lastUserQuery,
           selectedNoteSlugs || [],
           {
-            totalChunks: 12,
+            totalChunks: 16,
             minChunksPerDoc: 1,
-            maxChunksPerDoc: 3,
+            maxChunksPerDoc: 4,
             enforceDistribution: true,
-          },
-          subject?.toLowerCase()
+          }
         );
 
         console.log(
-          "Balanced RAG retrieval:",
+          "Dashboard balanced RAG:",
           formatDistributionLog(balancedResult)
         );
         console.log("RAG query", {
           index: indexName,
-          subject,
           selectedDocuments: selectedNoteSlugs?.length || 0,
           totalRetrieved: balancedResult.totalRetrieved,
         });
@@ -132,19 +123,13 @@ export async function POST(req: Request) {
           docs = await vectorStore.similaritySearch(lastUserQuery, 6);
         }
 
-        // Hard filter by subject and selected sources
-        const subjectLower = subject?.toLowerCase();
+        // Hard filter by selected sources
         const allowedSources = (selectedNoteSlugs || []).map((s) => `${s}.pdf`);
         const filteredDocs = docs.filter((d: any) => {
-          const bySubject = subjectLower
-            ? (d.metadata?.[SUBJECT_METADATA_KEY] ?? "")
-                .toString()
-                .toLowerCase() === subjectLower
-            : true;
           const bySource = allowedSources.length
             ? allowedSources.includes((d.metadata?.source ?? "").toString())
             : true;
-          return bySubject && bySource;
+          return bySource;
         });
         contextText = filteredDocs
           .map((d: any) => d.pageContent)
@@ -157,18 +142,17 @@ export async function POST(req: Request) {
   }
 
   const systemPrompt =
-    `Sei un tutor amichevole e competente che aiuta lo studente a comprendere una materia a partire da più documenti PDF selezionati. 
+    `Sei un tutor amichevole e competente che aiuta lo studente a comprendere la materia a partire da più documenti PDF selezionati da diverse materie.
+
     Rispondi SEMPRE in italiano.
 
     Regole fondamentali:
-      1. Dai priorità assoluta alle informazioni contenute nei PDF forniti. 
-      2. Quando possibile, indica chiaramente da quale documento e pagina/sezione proviene l’informazione. 
-      3. Se più PDF trattano lo stesso argomento, integra le informazioni in una risposta unica e coerente. 
-      4. Mantieni le risposte ancorate ai PDF: non inventare contenuti che non sono presenti. 
-      5. Se i PDF non contengono informazioni sufficienti, dichiaralo esplicitamente e rispondi con una sezione separata chiamata "Conoscenza generale". 
+      1. Dai priorità assoluta alle informazioni contenute nei PDF forniti.
+      2. Quando possibile, indica chiaramente da quale documento e pagina/sezione proviene l'informazione.
+      3. Se più PDF trattano lo stesso argomento, integra le informazioni in una risposta unica e coerente.
+      4. Mantieni le risposte ancorate ai PDF: non inventare contenuti che non sono presenti.
+      5. Se i PDF non contengono informazioni sufficienti, dichiaralo esplicitamente e rispondi con una sezione separata chiamata "Conoscenza generale".
       6. Le spiegazioni devono essere semplici, chiare e adatte a studenti delle superiori.
-  
-    ${subject ? `Materia: ${subject}` : ""}
 
     Contesto estratto dai PDF selezionati (bilanciato per garantire rappresentazione equa da ciascun documento):\n${contextText}`.trim();
 

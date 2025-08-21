@@ -219,7 +219,7 @@ async function DashboardContent() {
                 </CardContent>
                 <CardFooter>
                   <Button asChild className="w-full text-white">
-                    <Link href="/dashboard/ai-tutor">
+                    <Link href="/dashboard/chat">
                       Parla col tutor
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
