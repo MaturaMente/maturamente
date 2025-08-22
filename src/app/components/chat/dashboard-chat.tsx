@@ -22,6 +22,9 @@ import {
   CircleCheck,
   Filter,
   ChevronDown,
+  Sparkles,
+  Wand2,
+  ListChecks,
 } from "lucide-react";
 import { getSubjectIcon } from "@/utils/subject-icons";
 
@@ -348,6 +351,8 @@ export default function DashboardChat() {
 
   return (
     <div className="flex h-[calc(100vh-100px)] flex-col bg-background relative">
+      {/* Blue subtle gradient background */}
+      <div className="pointer-events-none absolute -top-24 left-1/2 h-32 w-full max-w-[960px] -translate-x-1/2 rounded-[50%] bg-blue-500/20 dark:bg-blue-400/20 blur-[72px]" />
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto p-8 space-y-2 md:px-[12%]"
@@ -364,33 +369,35 @@ export default function DashboardChat() {
                     variant="outline"
                     onClick={() =>
                       usePrompt(
-                        "Spiegami questi argomenti come se avessi 12 anni, usando esempi semplici"
+                        "Spiegami questi argomenti come se avessi 12 anni, con esempi concreti e analogie semplici."
                       )
                     }
                   >
-                    Spiegami in modo semplice
+                    <Sparkles className="h-4 w-4 mr-2" /> Spiegami in modo
+                    semplice
                   </Button>
                   <Button
                     className="rounded-full"
                     variant="outline"
                     onClick={() =>
                       usePrompt(
-                        "Riassumi i concetti principali dagli appunti selezionati"
+                        "Riassumi i concetti chiave dagli appunti selezionati e crea una mini mappa mentale con bullet point."
                       )
                     }
                   >
-                    Riassumi gli appunti selezionati
+                    <Wand2 className="h-4 w-4 mr-2" /> Riassumi e organizza
                   </Button>
                   <Button
                     className="rounded-full"
                     variant="outline"
                     onClick={() =>
                       usePrompt(
-                        "Crea 5 domande a risposta multipla basate sugli appunti selezionati, con soluzioni"
+                        "Crea 5 domande a risposta multipla sui contenuti selezionati, con spiegazione della soluzione."
                       )
                     }
                   >
-                    Crea quiz dai documenti
+                    <ListChecks className="h-4 w-4 mr-2" /> Crea quiz dai
+                    documenti
                   </Button>
                 </div>
                 <Button
@@ -749,7 +756,7 @@ export default function DashboardChat() {
                   placeholder="Cosa vuoi chiedere?"
                   rows={1}
                   className="outline-none w-full max-h-48 border-0 bg-transparent px-3 py-3 text-base leading-6 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
-                  disabled={status !== "ready"}
+                  disabled={false}
                 />
               </div>
 

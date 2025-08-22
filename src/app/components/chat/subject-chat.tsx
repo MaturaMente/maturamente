@@ -20,6 +20,10 @@ import {
   Search,
   Circle,
   CircleCheck,
+  GraduationCap,
+  Sparkles,
+  Wand2,
+  ListChecks,
 } from "lucide-react";
 
 type UINote = {
@@ -69,6 +73,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [subjectColor, setSubjectColor] = useState<string | null>(null);
 
   // Smart auto-scroll: only scroll to bottom if user is already at the bottom
   useEffect(() => {
@@ -104,6 +109,35 @@ export default function SubjectChat({ subject }: { subject?: string }) {
     container.addEventListener("scroll", handleScroll);
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Ensure subject color CSS variable is set locally to avoid blank states
+  useEffect(() => {
+    let cancelled = false;
+    async function ensureSubjectColor() {
+      if (!subject) return;
+      try {
+        const current = getComputedStyle(document.documentElement)
+          .getPropertyValue("--subject-color")
+          .trim();
+        if (current) {
+          setSubjectColor(current);
+          return;
+        }
+        const res = await fetch(`/api/subjects/${subject}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const color = (data?.color as string) || "";
+        if (!cancelled && color) {
+          setSubjectColor(color);
+          document.documentElement.style.setProperty("--subject-color", color);
+        }
+      } catch {}
+    }
+    ensureSubjectColor();
+    return () => {
+      cancelled = true;
+    };
+  }, [subject]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -267,6 +301,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
 
   return (
     <div className="flex h-[calc(100vh-100px)] flex-col bg-background relative">
+      <div className="pointer-events-none absolute -top-24 left-1/2 h-32 w-full max-w-[960px] -translate-x-1/2 rounded-[50%] bg-[var(--subject-color)]/20 blur-[72px]" />
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto p-8 space-y-2 md:px-[12%]"
@@ -284,34 +319,35 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                     variant="outline"
                     onClick={() =>
                       usePrompt(
-                        "Spiegami questi argomenti come se avessi 12 anni, usando esempi semplici"
+                        "Spiegami questi argomenti come se avessi 12 anni, con esempi concreti e analogie semplici."
                       )
                     }
                   >
-                    Spiegami in modo semplice
+                    <Sparkles className="h-4 w-4 mr-2" /> Spiegami in modo
+                    semplice
                   </Button>
                   <Button
                     className="rounded-full"
                     variant="outline"
                     onClick={() =>
                       usePrompt(
-                        "Riassumi i concetti principali dagli appunti selezionati"
+                        "Riassumi i concetti chiave dagli appunti selezionati e crea una mini mappa mentale con bullet point."
                       )
                     }
                   >
-                    Riassumi gli appunti selezionati
+                    <Wand2 className="h-4 w-4 mr-2" /> Riassumi e organizza
                   </Button>
-
                   <Button
                     className="rounded-full"
                     variant="outline"
                     onClick={() =>
                       usePrompt(
-                        "Crea 5 domande a risposta multipla basate sugli appunti selezionati, con soluzioni"
+                        "Crea 5 domande a risposta multipla sui contenuti selezionati, con spiegazione della soluzione."
                       )
                     }
                   >
-                    Crea quiz dai documenti
+                    <ListChecks className="h-4 w-4 mr-2" /> Crea quiz dai
+                    documenti
                   </Button>
                 </div>
                 <Button
@@ -337,165 +373,187 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                 className={`flex ${isUser ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`group relative flex flex-col ${
-                    isUser ? "items-end" : "items-start"
+                  className={`flex items-start gap-3 w-full ${
+                    isUser ? "flex-row-reverse" : ""
                   }`}
                 >
+                  {!isUser ? (
+                    <div
+                      className="mt-1 h-8 w-8 rounded-full bg-muted/50 flex items-center justify-center border"
+                      title="PIT"
+                    >
+                      <GraduationCap className="h-4 w-4" />
+                    </div>
+                  ) : null}
                   <div
-                    className={`px-4 ${
-                      isUser
-                        ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
-                        : "bg-none text-foreground w-full"
+                    className={`group relative flex flex-col ${
+                      isUser ? "items-end" : "items-start"
                     }`}
                   >
-                    {editingMessageId === message.id && isUser ? (
-                      <div className="w-full">
-                        <textarea
-                          autoFocus
-                          value={editingValue}
-                          onChange={(e) => setEditingValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                              e.preventDefault();
-                              saveEdit();
-                            } else if (e.key === "Escape") {
-                              e.preventDefault();
-                              cancelEdit();
-                            }
-                          }}
-                          className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
-                          placeholder="Modifica il messaggio"
-                        />
-                        <div className="mt-2 flex justify-end gap-2">
+                    <div
+                      className={`px-4 ${
+                        isUser
+                          ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
+                          : "bg-none text-foreground w-full"
+                      }`}
+                    >
+                      {editingMessageId === message.id && isUser ? (
+                        <div className="w-full">
+                          <textarea
+                            autoFocus
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (
+                                (e.metaKey || e.ctrlKey) &&
+                                e.key === "Enter"
+                              ) {
+                                e.preventDefault();
+                                saveEdit();
+                              } else if (e.key === "Escape") {
+                                e.preventDefault();
+                                cancelEdit();
+                              }
+                            }}
+                            className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
+                            placeholder="Modifica il messaggio"
+                          />
+                          <div className="mt-2 flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={cancelEdit}
+                            >
+                              Cancella
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={saveEdit}
+                              variant="secondary"
+                              disabled={status !== "ready"}
+                            >
+                              Invia
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          {/* RAG disclaimer for assistant messages */}
+                          {!isUser &&
+                            (() => {
+                              const idx = messages.findIndex(
+                                (m) => m.id === message.id
+                              );
+                              const prevUser = messages
+                                .slice(0, idx)
+                                .reverse()
+                                .find((m) => m.role === "user");
+                              const used = ((prevUser as any)?.metadata
+                                ?.selectedNoteSlugs || []) as string[];
+                              if (Array.isArray(used) && used.length > 0) {
+                                const titles = getTitlesFromSlugs(used);
+                                if (titles.length > 0) {
+                                  return (
+                                    <div className="mb-2 text-xs text-muted-foreground italic">
+                                      {`Risposta generata partendo da: ${titles.join(
+                                        ", "
+                                      )}`}
+                                    </div>
+                                  );
+                                }
+                              }
+                              return null;
+                            })()}
+                          {message.parts.map((part, index) =>
+                            part.type === "text" ? (
+                              <MarkdownRenderer
+                                content={part.text}
+                                key={index}
+                              />
+                            ) : null
+                          )}
+                          {!isUser && (status === "ready" || !isLastMessage) ? (
+                            <div className="mt-3 h-px w-full bg-border" />
+                          ) : null}
+                          {/* Show retrieval indicator inline for regenerate on this assistant message */}
+                          {!isUser &&
+                          isRetrieving &&
+                          status !== "streaming" &&
+                          pendingAssistantId === message.id ? (
+                            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                              Sto recuperando i documenti selezionati...
+                            </div>
+                          ) : null}
+                          {/* Show thinking indicator inline for regenerate when no documents are selected */}
+                          {!isUser &&
+                          isThinking &&
+                          status !== "streaming" &&
+                          pendingAssistantId === message.id ? (
+                            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                              Sto pensando...
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* hover actions below bubble, outside */}
+                    <div
+                      className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${
+                        isUser ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      {isUser ? (
+                        <>
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={cancelEdit}
+                            className="h-8 px-2 text-xs"
+                            onClick={() => handleCopy(messageText)}
                           >
-                            Cancella
+                            <Copy className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"
-                            onClick={saveEdit}
-                            variant="secondary"
+                            variant="ghost"
+                            className="h-8 px-2 text-xs"
                             disabled={status !== "ready"}
+                            onClick={() => beginEdit(message.id)}
                           >
-                            Invia
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        {/* RAG disclaimer for assistant messages */}
-                        {!isUser &&
-                          (() => {
-                            const idx = messages.findIndex(
-                              (m) => m.id === message.id
-                            );
-                            const prevUser = messages
-                              .slice(0, idx)
-                              .reverse()
-                              .find((m) => m.role === "user");
-                            const used = ((prevUser as any)?.metadata
-                              ?.selectedNoteSlugs || []) as string[];
-                            if (Array.isArray(used) && used.length > 0) {
-                              const titles = getTitlesFromSlugs(used);
-                              if (titles.length > 0) {
-                                return (
-                                  <div className="mb-2 text-xs text-muted-foreground italic">
-                                    {`Risposta generata partendo da: ${titles.join(
-                                      ", "
-                                    )}`}
-                                  </div>
-                                );
-                              }
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-xs"
+                            onClick={() => handleCopy(messageText)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-xs"
+                            disabled={
+                              !(status === "ready" || status === "error")
                             }
-                            return null;
-                          })()}
-                        {message.parts.map((part, index) =>
-                          part.type === "text" ? (
-                            <MarkdownRenderer content={part.text} key={index} />
-                          ) : null
-                        )}
-                        {!isUser && (status === "ready" || !isLastMessage) ? (
-                          <div className="mt-3 h-px w-full bg-border" />
-                        ) : null}
-                        {/* Show retrieval indicator inline for regenerate on this assistant message */}
-                        {!isUser &&
-                        isRetrieving &&
-                        status !== "streaming" &&
-                        pendingAssistantId === message.id ? (
-                          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                            Sto recuperando i documenti selezionati...
-                          </div>
-                        ) : null}
-                        {/* Show thinking indicator inline for regenerate when no documents are selected */}
-                        {!isUser &&
-                        isThinking &&
-                        status !== "streaming" &&
-                        pendingAssistantId === message.id ? (
-                          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                            Sto pensando...
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
+                            onClick={() =>
+                              regenerateWithCurrentSelection(message.id)
+                            }
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
 
-                  {/* hover actions below bubble, outside */}
-                  <div
-                    className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${
-                      isUser ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    {isUser ? (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          onClick={() => handleCopy(messageText)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          disabled={status !== "ready"}
-                          onClick={() => beginEdit(message.id)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          onClick={() => handleCopy(messageText)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          disabled={!(status === "ready" || status === "error")}
-                          onClick={() =>
-                            regenerateWithCurrentSelection(message.id)
-                          }
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
+                    {/* edit controls moved inside bubble */}
                   </div>
-
-                  {/* edit controls moved inside bubble */}
                 </div>
               </div>
             );
@@ -675,7 +733,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                   placeholder="Cosa vuoi chiedere?"
                   rows={1}
                   className="outline-none w-full max-h-48 border-0 bg-transparent px-3 py-3 text-base leading-6 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
-                  disabled={status !== "ready"}
+                  disabled={false}
                 />
               </div>
 
