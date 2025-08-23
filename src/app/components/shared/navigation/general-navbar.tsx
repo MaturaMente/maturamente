@@ -289,7 +289,7 @@ export function GeneralNavbar({ variant = "landing" }: NavbarProps) {
   const dashboardLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/dashboard/le-mie-materie", label: "Le mie materie" },
-    { href: "/dashboard/chat", label: "AI Tutor" },
+    { href: "/dashboard/chat", label: "PIT" },
   ];
 
   return (

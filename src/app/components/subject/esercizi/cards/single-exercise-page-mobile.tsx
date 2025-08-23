@@ -384,7 +384,7 @@ export default function MobileExerciseView({
                           className="flex items-center justify-center gap-2 w-full"
                         >
                           <MessageSquareText className="h-4 w-4" />
-                          Tutor AI
+                          PIT
                         </Button>
                       </div>
                     </div>
@@ -399,7 +399,7 @@ export default function MobileExerciseView({
                       )}
                     >
                       <p className="text-sm">
-                        Dopo l'aiuto del tutor hai capito l'esercizio?
+                        Dopo l'aiuto di PIT hai capito l'esercizio?
                       </p>
 
                       <div className="flex flex-row gap-2">

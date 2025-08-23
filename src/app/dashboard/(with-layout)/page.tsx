@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ArrowRight, FileText, BookOpen, Bot, Crown } from "lucide-react";
+import { getSubjectIcon } from "@/utils/subject-icons";
 import { SubjectsDataServer } from "@/app/components/dashboard/le-mie-materie/subjects-data-server";
 import { DashboardSubjectCard } from "@/app/components/dashboard/dashboard-subject-card";
 import { getUserSubjects } from "@/utils/subjects-data";
@@ -187,40 +188,101 @@ async function DashboardContent() {
               </Card>
             </div>
 
-            {/* Row 2: AI Tutor (smaller) + Appunti recenti (larger) */}
+            {/* Row 2: PIT (smaller) + Ore di studio (larger) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* AI Tutor Section - takes 1/3 of the width */}
-              <Card className="lg:col-span-1 overflow-hidden rounded-2xl border bg-card/80 backdrop-blur-sm shadow-xl">
+              {/* PIT Section - takes 1/3 of the width */}
+              <Card className="lg:col-span-1 overflow-hidden rounded-2xl border bg-card/80 backdrop-blur-sm shadow-xl h-full flex flex-col">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Bot className="h-5 w-5 text-primary" />
-                    AI Tutor
+                    PIT
                   </CardTitle>
                   <CardDescription>
-                    Riprendi la tua ultima conversazione
+                    Le tue materie studiate di recente
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="relative rounded-xl border bg-gradient-to-br from-primary/5 via-background to-background p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Bot className="h-4 w-4 text-primary" />
+                <CardContent className="flex-1">
+                  {(() => {
+                    // Derive 3 most recent DISTINCT subjects from recentStudyData
+                    const seen = new Set<string>();
+                    const distinctBySubject = recentStudyData
+                      .filter((n) => {
+                        if (seen.has(n.subjectSlug)) return false;
+                        seen.add(n.subjectSlug);
+                        return true;
+                      })
+                      .slice(0, 3);
+
+                    if (distinctBySubject.length === 0) {
+                      return (
+                        <div className="text-center py-4 text-muted-foreground text-sm">
+                          Nessuna materia recente. Inizia a studiare dai tuoi
+                          appunti.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-3">
+                        {distinctBySubject.map((n) => {
+                          const Icon = getSubjectIcon(n.subjectName);
+                          const color = n.subjectColor;
+                          const cardStyle = {
+                            "--subject-color": color,
+                          } as React.CSSProperties;
+                          return (
+                            <Link
+                              key={n.subjectSlug}
+                              href={`/${n.subjectSlug}/tutor`}
+                              className="group block"
+                              style={cardStyle}
+                            >
+                              <div className="relative rounded-xl border p-4 md:p-5 min-h-[84px] transition-all duration-300 hover:-translate-y-0.5 cursor-pointer overflow-hidden">
+                                {/* subtle top highlight line */}
+                                <hr className="hidden dark:block via-foreground/60 absolute top-0 left-[10%] h-[1px] w-[80%] border-0 bg-linear-to-r from-transparent via-[var(--subject-color)] to-transparent" />
+
+                                <div
+                                  className="pointer-events-none absolute -top-16 left-1/2 h-24 w-full -translate-x-1/2 rounded-[50%] blur-[60px]"
+                                  style={{ backgroundColor: `${color}33` }}
+                                />
+                                <div className="relative z-10 flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <span className="flex h-10 w-10 items-center justify-center">
+                                      {Icon ? (
+                                        <Icon
+                                          className="h-5 w-5"
+                                          style={{ color: `${color}90` }}
+                                        />
+                                      ) : (
+                                        <Bot
+                                          className="h-5 w-5"
+                                          style={{ color: `${color}90` }}
+                                        />
+                                      )}
+                                    </span>
+                                    <div className="min-w-0">
+                                      <div className="text-sm md:text-base font-semibold truncate">
+                                        {n.subjectName}
+                                      </div>
+                                      <div className="text-xs md:text-sm text-muted-foreground truncate">
+                                        Apri il tutor di {n.subjectName}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-[var(--subject-color)]" />
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
                       </div>
-                      <div className="space-y-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          Mi puoi spiegare la scomposizione in fattori?
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          18/06/2025
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </CardContent>
                 <CardFooter>
                   <Button asChild className="w-full text-white">
                     <Link href="/dashboard/chat">
-                      Parla col tutor
+                      Parla con PIT
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>

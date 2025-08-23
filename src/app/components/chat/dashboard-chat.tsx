@@ -7,7 +7,8 @@ import { DefaultChatTransport } from "ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MarkdownRenderer from "../shared/renderer/markdown-renderer";
-import PromptCard from "./PromptCard";
+import PromptCard from "./components/PromptCard";
+import DownloadMenuButton from "./components/download-menu-button";
 import {
   ArrowUp,
   ArrowDown,
@@ -761,7 +762,19 @@ export default function DashboardChat() {
               >
                 <Plus className="h-5 w-5" />
               </Button>
-
+              <DownloadMenuButton
+                messages={messages as any[]}
+                fileNameBase={`dashboard-chat`}
+                buttonVariant="ghost"
+                buttonSize="icon"
+                label="Scarica"
+                getMetadata={() => ({
+                  title: "Dashboard Chat",
+                  userName: (session?.user?.name as string) || null,
+                  subjectName: null,
+                  date: new Date(),
+                })}
+              />
               <div className="flex-1 min-w-0">
                 <textarea
                   ref={textareaRef}

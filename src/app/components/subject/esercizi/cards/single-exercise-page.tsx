@@ -269,7 +269,7 @@ export function Exercise({
           )}
         </AnimatePresence>
 
-        {/* AI Tutor section that appears when marked as incorrect */}
+        {/* PIT section that appears when marked as incorrect */}
         <AnimatePresence>
           {isIncorrect && !showTutor && (
             <motion.div
@@ -279,7 +279,7 @@ export function Exercise({
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="font-medium mb-2">Tutor AI</div>
+              <div className="font-medium mb-2">PIT</div>
               <p className="text-sm text-muted-foreground mb-3">
                 Vedo che stai avendo difficoltà con questo esercizio. Vuoi che:
               </p>
@@ -301,14 +301,14 @@ export function Exercise({
                   onClick={handleShowTutor}
                 >
                   <MessageSquareText className="h-4 w-4 mr-2" />
-                  Scrivi al Tutor
+                  Scrivi a PIT
                 </Button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Follow-up after AI Tutor help */}
+        {/* Follow-up after PIT help */}
         <AnimatePresence>
           {showTutor && (
             <motion.div
@@ -319,7 +319,7 @@ export function Exercise({
               transition={{ duration: 0.3 }}
             >
               <p className="text-center mb-3">
-                Dopo l'aiuto del Tutor, hai capito l'esercizio?
+                Dopo l'aiuto di PIT, hai capito l'esercizio?
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <Button

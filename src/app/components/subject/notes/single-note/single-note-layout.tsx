@@ -7,8 +7,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useRouter, useParams } from "next/navigation";
 import type { Note } from "@/types/notesTypes";
-import { ChatComponent, PDFComponent } from "./single-note-components";
+import { PDFComponent } from "./single-note-components";
 import { useStudySession } from "./use-study-session";
+import PdfChat from "@/app/components/chat/pdf-chat";
 
 interface SingleNoteLayoutProps {
   note: Note;
@@ -186,7 +187,7 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
             : "flex-1 px-4"
         )}
       >
-        <Tabs defaultValue="pdf" className="h-full flex flex-col">
+        <Tabs defaultValue="pdf" className="h-screen flex flex-col">
           <div className={cn("relative", isMobileFullscreen ? "mt-2" : "mt-4")}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="pdf" className="flex items-center gap-2">
@@ -220,7 +221,7 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
             className="flex-1 mt-2 data-[state=active]:flex data-[state=active]:flex-col"
           >
             <div className="flex-1 rounded-lg border overflow-hidden min-h-0">
-              <ChatComponent />
+              <PdfChat />
             </div>
           </TabsContent>
         </Tabs>
@@ -251,7 +252,7 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
         {/* Right section - AI Chat */}
         <div className="w-1/3 border-l bg-background flex flex-col h-screen">
           <div className="flex-1 overflow-hidden">
-            <ChatComponent />
+            <PdfChat />
           </div>
         </div>
       </div>

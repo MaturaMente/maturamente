@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "../shared/renderer/markdown-renderer";
-import PromptCard from "./PromptCard";
+import PromptCard from "./components/PromptCard";
+import DownloadMenuButton from "./components/download-menu-button";
 import {
   ArrowUp,
   ArrowDown,
@@ -17,6 +18,8 @@ import {
   Sparkles,
   Wand2,
   ListChecks,
+  MessageCircle,
+  Bot,
 } from "lucide-react";
 
 export default function PdfChat() {
@@ -208,284 +211,318 @@ export default function PdfChat() {
   }, [subject]);
 
   return (
-    <div className="flex h-full flex-col bg-background relative">
-      <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-6 md:p-8 space-y-2"
-        aria-live="polite"
-        aria-busy={status !== "ready"}
-      >
-        {messages.length === 0 ? (
-          <div className="flex h-[98%] items-center justify-center">
-            <div className="w-full">
-              <div className="flex flex-col gap-4 md:gap-8 ">
-                <PromptCard
-                  title="Riassumi con citazioni"
-                  description="Crea un riassunto citando i passaggi rilevanti."
-                  Icon={Sparkles}
-                  variant="subject"
-                  onClick={() =>
-                    usePrompt(
-                      "Riassumi i concetti principali di questo PDF citando i passaggi rilevanti"
-                    )
-                  }
-                />
-                <PromptCard
-                  title="Definizioni e pagine"
-                  description="Trova definizioni e indica le pagine."
-                  Icon={Wand2}
-                  variant="subject"
-                  onClick={() =>
-                    usePrompt(
-                      "Trova e spiega le definizioni presenti nel PDF indicando le pagine"
-                    )
-                  }
-                />
-                <PromptCard
-                  title="Crea quiz dal PDF"
-                  description="Genera 5 domande a risposta multipla."
-                  Icon={ListChecks}
-                  variant="subject"
-                  onClick={() =>
-                    usePrompt(
-                      "Crea 5 domande a risposta multipla basate sul PDF e cita il testo di riferimento"
-                    )
-                  }
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
-          messages.map((message, idx) => {
-            const isUser = message.role === "user";
-            const messageText = extractTextFromMessage(message);
-            const isLastMessage = idx === messages.length - 1;
-            return (
-              <div
-                key={message.id}
-                className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`group relative flex flex-col ${
-                    isUser ? "items-end" : "items-start"
-                  }`}
-                >
-                  <div
-                    className={`px-4 ${
-                      isUser
-                        ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
-                        : "bg-none text-foreground w-full"
-                    }`}
-                  >
-                    {editingMessageId === message.id && isUser ? (
-                      <div className="w-full">
-                        <textarea
-                          autoFocus
-                          value={editingValue}
-                          onChange={(e) => setEditingValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                              e.preventDefault();
-                              saveEdit();
-                            } else if (e.key === "Escape") {
-                              e.preventDefault();
-                              cancelEdit();
-                            }
-                          }}
-                          className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
-                          placeholder="Modifica il messaggio"
-                        />
-                        <div className="mt-2 flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={cancelEdit}
-                          >
-                            Cancella
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={saveEdit}
-                            variant="secondary"
-                            disabled={status !== "ready"}
-                          >
-                            Invia
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        {!isUser && (
-                          <div className="mb-2 text-xs text-muted-foreground italic">
-                            Risposta basata sul PDF corrente.
-                          </div>
-                        )}
-                        {message.parts.map((part, index) =>
-                          part.type === "text" ? (
-                            <MarkdownRenderer content={part.text} key={index} />
-                          ) : null
-                        )}
-                        {!isUser && (status === "ready" || !isLastMessage) ? (
-                          <div className="mt-3 h-px w-full bg-border" />
-                        ) : null}
-                        {!isUser &&
-                        isThinking &&
-                        status !== "streaming" &&
-                        pendingAssistantId === message.id ? (
-                          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                            Sto pensando...
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
+    <div className="w-full h-full min-h-0 flex flex-col">
+      {/* Chat Header */}
+      <div className="border-b p-4 flex justify-between">
+        <div className="flex items-center gap-2">
+          <Bot className="h-5 w-5 text-muted-foreground" />
+          <h2 className="font-medium text-foreground">Chat sul PDF</h2>
+        </div>
+        <DownloadMenuButton
+          messages={messages as any[]}
+          fileNameBase={`pdf-chat${subject ? `-${subject}` : ""}${
+            noteSlug ? `-${noteSlug}` : ""
+          }`}
+          className="flex border-none shadow-none"
+        />
+      </div>
 
-                  <div
-                    className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${
-                      isUser ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    {isUser ? (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          onClick={() => handleCopy(messageText)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          disabled={status !== "ready"}
-                          onClick={() => beginEdit(message.id)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          onClick={() => handleCopy(messageText)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          disabled={!(status === "ready" || status === "error")}
-                          onClick={() => regenerateWithNote(message.id)}
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
+      {/* Chat Content Placeholder */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex h-full flex-col bg-background relative">
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto p-6 md:p-8 space-y-2"
+            aria-live="polite"
+            aria-busy={status !== "ready"}
+          >
+            {messages.length === 0 ? (
+              <div className="flex h-[98%] items-center justify-center">
+                <div className="w-full">
+                  <div className="flex flex-col gap-4 md:gap-8 ">
+                    <PromptCard
+                      title="Riassumi con citazioni"
+                      description="Crea un riassunto citando i passaggi rilevanti."
+                      Icon={Sparkles}
+                      variant="subject"
+                      onClick={() =>
+                        usePrompt(
+                          "Riassumi i concetti principali di questo PDF citando i passaggi rilevanti"
+                        )
+                      }
+                    />
+                    <PromptCard
+                      title="Definizioni e pagine"
+                      description="Trova definizioni e indica le pagine."
+                      Icon={Wand2}
+                      variant="subject"
+                      onClick={() =>
+                        usePrompt(
+                          "Trova e spiega le definizioni presenti nel PDF indicando le pagine"
+                        )
+                      }
+                    />
+                    <PromptCard
+                      title="Crea quiz dal PDF"
+                      description="Genera 5 domande a risposta multipla."
+                      Icon={ListChecks}
+                      variant="subject"
+                      onClick={() =>
+                        usePrompt(
+                          "Crea 5 domande a risposta multipla basate sul PDF e cita il testo di riferimento"
+                        )
+                      }
+                    />
                   </div>
                 </div>
               </div>
-            );
-          })
-        )}
-        {isThinking && status !== "streaming" && !pendingAssistantId ? (
-          <div className="flex justify-start">
-            <div className="px-4 text-foreground w-full">
-              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                Sto pensando...
-              </div>
-            </div>
-          </div>
-        ) : null}
-        <div ref={messagesEndRef} />
-      </div>
+            ) : (
+              messages.map((message, idx) => {
+                const isUser = message.role === "user";
+                const messageText = extractTextFromMessage(message);
+                const isLastMessage = idx === messages.length - 1;
+                return (
+                  <div
+                    key={message.id}
+                    className={`flex ${
+                      isUser ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    <div
+                      className={`group relative flex flex-col ${
+                        isUser ? "items-end" : "items-start"
+                      }`}
+                    >
+                      <div
+                        className={`px-4 ${
+                          isUser
+                            ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
+                            : "bg-none text-foreground w-full"
+                        }`}
+                      >
+                        {editingMessageId === message.id && isUser ? (
+                          <div className="w-full">
+                            <textarea
+                              autoFocus
+                              value={editingValue}
+                              onChange={(e) => setEditingValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (
+                                  (e.metaKey || e.ctrlKey) &&
+                                  e.key === "Enter"
+                                ) {
+                                  e.preventDefault();
+                                  saveEdit();
+                                } else if (e.key === "Escape") {
+                                  e.preventDefault();
+                                  cancelEdit();
+                                }
+                              }}
+                              className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
+                              placeholder="Modifica il messaggio"
+                            />
+                            <div className="mt-2 flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={cancelEdit}
+                              >
+                                Cancella
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={saveEdit}
+                                variant="secondary"
+                                disabled={status !== "ready"}
+                              >
+                                Invia
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            {!isUser && (
+                              <div className="mb-2 text-xs text-muted-foreground italic">
+                                Risposta basata sul PDF corrente.
+                              </div>
+                            )}
+                            {message.parts.map((part, index) =>
+                              part.type === "text" ? (
+                                <MarkdownRenderer
+                                  content={part.text}
+                                  key={index}
+                                />
+                              ) : null
+                            )}
+                            {!isUser &&
+                            (status === "ready" || !isLastMessage) ? (
+                              <div className="mt-3 h-px w-full bg-border" />
+                            ) : null}
+                            {!isUser &&
+                            isThinking &&
+                            status !== "streaming" &&
+                            pendingAssistantId === message.id ? (
+                              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                                Sto pensando...
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
 
-      {/* Scroll to bottom button */}
-      {showScrollToBottom && (
-        <div className="absolute bottom-20 right-8 z-10">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="rounded-full shadow-lg bg-background border border-border hover:bg-accent"
-            onClick={scrollToBottom}
-            title="Scorri verso il basso"
+                      <div
+                        className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${
+                          isUser ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        {isUser ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              onClick={() => handleCopy(messageText)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              disabled={status !== "ready"}
+                              onClick={() => beginEdit(message.id)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              onClick={() => handleCopy(messageText)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              disabled={
+                                !(status === "ready" || status === "error")
+                              }
+                              onClick={() => regenerateWithNote(message.id)}
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            {isThinking && status !== "streaming" && !pendingAssistantId ? (
+              <div className="flex justify-start">
+                <div className="px-4 text-foreground w-full">
+                  <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                    Sto pensando...
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Scroll to bottom button */}
+          {showScrollToBottom && (
+            <div className="absolute bottom-20 right-8 z-10">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="rounded-full shadow-lg bg-background border border-border hover:bg-accent"
+                onClick={scrollToBottom}
+                title="Scorri verso il basso"
+              >
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (status !== "ready") return;
+              if (input.trim()) {
+                setIsThinking(true);
+                sendMessage({ text: input, metadata: { noteSlug } });
+                setInput("");
+              }
+            }}
+            className="sticky bottom-6 z-10 w-full bg-transparent px-4 md:px-6 pb-3"
           >
-            <ArrowDown className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (status !== "ready") return;
-          if (input.trim()) {
-            setIsThinking(true);
-            sendMessage({ text: input, metadata: { noteSlug } });
-            setInput("");
-          }
-        }}
-        className="sticky bottom-6 z-10 w-full bg-transparent px-4 md:px-6 pb-3"
-      >
-        <div className="w-full">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
-            <div className="flex-1 min-w-0 flex items-center gap-2 w-full">
-              <div className="flex-1 min-w-0">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      if (status === "ready" && input.trim()) {
-                        setIsThinking(true);
-                        sendMessage({ text: input, metadata: { noteSlug } });
-                        setInput("");
-                      }
-                    }
-                  }}
-                  placeholder="Chiedi qualcosa sul PDF..."
-                  rows={1}
-                  className="outline-none w-full max-h-48 border-0 bg-transparent px-3 py-3 text-base leading-6 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
-                  disabled={status !== "ready"}
-                />
+            <div className="w-full">
+              <div className="flex flex-col items-center gap-2 rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
+                <div className="flex-1 min-w-0 flex items-center gap-2 w-full">
+                  <div className="flex-1 min-w-0">
+                    <textarea
+                      ref={textareaRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          if (status === "ready" && input.trim()) {
+                            setIsThinking(true);
+                            sendMessage({
+                              text: input,
+                              metadata: { noteSlug },
+                            });
+                            setInput("");
+                          }
+                        }
+                      }}
+                      placeholder="Chiedi qualcosa sul PDF..."
+                      rows={1}
+                      className="outline-none w-full max-h-48 border-0 bg-transparent px-3 py-3 text-base leading-6 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none overflow-y-auto"
+                      disabled={status !== "ready"}
+                    />
+                  </div>
+                  {status === "ready" ? (
+                    <Button
+                      type="submit"
+                      size="icon"
+                      className={`h-10 w-10 rounded-full text-white ${
+                        input.trim()
+                          ? "bg-[var(--subject-color)]/95 hover:bg-[var(--subject-color)]"
+                          : ""
+                      }`}
+                      variant={"secondary"}
+                    >
+                      <ArrowUp className="h-5 w-5" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="secondary"
+                      className="h-10 w-10 rounded-full"
+                      onClick={() => stop()}
+                    >
+                      <Square className="h-5 w-5" />
+                    </Button>
+                  )}
+                </div>
               </div>
-              {status === "ready" ? (
-                <Button
-                  type="submit"
-                  size="icon"
-                  className={`h-10 w-10 rounded-full text-white ${
-                    input.trim()
-                      ? "bg-[var(--subject-color)]/95 hover:bg-[var(--subject-color)]"
-                      : ""
-                  }`}
-                  variant={"secondary"}
-                >
-                  <ArrowUp className="h-5 w-5" />
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="secondary"
-                  className="h-10 w-10 rounded-full"
-                  onClick={() => stop()}
-                >
-                  <Square className="h-5 w-5" />
-                </Button>
-              )}
             </div>
-          </div>
+          </form>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

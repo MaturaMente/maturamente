@@ -4,7 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import PromptCard from "./PromptCard";
+import PromptCard from "./components/PromptCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MarkdownRenderer from "../shared/renderer/markdown-renderer";
@@ -29,6 +29,7 @@ import {
   Bot,
   ArrowRight,
 } from "lucide-react";
+import DownloadMenuButton from "./components/download-menu-button";
 
 type UINote = {
   id: string;
@@ -742,7 +743,23 @@ export default function SubjectChat({ subject }: { subject?: string }) {
               >
                 <Plus className="h-5 w-5" />
               </Button>
-
+              <DownloadMenuButton
+                messages={messages as any[]}
+                fileNameBase={`subject-chat${subject ? `-${subject}` : ""}`}
+                buttonVariant="ghost"
+                buttonSize="icon"
+                label="Scarica"
+                getMetadata={() => ({
+                  title: "Subject Chat",
+                  userName: (session?.user?.name as string) || null,
+                  subjectName: subject || null,
+                  date: new Date(),
+                  themeColor:
+                    getComputedStyle(document.documentElement)
+                      .getPropertyValue("--subject-color")
+                      .trim() || undefined,
+                })}
+              />
               <div className="flex-1 min-w-0">
                 <textarea
                   ref={textareaRef}
