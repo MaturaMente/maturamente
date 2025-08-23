@@ -13,6 +13,7 @@ import type { NotesStatisticsData, RecentNote } from "@/types/statisticsTypes";
 import {
   getSubjectStudyStats,
   getMonthlyStudyActivityBySubject,
+  getDailyStudyActivityBySubject,
 } from "./study-sessions";
 
 /**
@@ -615,6 +616,11 @@ export const getNotesStatistics = cache(
         subjectSlug,
         6
       );
+      const dailyStudyActivity = await getDailyStudyActivityBySubject(
+        userId,
+        subjectSlug,
+        60
+      );
 
       return {
         totalNotes,
@@ -630,6 +636,7 @@ export const getNotesStatistics = cache(
         totalStudySessions: studyStats.totalSessions,
         averageSessionTimeMinutes: studyStats.averageTimeMinutes,
         monthlyStudyActivity,
+        dailyStudyActivity,
       };
     } catch (error) {
       console.error("Error fetching notes statistics:", error);

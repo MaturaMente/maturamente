@@ -6,6 +6,7 @@ import {
   StudySessionStats,
   NoteStudyStats,
   MonthlyStudyActivity,
+  DailyStudyActivity,
 } from "@/types/studySessionsTypes";
 
 /**
@@ -214,6 +215,151 @@ export function getStudyTimeByDay(userId: string, days: number = 30) {
     {
       revalidate: 60,
       tags: ["study-sessions", `user-${userId}`],
+    }
+  )();
+}
+
+/**
+ * Get normalized daily activity for the last N days (fills missing days with 0)
+ */
+export function getDailyStudyActivity(
+  userId: string,
+  days: number = 60
+): Promise<DailyStudyActivity[]> {
+  return unstable_cache(
+    async (): Promise<DailyStudyActivity[]> => {
+      const startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      startDate.setDate(startDate.getDate() - days + 1);
+
+      const sessions = await db
+        .select({
+          started_at: noteStudySessionsTable.started_at,
+          last_active_at: noteStudySessionsTable.last_active_at,
+        })
+        .from(noteStudySessionsTable)
+        .where(
+          and(
+            eq(noteStudySessionsTable.user_id, userId),
+            sql`${noteStudySessionsTable.started_at} >= ${startDate}`
+          )
+        )
+        .orderBy(desc(noteStudySessionsTable.started_at));
+
+      // Aggregate totals by ISO date (YYYY-MM-DD)
+      const totalsByIsoDate = sessions.reduce((acc, session) => {
+        const d = new Date(session.started_at);
+        const dateOnly = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const iso = dateOnly.toISOString().slice(0, 10);
+        if (!acc[iso]) acc[iso] = [] as any[];
+        acc[iso].push(session);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      // Build complete range day-by-day, filling gaps with zeros
+      const out: DailyStudyActivity[] = [];
+      const cursor = new Date(startDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      while (cursor <= today) {
+        const iso = new Date(
+          cursor.getFullYear(),
+          cursor.getMonth(),
+          cursor.getDate()
+        )
+          .toISOString()
+          .slice(0, 10);
+
+        const stats = calculateSessionStats(totalsByIsoDate[iso] || []);
+        out.push({
+          date: iso,
+          studyTimeMinutes: stats.totalTimeMinutes,
+          sessionCount: stats.totalSessions,
+        });
+
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      return out;
+    },
+    ["getDailyStudyActivity", userId, String(days)],
+    {
+      revalidate: 60,
+      tags: ["study-sessions", `user-${userId}`],
+    }
+  )();
+}
+
+/**
+ * Get normalized daily activity for a subject for the last N days
+ */
+export function getDailyStudyActivityBySubject(
+  userId: string,
+  subjectSlug: string,
+  days: number = 60
+): Promise<DailyStudyActivity[]> {
+  return unstable_cache(
+    async (): Promise<DailyStudyActivity[]> => {
+      const startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      startDate.setDate(startDate.getDate() - days + 1);
+
+      const sessions = await db
+        .select({
+          started_at: noteStudySessionsTable.started_at,
+          last_active_at: noteStudySessionsTable.last_active_at,
+        })
+        .from(noteStudySessionsTable)
+        .innerJoin(
+          notesTable,
+          eq(noteStudySessionsTable.note_id, notesTable.id)
+        )
+        .innerJoin(subjectsTable, eq(notesTable.subject_id, subjectsTable.id))
+        .where(
+          and(
+            eq(noteStudySessionsTable.user_id, userId),
+            eq(subjectsTable.slug, subjectSlug),
+            sql`${noteStudySessionsTable.started_at} >= ${startDate}`
+          )
+        )
+        .orderBy(desc(noteStudySessionsTable.started_at));
+
+      const totalsByIsoDate = sessions.reduce((acc, session) => {
+        const d = new Date(session.started_at);
+        const dateOnly = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const iso = dateOnly.toISOString().slice(0, 10);
+        if (!acc[iso]) acc[iso] = [] as any[];
+        acc[iso].push(session);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      const out: DailyStudyActivity[] = [];
+      const cursor = new Date(startDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      while (cursor <= today) {
+        const iso = new Date(
+          cursor.getFullYear(),
+          cursor.getMonth(),
+          cursor.getDate()
+        )
+          .toISOString()
+          .slice(0, 10);
+        const stats = calculateSessionStats(totalsByIsoDate[iso] || []);
+        out.push({
+          date: iso,
+          studyTimeMinutes: stats.totalTimeMinutes,
+          sessionCount: stats.totalSessions,
+        });
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return out;
+    },
+    ["getDailyStudyActivityBySubject", userId, subjectSlug, String(days)],
+    {
+      revalidate: 60,
+      tags: ["study-sessions", `user-${userId}`, `subject-${subjectSlug}`],
     }
   )();
 }

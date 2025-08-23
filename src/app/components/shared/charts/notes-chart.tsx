@@ -10,7 +10,13 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BarChart3, TrendingUp, Clock } from "lucide-react";
+import {
+  BarChart3,
+  TrendingUp,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -22,10 +28,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import type { MonthlyStudyActivity } from "@/types/studySessionsTypes";
+import type { DailyStudyActivity } from "@/types/studySessionsTypes";
 
 interface NotesChartProps {
-  monthlyActivity: MonthlyStudyActivity[];
+  dailyActivity: DailyStudyActivity[];
   subjectColor?: string;
 }
 
@@ -40,12 +46,13 @@ interface TooltipProps {
 }
 
 export function NotesChart({
-  monthlyActivity,
+  dailyActivity,
   subjectColor = "#3b82f6",
 }: NotesChartProps) {
   const [mounted, setMounted] = useState(false);
   const [chartType, setChartType] = useState<"bar" | "line">("bar");
   const [isMobile, setIsMobile] = useState(false);
+  const [endIndex, setEndIndex] = useState<number>(0);
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -64,20 +71,34 @@ export function NotesChart({
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
+  // Keep the view anchored to the latest available day when props or screen size changes
+  useEffect(() => {
+    if (!dailyActivity || dailyActivity.length === 0) return;
+    setEndIndex(dailyActivity.length - 1);
+  }, [dailyActivity, isMobile]);
+
   if (!mounted) {
     return null;
   }
 
-  // Process activity data based on screen size
-  const processedActivity = isMobile
-    ? monthlyActivity.slice(-3)
-    : monthlyActivity;
+  // Determine window size and slice the visible activity
+  const windowSize = isMobile ? 3 : 7;
+  const startIndex = Math.max(0, endIndex - windowSize + 1);
+  const canGoBack = startIndex > 0;
+  const canGoForward = endIndex < dailyActivity.length - 1;
+  const visibleActivity = dailyActivity.slice(startIndex, endIndex + 1);
 
   // Transform data for charts - study time in minutes for clearer axis units
-  const chartData = processedActivity.map((activity) => ({
-    month: activity.month,
-    minutes: activity.studyTimeMinutes,
-  }));
+  const chartData = visibleActivity.map((activity) => {
+    const dateObj = new Date(activity.date);
+    const day = dateObj.getDate();
+    const monthShort = dateObj.toLocaleString("it-IT", { month: "short" });
+    const label = `${day} ${monthShort}`;
+    return {
+      label,
+      minutes: activity.studyTimeMinutes,
+    };
+  });
 
   // Determine adaptive Y-axis ticks in minutes
   const maxMinutes = Math.max(...chartData.map((d) => d.minutes), 0);
@@ -136,7 +157,7 @@ export function NotesChart({
   };
 
   const commonXAxisProps = {
-    dataKey: "month",
+    dataKey: "label",
     className: "text-xs fill-muted-foreground",
     tick: { fontSize: 12, dy: 5 },
     axisLine: { stroke: "hsl(var(--border))" },
@@ -227,11 +248,11 @@ export function NotesChart({
   );
 
   // Calculate totals for header
-  const totalStudyTime = monthlyActivity.reduce(
+  const totalStudyTime = visibleActivity.reduce(
     (sum, activity) => sum + activity.studyTimeMinutes,
     0
   );
-  const totalSessions = monthlyActivity.reduce(
+  const totalSessions = visibleActivity.reduce(
     (sum, activity) => sum + activity.sessionCount,
     0
   );
@@ -246,15 +267,27 @@ export function NotesChart({
                 className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0"
                 style={{ color: subjectColor }}
               />
-              <span className="truncate">Tempo di studio mensile</span>
+              <span className="truncate">Tempo di studio</span>
             </CardTitle>
             <CardDescription className="text-xs md:text-sm">
-              Ore dedicate allo studio degli appunti negli ultimi{" "}
-              {isMobile ? "3" : "6"} mesi
+              {isMobile ? "Ultimi 3 giorni" : "Ultimi 7 giorni"}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="flex gap-2 w-full md:w-auto">
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setEndIndex((prev) =>
+                    Math.max(windowSize - 1, prev - windowSize)
+                  )
+                }
+                className="text-xs"
+                disabled={!canGoBack}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
               <Button
                 variant={chartType === "bar" ? "secondary" : "outline"}
                 size="sm"
@@ -282,6 +315,19 @@ export function NotesChart({
               >
                 <TrendingUp className="h-3 w-3 mr-1" />
                 Linea
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setEndIndex((prev) =>
+                    Math.min(dailyActivity.length - 1, prev + windowSize)
+                  )
+                }
+                className="text-xs"
+                disabled={!canGoForward}
+              >
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>

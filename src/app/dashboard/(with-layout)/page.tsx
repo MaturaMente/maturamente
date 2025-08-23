@@ -28,7 +28,7 @@ import {
   getDashboardRecentStudyData,
 } from "@/utils/dashboard-data";
 import type { Metadata } from "next";
-import { getMonthlyStudyActivity } from "@/utils/study-sessions";
+import { getDailyStudyActivity } from "@/utils/study-sessions";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -96,20 +96,19 @@ async function DashboardContent() {
       subjectsData,
       userSubjects,
       subscriptionData,
-      monthlyActivity,
+      dailyActivity,
       recentStudyData,
     ] = await Promise.all([
       SubjectsDataServer(),
       getUserSubjects(userId),
       getDashboardSubscriptionData(userId),
-      getMonthlyStudyActivity(userId, 6),
+      getDailyStudyActivity(userId, 60),
       getDashboardRecentStudyData(userId, 6),
     ]);
 
     return (
       <SubscriptionChecker userId={userId}>
         <div className="pointer-events-none absolute top-0 left-0 h-100 w-100 bg-blue-500/20 rounded-[50%] -translate-x-1/3 -translate-y-1/3 blur-[100px]" />
-        <div className="hidden md:block pointer-events-none absolute bottom-0 right-0 h-100 w-100 bg-blue-300/20 rounded-[50%] translate-x-1/3 translate-y-1/3 blur-[100px]" />
         <div className="flex flex-col gap-8 pb-10 container mx-auto max-w-7xl">
           {/* Header Section */}
           <div className="relative w-full pt-2">
@@ -290,7 +289,7 @@ async function DashboardContent() {
               </Card>
               {/* Ore di studio Section - takes 1/3 of the width */}
               <div className="lg:col-span-2 rounded-2xl backdrop-blur-sm shadow-xl">
-                <NotesChart monthlyActivity={monthlyActivity} />
+                <NotesChart dailyActivity={dailyActivity} />
               </div>
             </div>
           </div>

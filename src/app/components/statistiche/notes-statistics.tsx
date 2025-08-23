@@ -49,6 +49,7 @@ export function NotesStatistics({
     studiedPercentage,
     recentNotes,
     monthlyStudyActivity,
+    dailyStudyActivity,
   } = data;
 
   const formatDate = (date: Date) => {
@@ -175,7 +176,7 @@ export function NotesStatistics({
 
         <TabsContent value="activity">
           <NotesChart
-            monthlyActivity={monthlyStudyActivity}
+            dailyActivity={dailyStudyActivity || []}
             subjectColor={subjectColor}
           />
         </TabsContent>

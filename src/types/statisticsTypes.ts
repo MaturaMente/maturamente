@@ -76,6 +76,11 @@ export interface NotesStatisticsData {
   totalStudySessions: number;
   averageSessionTimeMinutes: number;
   monthlyStudyActivity: MonthlyStudyActivity[];
+  dailyStudyActivity?: {
+    date: string;
+    studyTimeMinutes: number;
+    sessionCount: number;
+  }[];
 }
 
 export interface MonthlyStudyActivity {

@@ -363,7 +363,7 @@ export default function DashboardChat() {
     <div className="flex h-full flex-col relative">
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-8 pt-24 md:pt-28 pb-40 space-y-2 md:px-[12%]"
+        className="flex-1 overflow-y-auto px-12 py-32 space-y-2 md:px-[4%]"
         aria-live="polite"
         aria-busy={status !== "ready"}
       >
@@ -393,7 +393,7 @@ export default function DashboardChat() {
                   </div>
                 </div>
                 {/* Prompt cards */}
-                <div className="w-full grid grid-cols-1 md:grid-cols-3 md:gap-8 gap-4">
+                <div className="w-full grid grid-cols-1 lg:grid-cols-3 lg:gap-8 gap-4">
                   <PromptCard
                     title="Spiegami facilmente"
                     description="Ottieni una spiegazione semplice con esempi chiari."
@@ -768,6 +768,7 @@ export default function DashboardChat() {
                 buttonVariant="ghost"
                 buttonSize="icon"
                 label="Scarica"
+                className="hidden sm:block"
                 getMetadata={() => ({
                   title: "Dashboard Chat",
                   userName: (session?.user?.name as string) || null,
