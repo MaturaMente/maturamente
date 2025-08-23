@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "../shared/renderer/markdown-renderer";
+import PromptCard from "./PromptCard";
 import {
   ArrowUp,
   ArrowDown,
@@ -13,6 +14,9 @@ import {
   Pencil,
   RefreshCw,
   Square,
+  Sparkles,
+  Wand2,
+  ListChecks,
 } from "lucide-react";
 
 export default function PdfChat() {
@@ -178,53 +182,76 @@ export default function PdfChat() {
     el.style.height = newHeight + "px";
   }, [input]);
 
+  // Ensure subject color CSS variable is present for consistent styling
+  useEffect(() => {
+    let cancelled = false;
+    async function ensureSubjectColor() {
+      if (!subject) return;
+      try {
+        const current = getComputedStyle(document.documentElement)
+          .getPropertyValue("--subject-color")
+          .trim();
+        if (current) return;
+        const res = await fetch(`/api/subjects/${subject}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const color = (data?.color as string) || "";
+        if (!cancelled && color) {
+          document.documentElement.style.setProperty("--subject-color", color);
+        }
+      } catch {}
+    }
+    ensureSubjectColor();
+    return () => {
+      cancelled = true;
+    };
+  }, [subject]);
+
   return (
-    <div className="flex h-[calc(100vh-100px)] flex-col bg-background relative">
+    <div className="flex h-full flex-col bg-background relative">
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-8 space-y-2"
+        className="flex-1 overflow-y-auto p-6 md:p-8 space-y-2"
         aria-live="polite"
         aria-busy={status !== "ready"}
       >
         {messages.length === 0 ? (
           <div className="flex h-[98%] items-center justify-center">
-            <div className="text-center max-w-2xl">
-              <div className="flex flex-col items-center justify-center gap-4">
-                <div className="w-full flex flex-col gap-2 justify-center">
-                  <Button
-                    className="rounded-full"
-                    variant="outline"
-                    onClick={() =>
-                      usePrompt(
-                        "Riassumi i concetti principali di questo PDF citando i passaggi rilevanti"
-                      )
-                    }
-                  >
-                    Riassumi con citazioni
-                  </Button>
-                  <Button
-                    className="rounded-full"
-                    variant="outline"
-                    onClick={() =>
-                      usePrompt(
-                        "Trova e spiega le definizioni presenti nel PDF indicando le pagine"
-                      )
-                    }
-                  >
-                    Definizioni e pagine
-                  </Button>
-                  <Button
-                    className="rounded-full"
-                    variant="outline"
-                    onClick={() =>
-                      usePrompt(
-                        "Crea 5 domande a risposta multipla basate sul PDF e cita il testo di riferimento"
-                      )
-                    }
-                  >
-                    Crea quiz dal PDF
-                  </Button>
-                </div>
+            <div className="w-full">
+              <div className="flex flex-col gap-4 md:gap-8 ">
+                <PromptCard
+                  title="Riassumi con citazioni"
+                  description="Crea un riassunto citando i passaggi rilevanti."
+                  Icon={Sparkles}
+                  variant="subject"
+                  onClick={() =>
+                    usePrompt(
+                      "Riassumi i concetti principali di questo PDF citando i passaggi rilevanti"
+                    )
+                  }
+                />
+                <PromptCard
+                  title="Definizioni e pagine"
+                  description="Trova definizioni e indica le pagine."
+                  Icon={Wand2}
+                  variant="subject"
+                  onClick={() =>
+                    usePrompt(
+                      "Trova e spiega le definizioni presenti nel PDF indicando le pagine"
+                    )
+                  }
+                />
+                <PromptCard
+                  title="Crea quiz dal PDF"
+                  description="Genera 5 domande a risposta multipla."
+                  Icon={ListChecks}
+                  variant="subject"
+                  onClick={() =>
+                    usePrompt(
+                      "Crea 5 domande a risposta multipla basate sul PDF e cita il testo di riferimento"
+                    )
+                  }
+                />
               </div>
             </div>
           </div>
@@ -405,11 +432,11 @@ export default function PdfChat() {
             setInput("");
           }
         }}
-        className="sticky bottom-0 z-10 w-full bg-transparent pb-8 md:pb-4 px-8"
+        className="sticky bottom-6 z-10 w-full bg-transparent px-4 md:px-6 pb-3"
       >
         <div className="w-full">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-muted/10 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-muted/10">
-            <div className="flex-1 min-w-0 flex items-end gap-2 w-full">
+          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
+            <div className="flex-1 min-w-0 flex items-center gap-2 w-full">
               <div className="flex-1 min-w-0">
                 <textarea
                   ref={textareaRef}
@@ -435,8 +462,12 @@ export default function PdfChat() {
                 <Button
                   type="submit"
                   size="icon"
-                  className="h-10 w-10 rounded-full text-white"
-                  variant={input.trim() ? "default" : "secondary"}
+                  className={`h-10 w-10 rounded-full text-white ${
+                    input.trim()
+                      ? "bg-[var(--subject-color)]/95 hover:bg-[var(--subject-color)]"
+                      : ""
+                  }`}
+                  variant={"secondary"}
                 >
                   <ArrowUp className="h-5 w-5" />
                 </Button>

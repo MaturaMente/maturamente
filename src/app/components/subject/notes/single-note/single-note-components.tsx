@@ -128,7 +128,7 @@ export function PDFComponent({
 // Chat component for AI interaction (placeholder for now)
 export function ChatComponent({}: ChatComponentProps) {
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full min-h-0 flex flex-col">
       {/* Chat Header */}
       <div className="border-b p-4">
         <div className="flex items-center gap-2">
@@ -138,7 +138,9 @@ export function ChatComponent({}: ChatComponentProps) {
       </div>
 
       {/* Chat Content Placeholder */}
-      <PdfChat />
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <PdfChat />
+      </div>
     </div>
   );
 }

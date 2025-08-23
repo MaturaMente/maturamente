@@ -230,16 +230,16 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
       <div
         ref={desktopContainerRef}
         className={cn(
-          "hidden md:flex flex-1 border-b",
+          "hidden md:flex flex-1 border-b w-full h-screen",
           isDesktopFullscreen
             ? "fixed inset-0 z-50 bg-background"
             : "bg-background"
         )}
       >
         {/* Left section - PDF Viewer */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="w-2/3 flex-1 flex flex-col h-screen">
           {/* PDF Viewer */}
-          <div className="flex-1 relative min-h-0 overflow-hidden">
+          <div className="flex-1 relative overflow-hidden">
             <PDFComponent
               note={note}
               mobileFullscreen={isDesktopFullscreen}
@@ -249,8 +249,8 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
         </div>
 
         {/* Right section - AI Chat */}
-        <div className="w-[420px] lg:w-[480px] border-l bg-background flex flex-col min-h-0">
-          <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="w-1/3 border-l bg-background flex flex-col h-screen">
+          <div className="flex-1 overflow-hidden">
             <ChatComponent />
           </div>
         </div>
