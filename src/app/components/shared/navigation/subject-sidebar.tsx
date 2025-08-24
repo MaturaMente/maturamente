@@ -121,7 +121,7 @@ export default function SubjectSidebar({
       return pathname === href;
     }
 
-    // For sub-pages (e.g., "/matematica/tutor"), check if pathname matches exactly
+    // For sub-pages (e.g., "/matematica/pit"), check if pathname matches exactly
     // or starts with the href followed by a "/"
     return pathname === href || pathname.startsWith(href + "/");
   };

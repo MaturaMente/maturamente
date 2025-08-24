@@ -3,11 +3,13 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useRef, useState } from "react";
+import useAutoScroll from "@/utils/useAutoScroll";
 import { useSession } from "next-auth/react";
 import PromptCard from "./components/PromptCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import MarkdownRenderer from "../shared/renderer/markdown-renderer";
+import MarkdownRenderer from "./chat-markdown-renderer";
+// import MarkdownRenderer from "../shared/renderer/markdown-renderer";
 import {
   ArrowUp,
   ArrowDown,
@@ -30,6 +32,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import DownloadMenuButton from "./components/download-menu-button";
+import { cn } from "@/lib/utils";
 
 type UINote = {
   id: string;
@@ -50,7 +53,14 @@ export default function SubjectChat({ subject }: { subject?: string }) {
       }),
     });
   const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  // Autoscroll management
+  const {
+    containerRef,
+    onItemsChange,
+    hasNewItems,
+    scrollToBottom,
+    setIsStreaming,
+  } = useAutoScroll({ bottomThreshold: 50 });
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
   const [showNotesOverlay, setShowNotesOverlay] = useState(false);
@@ -76,47 +86,20 @@ export default function SubjectChat({ subject }: { subject?: string }) {
   const [chipsExpanded, setChipsExpanded] = useState(false);
   const [chipsCanCollapse, setChipsCanCollapse] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
-  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  // Removed legacy scroll refs/state in favor of useAutoScroll
+  const [isMultiline, setIsMultiline] = useState(false);
   const [subjectColor, setSubjectColor] = useState<string | null>(null);
   const { data: session } = useSession();
   const firstName = (session?.user?.name || "").split(" ")[0] || null;
 
-  // Smart auto-scroll: only scroll to bottom if user is already at the bottom
+  // Autoscroll: mark streaming state and notify on message updates
   useEffect(() => {
-    if (!scrollContainerRef.current || isUserScrolledUp) return;
+    setIsStreaming(status === "streaming");
+  }, [status, setIsStreaming]);
 
-    const container = scrollContainerRef.current;
-    const isAtBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight <
-      100;
-
-    if (isAtBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    } else {
-      setShowScrollToBottom(true);
-    }
-  }, [messages, isUserScrolledUp]);
-
-  // Track user scroll position
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
-
-      setIsUserScrolledUp(!isAtBottom);
-      if (isAtBottom) {
-        setShowScrollToBottom(false);
-      }
-    };
-
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, []);
+    onItemsChange();
+  }, [messages, onItemsChange]);
 
   // Ensure subject color CSS variable is set locally to avoid blank states
   useEffect(() => {
@@ -147,11 +130,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
     };
   }, [subject]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    setShowScrollToBottom(false);
-    setIsUserScrolledUp(false);
-  };
+  // scrollToBottom provided by hook
 
   const extractTextFromMessage = (message: any) => {
     return message.parts
@@ -301,13 +280,16 @@ export default function SubjectChat({ subject }: { subject?: string }) {
     }
   }, [status, isRetrieving]);
 
-  // Auto-resize textarea height up to a max
+  // Auto-resize textarea height up to a max and detect multiline
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "0px";
     const newHeight = Math.min(el.scrollHeight, 192); // max-h-48
     el.style.height = newHeight + "px";
+    const computed = getComputedStyle(el);
+    const lineHeight = parseFloat(computed.lineHeight || "24");
+    setIsMultiline(newHeight > lineHeight + 2);
   }, [input]);
 
   const cardStyle = {
@@ -315,7 +297,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
   } as React.CSSProperties;
 
   return (
-    <div className="flex h-full flex-col bg-background relative">
+    <div className="flex h-full md:h-[calc(100vh-60px)] flex-col relative">
       {/* Improved layered gradient background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-25">
         <div className="absolute inset-0 bg-gradient-to-b from-[var(--subject-color)]/15 via-transparent to-transparent" />
@@ -324,315 +306,357 @@ export default function SubjectChat({ subject }: { subject?: string }) {
         <div className="absolute -bottom-10 left-1/4 h-40 w-80 rounded-[40%] bg-muted/20 blur-[70px]" />
       </div>
       <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-8 pt-[72px] md:pt-[88px] space-y-2 md:px-[12%]"
+        ref={containerRef}
+        className="flex-1 overflow-y-auto"
         aria-live="polite"
         aria-busy={status !== "ready"}
         style={cardStyle}
       >
-        {/* Inline retrieval indicator will render next to the pending assistant message below */}
-        {messages.length === 0 ? (
-          <div className="flex h-[98%] items-center justify-center">
-            <div className="text-center max-w-4xl">
-              <div className="flex flex-col md:flex-wrap items-center justify-center md:gap-8 gap-4">
-                {/* Hero */}
-                <div className="flex flex-col items-center gap-3 mb-2">
-                  <div className="relative">
-                    <div className="pointer-events-none absolute -inset-2 rounded-2xl bg-[var(--subject-color)]/30 blur-md" />
-                    <div className="hidden dark:block absolute -top-px left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-70" />
-                    <div className="relative h-12 w-12 rounded-2xl text-background flex items-center justify-center shadow-sm bg-[var(--subject-color)]">
-                      <Bot className="h-5 w-5 text-white" />
+        <div className="mx-auto w-full px-6 h-full md:py-12 py-6 mb-32 md:mb-0 space-y-2">
+          {/* Inline retrieval indicator will render next to the pending assistant message below */}
+          {messages.length === 0 ? (
+            <div className="flex h-[98%] items-center justify-center">
+              <div className="text-center max-w-4xl">
+                <div className="flex flex-col md:flex-wrap items-center justify-center md:gap-8 gap-4 md:pt-0 pt-12">
+                  {/* Hero */}
+                  <div className="flex flex-col items-center gap-3 mb-2">
+                    <div className="relative">
+                      <div className="pointer-events-none absolute -inset-2 rounded-2xl bg-[var(--subject-color)]/30 blur-md" />
+                      <div className="hidden dark:block absolute -top-px left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-70" />
+                      <div className="relative h-12 w-12 rounded-2xl text-background flex items-center justify-center shadow-sm bg-[var(--subject-color)]">
+                        <Bot className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-2xl md:text-3xl font-semibold tracking-tight">
+                        {`Bentornato${
+                          firstName ? ` ${firstName}` : ""
+                        }, cosa devi studiare oggi?`}
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        Pronto ad aiutarti con spiegazioni, riassunti e quiz dai
+                        tuoi appunti.
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-2xl md:text-3xl font-semibold tracking-tight">
-                      {`Bentornato${
-                        firstName ? ` ${firstName}` : ""
-                      }, cosa devi studiare oggi?`}
-                    </div>
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      Pronto ad aiutarti con spiegazioni, riassunti e quiz dai
-                      tuoi appunti.
-                    </div>
+                  {/* Prompt cards */}
+                  <div className="w-full grid grid-cols-1 md:grid-cols-3 md:gap-8 gap-4">
+                    <PromptCard
+                      title="Spiegami facilmente"
+                      description="Ottieni una spiegazione semplice con esempi chiari."
+                      Icon={Sparkles}
+                      variant="subject"
+                      onClick={() =>
+                        usePrompt(
+                          "Spiegami questi argomenti come se avessi 12 anni, con esempi concreti e analogie semplici."
+                        )
+                      }
+                    />
+                    <PromptCard
+                      title="Riassumi e organizza"
+                      description="Crea un riassunto con punti chiave ordinati."
+                      Icon={Wand2}
+                      variant="subject"
+                      onClick={() =>
+                        usePrompt(
+                          "Riassumi i concetti chiave dagli appunti selezionati e crea una mini mappa mentale con bullet point."
+                        )
+                      }
+                    />
+                    <PromptCard
+                      title="Crea quiz dai documenti"
+                      description="Genera domande per metterti alla prova."
+                      Icon={ListChecks}
+                      variant="subject"
+                      onClick={() =>
+                        usePrompt(
+                          "Crea 5 domande a risposta multipla sui contenuti selezionati, con spiegazione della soluzione."
+                        )
+                      }
+                    />
                   </div>
+                  <Button
+                    className="bg-[var(--subject-color)]/95 text-white cursor-pointer hover:bg-[var(--subject-color)] hover:scale-102 hover:shadow-2xl hover:shadow-[var(--subject-color)] transition-all duration-300"
+                    variant="secondary"
+                    size="lg"
+                    onClick={openNotesOverlay}
+                    title="Seleziona gli appunti"
+                  >
+                    Scegli gli appunti
+                  </Button>
                 </div>
-                {/* Prompt cards */}
-                <div className="w-full grid grid-cols-1 md:grid-cols-3 md:gap-8 gap-4">
-                  <PromptCard
-                    title="Spiegami facilmente"
-                    description="Ottieni una spiegazione semplice con esempi chiari."
-                    Icon={Sparkles}
-                    variant="subject"
-                    onClick={() =>
-                      usePrompt(
-                        "Spiegami questi argomenti come se avessi 12 anni, con esempi concreti e analogie semplici."
-                      )
-                    }
-                  />
-                  <PromptCard
-                    title="Riassumi e organizza"
-                    description="Crea un riassunto con punti chiave ordinati."
-                    Icon={Wand2}
-                    variant="subject"
-                    onClick={() =>
-                      usePrompt(
-                        "Riassumi i concetti chiave dagli appunti selezionati e crea una mini mappa mentale con bullet point."
-                      )
-                    }
-                  />
-                  <PromptCard
-                    title="Crea quiz dai documenti"
-                    description="Genera domande per metterti alla prova."
-                    Icon={ListChecks}
-                    variant="subject"
-                    onClick={() =>
-                      usePrompt(
-                        "Crea 5 domande a risposta multipla sui contenuti selezionati, con spiegazione della soluzione."
-                      )
-                    }
-                  />
-                </div>
-                <Button
-                  className="bg-[var(--subject-color)]/95 text-white cursor-pointer hover:bg-[var(--subject-color)] hover:scale-102 hover:shadow-2xl hover:shadow-[var(--subject-color)] transition-all duration-300"
-                  variant="secondary"
-                  size="lg"
-                  onClick={openNotesOverlay}
-                  title="Seleziona gli appunti"
-                >
-                  Scegli gli appunti
-                </Button>
               </div>
             </div>
-          </div>
-        ) : (
-          messages.map((message, idx) => {
-            const isUser = message.role === "user";
-            const messageText = extractTextFromMessage(message);
-            const isLastMessage = idx === messages.length - 1;
-            return (
-              <div
-                key={message.id}
-                className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`flex items-start gap-3 w-full ${
-                    isUser ? "flex-row-reverse" : ""
-                  }`}
-                >
+          ) : (
+            <div
+              className={cn(
+                "mx-auto w-full max-w-3xl h-full space-y-2",
+                selectedNoteSlugs.length > 0 ? "pb-[160px]" : "pb-[60px]"
+              )}
+            >
+              {messages.map((message, idx) => {
+                const isUser = message.role === "user";
+                const messageText = extractTextFromMessage(message);
+                const isLastMessage = idx === messages.length - 1;
+                return (
                   <div
-                    className={`group relative flex flex-col ${
-                      isUser ? "items-end" : "items-start"
+                    key={message.id}
+                    className={`flex ${
+                      isUser ? "justify-end" : "justify-start"
                     }`}
                   >
                     <div
-                      className={`px-4 ${
-                        isUser
-                          ? "px-4 py-2 rounded-2xl bg-[var(--subject-color)]/95 dark:text-foreground text-primary-foreground"
-                          : "bg-none text-foreground w-full"
+                      className={`flex items-start gap-3 w-full ${
+                        isUser ? "flex-row-reverse" : ""
                       }`}
                     >
-                      {editingMessageId === message.id && isUser ? (
-                        <div className="w-full">
-                          <textarea
-                            autoFocus
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (
-                                (e.metaKey || e.ctrlKey) &&
-                                e.key === "Enter"
-                              ) {
-                                e.preventDefault();
-                                saveEdit();
-                              } else if (e.key === "Escape") {
-                                e.preventDefault();
-                                cancelEdit();
-                              }
-                            }}
-                            className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
-                            placeholder="Modifica il messaggio"
-                          />
-                          <div className="mt-2 flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={cancelEdit}
-                            >
-                              Cancella
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={saveEdit}
-                              variant="secondary"
-                              disabled={status !== "ready"}
-                            >
-                              Invia
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          {/* Assistant header with PIT */}
-                          {!isUser && (
-                            <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                              <Bot className="h-4 w-4" /> PIT
-                            </div>
-                          )}
-                          {/* RAG disclaimer for assistant messages */}
-                          {!isUser &&
-                            (() => {
-                              const idx = messages.findIndex(
-                                (m) => m.id === message.id
-                              );
-                              const prevUser = messages
-                                .slice(0, idx)
-                                .reverse()
-                                .find((m) => m.role === "user");
-                              const used = ((prevUser as any)?.metadata
-                                ?.selectedNoteSlugs || []) as string[];
-                              if (Array.isArray(used) && used.length > 0) {
-                                const titles = getTitlesFromSlugs(used);
-                                if (titles.length > 0) {
-                                  return (
-                                    <div className="mb-2 text-xs text-muted-foreground italic">
-                                      {`Risposta generata partendo da: ${titles.join(
-                                        ", "
-                                      )}`}
-                                    </div>
-                                  );
+                      <div
+                        className={`group relative flex flex-col ${
+                          isUser ? "items-end" : "items-start"
+                        }`}
+                      >
+                        <div
+                          className={`px-4 ${
+                            isUser
+                              ? "px-4 py-2 rounded-2xl bg-[var(--subject-color)]/95 dark:text-foreground text-primary-foreground"
+                              : "bg-none text-foreground w-full"
+                          }`}
+                        >
+                          {editingMessageId === message.id && isUser ? (
+                            <div className="w-full">
+                              <textarea
+                                autoFocus
+                                value={editingValue}
+                                onChange={(e) =>
+                                  setEditingValue(e.target.value)
                                 }
-                              }
-                              return null;
-                            })()}
-                          {message.parts.map((part, index) =>
-                            part.type === "text" ? (
-                              <MarkdownRenderer
-                                content={part.text}
-                                key={index}
+                                onKeyDown={(e) => {
+                                  if (
+                                    (e.metaKey || e.ctrlKey) &&
+                                    e.key === "Enter"
+                                  ) {
+                                    e.preventDefault();
+                                    saveEdit();
+                                  } else if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    cancelEdit();
+                                  }
+                                }}
+                                className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
+                                placeholder="Modifica il messaggio"
                               />
-                            ) : null
+                              <div className="mt-2 flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={cancelEdit}
+                                >
+                                  Cancella
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={saveEdit}
+                                  variant="secondary"
+                                  disabled={status !== "ready"}
+                                >
+                                  Invia
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              {/* Assistant header with PIT */}
+                              {!isUser && (
+                                <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                                  <Bot className="h-4 w-4" /> PIT
+                                </div>
+                              )}
+                              {/* RAG disclaimer for assistant messages */}
+                              {!isUser &&
+                                (() => {
+                                  const idx = messages.findIndex(
+                                    (m) => m.id === message.id
+                                  );
+                                  const prevUser = messages
+                                    .slice(0, idx)
+                                    .reverse()
+                                    .find((m) => m.role === "user");
+                                  const used = ((prevUser as any)?.metadata
+                                    ?.selectedNoteSlugs || []) as string[];
+                                  if (Array.isArray(used) && used.length > 0) {
+                                    const titles = getTitlesFromSlugs(used);
+                                    if (titles.length > 0) {
+                                      return (
+                                        <div className="mb-2 text-xs text-muted-foreground italic">
+                                          {`Risposta generata partendo da: ${titles.join(
+                                            ", "
+                                          )}`}
+                                        </div>
+                                      );
+                                    }
+                                  }
+                                  return null;
+                                })()}
+                              {message.parts.map((part, index) =>
+                                part.type === "text" ? (
+                                  <MarkdownRenderer
+                                    content={part.text}
+                                    key={index}
+                                  />
+                                ) : null
+                              )}
+                              {!isUser &&
+                              (status === "ready" || !isLastMessage) ? (
+                                <div className="mt-3 h-px w-full bg-border" />
+                              ) : null}
+                              {!isUser &&
+                              isRetrieving &&
+                              status !== "streaming" &&
+                              pendingAssistantId === message.id ? (
+                                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                                  Sto recuperando i documenti selezionati...
+                                </div>
+                              ) : null}
+                              {!isUser &&
+                              isThinking &&
+                              status !== "streaming" &&
+                              pendingAssistantId === message.id ? (
+                                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                                  Sto pensando...
+                                </div>
+                              ) : null}
+                            </div>
                           )}
-                          {!isUser && (status === "ready" || !isLastMessage) ? (
-                            <div className="mt-3 h-px w-full bg-border" />
-                          ) : null}
-                          {/* Show retrieval indicator inline for regenerate on this assistant message */}
-                          {!isUser &&
-                          isRetrieving &&
-                          status !== "streaming" &&
-                          pendingAssistantId === message.id ? (
-                            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                              Sto recuperando i documenti selezionati...
-                            </div>
-                          ) : null}
-                          {/* Show thinking indicator inline for regenerate when no documents are selected */}
-                          {!isUser &&
-                          isThinking &&
-                          status !== "streaming" &&
-                          pendingAssistantId === message.id ? (
-                            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                              Sto pensando...
-                            </div>
-                          ) : null}
                         </div>
-                      )}
-                    </div>
 
-                    {/* hover actions below bubble, outside */}
-                    <div
-                      className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${
-                        isUser ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      {isUser ? (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-2 text-xs"
-                            onClick={() => handleCopy(messageText)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-2 text-xs"
-                            disabled={status !== "ready"}
-                            onClick={() => beginEdit(message.id)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-2 text-xs"
-                            onClick={() => handleCopy(messageText)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-2 text-xs"
-                            disabled={
-                              !(status === "ready" || status === "error")
-                            }
-                            onClick={() =>
-                              regenerateWithCurrentSelection(message.id)
-                            }
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                        {/* hover actions below bubble, outside */}
+                        <div
+                          className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 md:opacity-0 opacity-100 transition-opacity duration-150 group-hover:opacity-100 ${
+                            isUser ? "justify-end" : "justify-start"
+                          }`}
+                        >
+                          {isUser ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-2 text-xs"
+                                onClick={() => handleCopy(messageText)}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-2 text-xs"
+                                disabled={status !== "ready"}
+                                onClick={() => beginEdit(message.id)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-2 text-xs"
+                                onClick={() => handleCopy(messageText)}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-2 text-xs"
+                                disabled={
+                                  !(status === "ready" || status === "error")
+                                }
+                                onClick={() =>
+                                  regenerateWithCurrentSelection(message.id)
+                                }
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
 
-                    {/* edit controls moved inside bubble */}
+                        {/* edit controls moved inside bubble */}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {isRetrieving && status !== "streaming" && !pendingAssistantId ? (
+                <div className="flex justify-start">
+                  <div className="px-4 text-foreground w-full">
+                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                      Sto recuperando i documenti selezionati...
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        )}
-        {/* Inline retrieval indicator for new assistant replies after the last user message */}
-        {isRetrieving && status !== "streaming" && !pendingAssistantId ? (
-          <div className="flex justify-start">
-            <div className="px-4 text-foreground w-full">
-              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                Sto recuperando i documenti selezionati...
+              ) : null}
+              {isThinking && status !== "streaming" && !pendingAssistantId ? (
+                <div className="flex justify-start">
+                  <div className="px-4 text-foreground w-full">
+                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                      Sto pensando...
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+          {messages.length === 0 &&
+          isRetrieving &&
+          status !== "streaming" &&
+          !pendingAssistantId ? (
+            <div className="flex justify-start">
+              <div className="px-4 text-foreground w-full">
+                <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                  Sto recuperando i documenti selezionati...
+                </div>
               </div>
             </div>
-          </div>
-        ) : null}
-        {isThinking && status !== "streaming" && !pendingAssistantId ? (
-          <div className="flex justify-start">
-            <div className="px-4 text-foreground w-full">
-              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                Sto pensando...
+          ) : null}
+          {messages.length === 0 &&
+          isThinking &&
+          status !== "streaming" &&
+          !pendingAssistantId ? (
+            <div className="flex justify-start">
+              <div className="px-4 text-foreground w-full">
+                <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                  Sto pensando...
+                </div>
               </div>
             </div>
-          </div>
-        ) : null}
-        <div ref={messagesEndRef} />
+          ) : null}
+          {/* bottom anchor optional */}
+        </div>
       </div>
 
-      {/* Scroll to bottom button */}
-      {showScrollToBottom && (
-        <div className="absolute bottom-20 right-8 z-10">
+      {/* New messages indicator */}
+      {hasNewItems && (
+        <div
+          className={cn(
+            "fixed left-1/2 -translate-x-1/2 z-10",
+            selectedNoteSlugs.length > 0 ? "bottom-62" : "bottom-36"
+          )}
+        >
           <Button
             type="button"
             size="sm"
             variant="secondary"
-            className="rounded-full shadow-lg bg-background border border-border hover:bg-accent"
+            className="h-10 w-10 p-0 m-0 rounded-full shadow-lg bg-background border border-border hover:bg-accent"
             onClick={scrollToBottom}
-            title="Scorri verso il basso"
+            title="Nuovi messaggi"
           >
             <ArrowDown className="h-4 w-4" />
           </Button>
@@ -733,36 +757,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                 )}
               </div>
             )}
-            <div className="flex-1 min-w-0 flex items-center gap-2 w-full">
-              {/* open notes overlay for RAG selection */}
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 rounded-full"
-                onClick={openNotesOverlay}
-                title="Seleziona appunti per il RAG"
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
-              <DownloadMenuButton
-                messages={messages as any[]}
-                fileNameBase={`subject-chat${subject ? `-${subject}` : ""}`}
-                buttonVariant="ghost"
-                buttonSize="icon"
-                label="Scarica"
-                className="hidden sm:block"
-                getMetadata={() => ({
-                  title: "Subject Chat",
-                  userName: (session?.user?.name as string) || null,
-                  subjectName: subject || null,
-                  date: new Date(),
-                  themeColor:
-                    getComputedStyle(document.documentElement)
-                      .getPropertyValue("--subject-color")
-                      .trim() || undefined,
-                })}
-              />
+            <div className="flex-1 flex-col min-w-0 flex w-full">
               <div className="flex-1 min-w-0">
                 <textarea
                   ref={textareaRef}
@@ -793,32 +788,68 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                   disabled={false}
                 />
               </div>
-
-              {/* send / stop toggle */}
-              {status === "ready" ? (
-                <Button
-                  type="submit"
-                  size="icon"
-                  className={`h-10 w-10 rounded-full text-white ${
-                    input.trim()
-                      ? "bg-[var(--subject-color)]/95 hover:bg-[var(--subject-color)]"
-                      : ""
-                  }`}
-                  variant={input.trim() ? "secondary" : "secondary"}
-                >
-                  <ArrowUp className="h-5 w-5" />
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="secondary"
-                  className="h-10 w-10 rounded-full"
-                  onClick={() => stop()}
-                >
-                  <Square className="h-5 w-5" />
-                </Button>
-              )}
+              <div
+                className={`flex items-center gap-2 ${
+                  isMultiline ? "justify-between" : ""
+                } w-full`}
+              >
+                <div className="flex items-center gap-2">
+                  {/* open notes overlay for RAG selection */}
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-10 w-10 rounded-full"
+                    onClick={openNotesOverlay}
+                    title="Seleziona appunti per il RAG"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                  <DownloadMenuButton
+                    messages={messages as any[]}
+                    fileNameBase={`subject-chat${subject ? `-${subject}` : ""}`}
+                    buttonVariant="ghost"
+                    buttonSize="icon"
+                    label="Scarica"
+                    className="hidden sm:block"
+                    getMetadata={() => ({
+                      title: "Subject Chat",
+                      userName: (session?.user?.name as string) || null,
+                      subjectName: subject || null,
+                      date: new Date(),
+                      themeColor:
+                        getComputedStyle(document.documentElement)
+                          .getPropertyValue("--subject-color")
+                          .trim() || undefined,
+                    })}
+                  />
+                </div>
+                {/* send / stop toggle */}
+                {status === "ready" ? (
+                  <Button
+                    type="submit"
+                    size="icon"
+                    className={`h-10 w-10 rounded-full text-white ${
+                      input.trim()
+                        ? "bg-[var(--subject-color)]/95 hover:bg-[var(--subject-color)]"
+                        : ""
+                    }`}
+                    variant={input.trim() ? "secondary" : "secondary"}
+                  >
+                    <ArrowUp className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="h-10 w-10 rounded-full"
+                    onClick={() => stop()}
+                  >
+                    <Square className="h-5 w-5" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

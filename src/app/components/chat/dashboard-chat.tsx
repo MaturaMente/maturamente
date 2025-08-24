@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import useAutoScroll from "@/utils/useAutoScroll";
 import { useSession } from "next-auth/react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import MarkdownRenderer from "../shared/renderer/markdown-renderer";
+// import MarkdownRenderer from "@/app/components/shared/renderer/markdown-renderer";
+import MarkdownRenderer from "./chat-markdown-renderer";
 import PromptCard from "./components/PromptCard";
 import DownloadMenuButton from "./components/download-menu-button";
 import {
@@ -31,6 +33,7 @@ import {
   Bot,
 } from "lucide-react";
 import { getSubjectIcon } from "@/utils/subject-icons";
+import { cn } from "@/lib/utils";
 
 type UINote = {
   id: string;
@@ -57,7 +60,13 @@ export default function DashboardChat() {
       }),
     });
   const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const {
+    containerRef,
+    onItemsChange,
+    hasNewItems,
+    scrollToBottom,
+    setIsStreaming,
+  } = useAutoScroll({ bottomThreshold: 50 });
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
   const [showNotesOverlay, setShowNotesOverlay] = useState(false);
@@ -90,52 +99,20 @@ export default function DashboardChat() {
   const [chipsExpanded, setChipsExpanded] = useState(false);
   const [chipsCanCollapse, setChipsCanCollapse] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
-  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  // Legacy manual scroll state removed in favor of useAutoScroll
+  const [isMultiline, setIsMultiline] = useState(false);
   const { data: session } = useSession();
   const firstName = (session?.user?.name || "").split(" ")[0] || null;
 
-  // Smart auto-scroll: only scroll to bottom if user is already at the bottom
   useEffect(() => {
-    if (!scrollContainerRef.current || isUserScrolledUp) return;
+    setIsStreaming(status === "streaming");
+  }, [status, setIsStreaming]);
 
-    const container = scrollContainerRef.current;
-    const isAtBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight <
-      100;
-
-    if (isAtBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    } else {
-      setShowScrollToBottom(true);
-    }
-  }, [messages, isUserScrolledUp]);
-
-  // Track user scroll position
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    onItemsChange();
+  }, [messages, onItemsChange]);
 
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
-
-      setIsUserScrolledUp(!isAtBottom);
-      if (isAtBottom) {
-        setShowScrollToBottom(false);
-      }
-    };
-
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    setShowScrollToBottom(false);
-    setIsUserScrolledUp(false);
-  };
+  // scrollToBottom provided by useAutoScroll
 
   const extractTextFromMessage = (message: any) => {
     return message.parts
@@ -334,13 +311,16 @@ export default function DashboardChat() {
     }
   }, [status, isRetrieving]);
 
-  // Auto-resize textarea height up to a max
+  // Auto-resize textarea height up to a max and detect multiline
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "0px";
     const newHeight = Math.min(el.scrollHeight, 192); // max-h-48
     el.style.height = newHeight + "px";
+    const computed = getComputedStyle(el);
+    const lineHeight = parseFloat(computed.lineHeight || "24");
+    setIsMultiline(newHeight > lineHeight + 2);
   }, [input]);
 
   // Close subject dropdown when clicking outside
@@ -362,291 +342,344 @@ export default function DashboardChat() {
   return (
     <div className="flex h-full flex-col relative">
       <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-12 py-32 space-y-2 md:px-[4%]"
+        ref={containerRef}
+        className="flex-1 overflow-y-auto"
         aria-live="polite"
         aria-busy={status !== "ready"}
       >
-        {messages.length === 0 ? (
-          <div className="flex h-[98%] items-center justify-center">
-            <div className="text-center max-w-4xl">
-              <div className="flex flex-col md:flex-wrap items-center justify-center md:gap-8 gap-4">
-                {/* Hero */}
-                <div className="flex flex-col items-center gap-3 mb-2">
-                  <div className="relative">
-                    <div className="pointer-events-none absolute -inset-2 rounded-2xl bg-blue-500/30 blur-md" />
-                    <div className="hidden dark:block absolute -top-px left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-70" />
-                    <div className="relative h-12 w-12 rounded-2xl bg-blue-500 text-background flex items-center justify-center shadow-sm">
-                      <Bot className="h-5 w-5 text-white" />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-2xl md:text-3xl font-semibold tracking-tight">
-                      {`Bentornato${
-                        firstName ? ` ${firstName}` : ""
-                      }, cosa devi studiare oggi?`}
-                    </div>
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      Chiedi spiegazioni, riassunti o crea quiz partendo dai
-                      tuoi appunti.
-                    </div>
-                  </div>
-                </div>
-                {/* Prompt cards */}
-                <div className="w-full grid grid-cols-1 lg:grid-cols-3 lg:gap-8 gap-4">
-                  <PromptCard
-                    title="Spiegami facilmente"
-                    description="Ottieni una spiegazione semplice con esempi chiari."
-                    Icon={Sparkles}
-                    variant="dashboard"
-                    onClick={() =>
-                      usePrompt(
-                        "Spiegami questi argomenti come se avessi 12 anni, con esempi concreti e analogie semplici."
-                      )
-                    }
-                  />
-                  <PromptCard
-                    title="Riassumi e organizza"
-                    description="Crea un riassunto con punti chiave ordinati."
-                    Icon={Wand2}
-                    variant="dashboard"
-                    onClick={() =>
-                      usePrompt(
-                        "Riassumi i concetti chiave dagli appunti selezionati e crea una mini mappa mentale con bullet point."
-                      )
-                    }
-                  />
-                  <PromptCard
-                    title="Crea quiz dai documenti"
-                    description="Genera domande per metterti alla prova."
-                    Icon={ListChecks}
-                    variant="dashboard"
-                    onClick={() =>
-                      usePrompt(
-                        "Crea 5 domande a risposta multipla sui contenuti selezionati, con spiegazione della soluzione."
-                      )
-                    }
-                  />
-                </div>
-                <Button
-                  className="text-white"
-                  variant="default"
-                  size="lg"
-                  onClick={openNotesOverlay}
-                  title="Seleziona gli appunti"
-                >
-                  Scegli gli appunti
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          messages.map((message, idx) => {
-            const isUser = message.role === "user";
-            const messageText = extractTextFromMessage(message);
-            const isLastMessage = idx === messages.length - 1;
-            return (
-              <div
-                key={message.id}
-                className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`group relative flex flex-col ${
-                    isUser ? "items-end" : "items-start"
-                  }`}
-                >
-                  <div
-                    className={`px-4 ${
-                      isUser
-                        ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
-                        : "bg-none text-foreground w-full"
-                    }`}
-                  >
-                    {editingMessageId === message.id && isUser ? (
-                      <div className="w-full">
-                        <textarea
-                          autoFocus
-                          value={editingValue}
-                          onChange={(e) => setEditingValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                              e.preventDefault();
-                              saveEdit();
-                            } else if (e.key === "Escape") {
-                              e.preventDefault();
-                              cancelEdit();
-                            }
-                          }}
-                          className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
-                          placeholder="Modifica il messaggio"
-                        />
-                        <div className="mt-2 flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={cancelEdit}
-                          >
-                            Cancella
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={saveEdit}
-                            variant="secondary"
-                            disabled={status !== "ready"}
-                          >
-                            Invia
-                          </Button>
+        <div>
+          {messages.length === 0 ? (
+            <div className="mx-auto w-full px-6 h-full md:py-48 py-24 mb-24 md:mb-0 space-y-2">
+              <div className="flex h-[98%] items-center justify-center">
+                <div className="text-center max-w-4xl">
+                  <div className="flex flex-col md:flex-wrap items-center justify-center md:gap-8 gap-4 md:pt-0 pt-12">
+                    {/* Hero */}
+                    <div className="flex flex-col items-center gap-3 mb-2">
+                      <div className="relative">
+                        <div className="pointer-events-none absolute -inset-2 rounded-2xl bg-blue-500/30 blur-md" />
+                        <div className="hidden dark:block absolute -top-px left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-70" />
+                        <div className="relative h-12 w-12 rounded-2xl bg-blue-500 text-background flex items-center justify-center shadow-sm">
+                          <Bot className="h-5 w-5 text-white" />
                         </div>
                       </div>
-                    ) : (
                       <div>
-                        {/* Assistant header with PIT */}
-                        {!isUser && (
-                          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                            <Bot className="h-4 w-4" /> PIT
-                          </div>
-                        )}
-                        {!isUser &&
-                          (() => {
-                            const idx = messages.findIndex(
-                              (m) => m.id === message.id
-                            );
-                            const prevUser = messages
-                              .slice(0, idx)
-                              .reverse()
-                              .find((m) => m.role === "user");
-                            const used = ((prevUser as any)?.metadata
-                              ?.selectedNoteSlugs || []) as string[];
-                            if (Array.isArray(used) && used.length > 0) {
-                              const titles = getTitlesFromSlugs(used);
-                              if (titles.length > 0) {
-                                return (
-                                  <div className="mb-2 text-xs text-muted-foreground italic">
-                                    {`Risposta generata partendo da: ${titles.join(
-                                      ", "
-                                    )}`}
-                                  </div>
-                                );
-                              }
-                            }
-                            return null;
-                          })()}
-                        {message.parts.map((part, index) =>
-                          part.type === "text" ? (
-                            <MarkdownRenderer content={part.text} key={index} />
-                          ) : null
-                        )}
-                        {!isUser && (status === "ready" || !isLastMessage) ? (
-                          <div className="mt-3 h-px w-full bg-border" />
-                        ) : null}
-                        {!isUser &&
-                        isRetrieving &&
-                        status !== "streaming" &&
-                        pendingAssistantId === message.id ? (
-                          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                            Sto recuperando i documenti selezionati...
-                          </div>
-                        ) : null}
-                        {!isUser &&
-                        isThinking &&
-                        status !== "streaming" &&
-                        pendingAssistantId === message.id ? (
-                          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                            Sto pensando...
-                          </div>
-                        ) : null}
+                        <div className="text-2xl md:text-3xl font-semibold tracking-tight">
+                          {`Bentornato${
+                            firstName ? ` ${firstName}` : ""
+                          }, cosa devi studiare oggi?`}
+                        </div>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                          Chiedi spiegazioni, riassunti o crea quiz partendo dai
+                          tuoi appunti.
+                        </div>
                       </div>
-                    )}
+                    </div>
+                    {/* Prompt cards */}
+                    <div className="w-full grid grid-cols-1 lg:grid-cols-3 lg:gap-8 gap-4">
+                      <PromptCard
+                        title="Spiegami facilmente"
+                        description="Ottieni una spiegazione semplice con esempi chiari."
+                        Icon={Sparkles}
+                        variant="dashboard"
+                        onClick={() =>
+                          usePrompt(
+                            "Spiegami questi argomenti come se avessi 12 anni, con esempi concreti e analogie semplici."
+                          )
+                        }
+                      />
+                      <PromptCard
+                        title="Riassumi e organizza"
+                        description="Crea un riassunto con punti chiave ordinati."
+                        Icon={Wand2}
+                        variant="dashboard"
+                        onClick={() =>
+                          usePrompt(
+                            "Riassumi i concetti chiave dagli appunti selezionati e crea una mini mappa mentale con bullet point."
+                          )
+                        }
+                      />
+                      <PromptCard
+                        title="Crea quiz"
+                        description="Genera domande per metterti alla prova."
+                        Icon={ListChecks}
+                        variant="dashboard"
+                        onClick={() =>
+                          usePrompt(
+                            "Crea 5 domande a risposta multipla sui contenuti selezionati, con spiegazione della soluzione."
+                          )
+                        }
+                      />
+                    </div>
+                    <Button
+                      className="text-white"
+                      variant="default"
+                      size="lg"
+                      onClick={openNotesOverlay}
+                      title="Seleziona gli appunti"
+                    >
+                      Scegli gli appunti
+                    </Button>
                   </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "mx-auto w-full max-w-3xl px-6 h-full pt-24 pb-[260px] space-y-2",
+                selectedNoteSlugs.length > 0 ? "pb-[260px]" : "pb-[160px]"
+              )}
+            >
+              {messages.map((message, idx) => {
+                const isUser = message.role === "user";
+                const messageText = extractTextFromMessage(message);
+                const isLastMessage = idx === messages.length - 1;
+                return (
                   <div
-                    className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${
+                    key={message.id}
+                    className={`flex ${
                       isUser ? "justify-end" : "justify-start"
                     }`}
                   >
-                    {isUser ? (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          onClick={() => handleCopy(messageText)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          disabled={status !== "ready"}
-                          onClick={() => beginEdit(message.id)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          onClick={() => handleCopy(messageText)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-xs"
-                          disabled={!(status === "ready" || status === "error")}
-                          onClick={() =>
-                            regenerateWithCurrentSelection(message.id)
-                          }
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
+                    <div
+                      className={`group relative flex flex-col ${
+                        isUser ? "items-end" : "items-start"
+                      }`}
+                    >
+                      <div
+                        className={`px-4 ${
+                          isUser
+                            ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
+                            : "bg-none text-foreground w-full"
+                        }`}
+                      >
+                        {editingMessageId === message.id && isUser ? (
+                          <div className="w-full">
+                            <textarea
+                              autoFocus
+                              value={editingValue}
+                              onChange={(e) => setEditingValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (
+                                  (e.metaKey || e.ctrlKey) &&
+                                  e.key === "Enter"
+                                ) {
+                                  e.preventDefault();
+                                  saveEdit();
+                                } else if (e.key === "Escape") {
+                                  e.preventDefault();
+                                  cancelEdit();
+                                }
+                              }}
+                              className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
+                              placeholder="Modifica il messaggio"
+                            />
+                            <div className="mt-2 flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={cancelEdit}
+                              >
+                                Cancella
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={saveEdit}
+                                variant="secondary"
+                                disabled={status !== "ready"}
+                              >
+                                Invia
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            {/* Assistant header with PIT */}
+                            {!isUser && (
+                              <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                                <Bot className="h-4 w-4" /> PIT
+                              </div>
+                            )}
+                            {!isUser &&
+                              (() => {
+                                const idx = messages.findIndex(
+                                  (m) => m.id === message.id
+                                );
+                                const prevUser = messages
+                                  .slice(0, idx)
+                                  .reverse()
+                                  .find((m) => m.role === "user");
+                                const used = ((prevUser as any)?.metadata
+                                  ?.selectedNoteSlugs || []) as string[];
+                                if (Array.isArray(used) && used.length > 0) {
+                                  const titles = getTitlesFromSlugs(used);
+                                  if (titles.length > 0) {
+                                    return (
+                                      <div className="mb-2 text-xs text-muted-foreground italic line-clamp-1 hover:line-clamp-none">
+                                        {`Risposta generata partendo da: ${titles.join(
+                                          ", "
+                                        )}`}
+                                      </div>
+                                    );
+                                  }
+                                }
+                                return null;
+                              })()}
+                            {message.parts.map((part, index) =>
+                              part.type === "text" ? (
+                                <MarkdownRenderer
+                                  content={part.text}
+                                  key={index}
+                                />
+                              ) : null
+                            )}
+                            {!isUser &&
+                            (status === "ready" || !isLastMessage) ? (
+                              <div className="mt-3 h-px w-full bg-border" />
+                            ) : null}
+                            {!isUser &&
+                            isRetrieving &&
+                            status !== "streaming" &&
+                            pendingAssistantId === message.id ? (
+                              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                                Sto recuperando i documenti selezionati...
+                              </div>
+                            ) : null}
+                            {!isUser &&
+                            isThinking &&
+                            status !== "streaming" &&
+                            pendingAssistantId === message.id ? (
+                              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                                Sto pensando...
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
+                      <div
+                        className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 md:opacity-0 opacity-100 transition-opacity duration-150 group-hover:opacity-100 ${
+                          isUser ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        {isUser ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              onClick={() => handleCopy(messageText)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              disabled={status !== "ready"}
+                              onClick={() => beginEdit(message.id)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              onClick={() => handleCopy(messageText)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              disabled={
+                                !(status === "ready" || status === "error")
+                              }
+                              onClick={() =>
+                                regenerateWithCurrentSelection(message.id)
+                              }
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {isRetrieving && status !== "streaming" && !pendingAssistantId ? (
+                <div className="flex justify-start">
+                  <div className="px-4 text-foreground w-full">
+                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                      Sto recuperando i documenti selezionati...
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        )}
-        {isRetrieving && status !== "streaming" && !pendingAssistantId ? (
-          <div className="flex justify-start">
-            <div className="px-4 text-foreground w-full">
-              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                Sto recuperando i documenti selezionati...
+              ) : null}
+              {isThinking && status !== "streaming" && !pendingAssistantId ? (
+                <div className="flex justify-start">
+                  <div className="px-4 text-foreground w-full">
+                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                      Sto pensando...
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+          {messages.length === 0 &&
+          isRetrieving &&
+          status !== "streaming" &&
+          !pendingAssistantId ? (
+            <div className="flex justify-start">
+              <div className="px-4 text-foreground w-full">
+                <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                  Sto recuperando i documenti selezionati...
+                </div>
               </div>
             </div>
-          </div>
-        ) : null}
-        {isThinking && status !== "streaming" && !pendingAssistantId ? (
-          <div className="flex justify-start">
-            <div className="px-4 text-foreground w-full">
-              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                Sto pensando...
+          ) : null}
+          {messages.length === 0 &&
+          isThinking &&
+          status !== "streaming" &&
+          !pendingAssistantId ? (
+            <div className="flex justify-start">
+              <div className="px-4 text-foreground w-full">
+                <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                  Sto pensando...
+                </div>
               </div>
             </div>
-          </div>
-        ) : null}
-        <div ref={messagesEndRef} />
+          ) : null}
+          {/* bottom anchor optional */}
+        </div>
       </div>
 
-      {/* Scroll to bottom button */}
-      {showScrollToBottom && (
-        <div className="absolute bottom-20 right-8 z-10">
+      {/* New messages indicator */}
+      {hasNewItems && (
+        <div
+          className={cn(
+            "fixed left-1/2 -translate-x-1/2 z-10",
+            selectedNoteSlugs.length > 0 ? "bottom-62" : "bottom-36"
+          )}
+        >
           <Button
             type="button"
             size="sm"
             variant="secondary"
-            className="rounded-full shadow-lg bg-background border border-border hover:bg-accent"
+            className="h-10 w-10 p-0 m-0 rounded-full shadow-lg bg-background border border-border hover:bg-accent"
             onClick={scrollToBottom}
-            title="Scorri verso il basso"
+            title="Nuovi messaggi"
           >
             <ArrowDown className="h-4 w-4" />
           </Button>
@@ -669,10 +702,10 @@ export default function DashboardChat() {
             setInput("");
           }
         }}
-        className="fixed bottom-6 left-0 right-0 z-20 w-full bg-transparent px-6 pb-0"
+        className="fixed bottom-0 w-full bg-transparent pb-4 md:px-0 px-4"
       >
         <div className="mx-auto w-full max-w-3xl">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
+          <div className="flex flex-col items-center rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
             {selectedNoteSlugs.length > 0 && (
               <div className="mb-2 w-full">
                 <div
@@ -751,31 +784,8 @@ export default function DashboardChat() {
                 )}
               </div>
             )}
-            <div className="flex-1 min-w-0 flex items-center gap-2 w-full">
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 rounded-full"
-                onClick={openNotesOverlay}
-                title="Seleziona appunti per il RAG"
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
-              <DownloadMenuButton
-                messages={messages as any[]}
-                fileNameBase={`dashboard-chat`}
-                buttonVariant="ghost"
-                buttonSize="icon"
-                label="Scarica"
-                className="hidden sm:block"
-                getMetadata={() => ({
-                  title: "Dashboard Chat",
-                  userName: (session?.user?.name as string) || null,
-                  subjectName: null,
-                  date: new Date(),
-                })}
-              />
+            <div className="flex-1 flex-col min-w-0 flex w-full">
+              {/* Textarea on top when multiline */}
               <div className="flex-1 min-w-0">
                 <textarea
                   ref={textareaRef}
@@ -806,27 +816,58 @@ export default function DashboardChat() {
                   disabled={false}
                 />
               </div>
-
-              {status === "ready" ? (
-                <Button
-                  type="submit"
-                  size="icon"
-                  className="h-10 w-10 rounded-full text-white"
-                  variant={input.trim() ? "default" : "secondary"}
-                >
-                  <ArrowUp className="h-5 w-5" />
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="secondary"
-                  className="h-10 w-10 rounded-full"
-                  onClick={() => stop()}
-                >
-                  <Square className="h-5 w-5" />
-                </Button>
-              )}
+              {/* Controls row */}
+              <div
+                className={`flex items-center gap-2 ${
+                  isMultiline ? "justify-between" : ""
+                } w-full`}
+              >
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-10 w-10 rounded-full"
+                    onClick={openNotesOverlay}
+                    title="Seleziona appunti per il RAG"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                  <DownloadMenuButton
+                    messages={messages as any[]}
+                    fileNameBase={`dashboard-chat`}
+                    buttonVariant="ghost"
+                    buttonSize="icon"
+                    label="Scarica"
+                    getMetadata={() => ({
+                      title: "Dashboard Chat",
+                      userName: (session?.user?.name as string) || null,
+                      subjectName: null,
+                      date: new Date(),
+                    })}
+                  />
+                </div>
+                {status === "ready" ? (
+                  <Button
+                    type="submit"
+                    size="icon"
+                    className="h-10 w-10 rounded-full text-white"
+                    variant={input.trim() ? "default" : "secondary"}
+                  >
+                    <ArrowUp className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="h-10 w-10 rounded-full"
+                    onClick={() => stop()}
+                  >
+                    <Square className="h-5 w-5" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

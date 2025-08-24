@@ -45,7 +45,7 @@ export const getNavLinks = (subjectSlug: string, maturita: boolean = true) => {
     },
     {
       name: "PIT",
-      href: `/${subjectSlug}/tutor`,
+      href: `/${subjectSlug}/pit`,
       icon: Bot,
     },
     {

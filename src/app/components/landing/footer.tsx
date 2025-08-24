@@ -52,7 +52,7 @@ export default function FooterSection({
     {
       title: "Il Tuo Studio",
       links: [
-        { text: "Tutor AI", href: "/dashboard/tutor" },
+        { text: "Tutor AI", href: "/dashboard/pit" },
         { text: "Preferiti", href: "/dashboard/preferiti" },
         { text: "Statistiche", href: "/dashboard/statistiche" },
       ],

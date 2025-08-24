@@ -232,7 +232,7 @@ async function DashboardContent() {
                           return (
                             <Link
                               key={n.subjectSlug}
-                              href={`/${n.subjectSlug}/tutor`}
+                              href={`/${n.subjectSlug}/pit`}
                               className="group block"
                               style={cardStyle}
                             >
@@ -280,7 +280,7 @@ async function DashboardContent() {
                 </CardContent>
                 <CardFooter>
                   <Button asChild className="w-full text-white">
-                    <Link href="/dashboard/chat">
+                    <Link href="/dashboard/pit">
                       Parla con PIT
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>

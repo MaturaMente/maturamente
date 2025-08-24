@@ -7,7 +7,7 @@ export default function DashboardMaturamenteLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden">
+    <div className="relative flex md:h-screen h-full flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-25">
         <div className="absolute inset-0 bg-gradient-to-b from-blue-500/15 via-transparent to-transparent" />
         <div className="absolute -top-24 left-1/2 h-40 w-[90%] -translate-x-1/2 rounded-[50%] bg-blue-500/25 dark:bg-blue-400/25 blur-[80px]" />

@@ -3,6 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useRef, useState } from "react";
+import useAutoScroll from "@/utils/useAutoScroll";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "../shared/renderer/markdown-renderer";
@@ -39,7 +40,13 @@ export default function PdfChat() {
     });
 
   const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const {
+    containerRef,
+    onItemsChange,
+    hasNewItems,
+    scrollToBottom,
+    setIsStreaming,
+  } = useAutoScroll({ bottomThreshold: 50 });
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
   const [isThinking, setIsThinking] = useState(false);
@@ -47,50 +54,18 @@ export default function PdfChat() {
     null
   );
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
-  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  // Replace legacy scroll state with useAutoScroll
+  const [isMultiline, setIsMultiline] = useState(false);
 
-  // Smart auto-scroll: only scroll to bottom if user is already at the bottom
   useEffect(() => {
-    if (!scrollContainerRef.current || isUserScrolledUp) return;
+    setIsStreaming(status === "streaming");
+  }, [status, setIsStreaming]);
 
-    const container = scrollContainerRef.current;
-    const isAtBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight <
-      100;
-
-    if (isAtBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    } else {
-      setShowScrollToBottom(true);
-    }
-  }, [messages, isUserScrolledUp]);
-
-  // Track user scroll position
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    onItemsChange();
+  }, [messages, onItemsChange]);
 
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
-
-      setIsUserScrolledUp(!isAtBottom);
-      if (isAtBottom) {
-        setShowScrollToBottom(false);
-      }
-    };
-
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    setShowScrollToBottom(false);
-    setIsUserScrolledUp(false);
-  };
+  // scrollToBottom provided by useAutoScroll
 
   const extractTextFromMessage = (message: any) => {
     return message.parts
@@ -176,13 +151,16 @@ export default function PdfChat() {
     }
   }, [status, isThinking]);
 
-  // Auto-resize textarea height up to a max
+  // Auto-resize textarea height up to a max and detect multiline
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "0px";
     const newHeight = Math.min(el.scrollHeight, 192); // max-h-48
     el.style.height = newHeight + "px";
+    const computed = getComputedStyle(el);
+    const lineHeight = parseFloat(computed.lineHeight || "24");
+    setIsMultiline(newHeight > lineHeight + 2);
   }, [input]);
 
   // Ensure subject color CSS variable is present for consistent styling
@@ -231,7 +209,7 @@ export default function PdfChat() {
       <div className="flex-1 min-h-0 overflow-hidden">
         <div className="flex h-full flex-col bg-background relative">
           <div
-            ref={scrollContainerRef}
+            ref={containerRef}
             className="flex-1 overflow-y-auto p-6 md:p-8 space-y-2"
             aria-live="polite"
             aria-busy={status !== "ready"}
@@ -435,11 +413,11 @@ export default function PdfChat() {
                 </div>
               </div>
             ) : null}
-            <div ref={messagesEndRef} />
+            {/* bottom anchor optional */}
           </div>
 
-          {/* Scroll to bottom button */}
-          {showScrollToBottom && (
+          {/* New messages indicator */}
+          {hasNewItems && (
             <div className="absolute bottom-20 right-8 z-10">
               <Button
                 type="button"
@@ -447,9 +425,10 @@ export default function PdfChat() {
                 variant="secondary"
                 className="rounded-full shadow-lg bg-background border border-border hover:bg-accent"
                 onClick={scrollToBottom}
-                title="Scorri verso il basso"
+                title="Nuovi messaggi"
               >
-                <ArrowDown className="h-4 w-4" />
+                <ArrowDown className="h-4 w-4 mr-2" />
+                Nuovi messaggi
               </Button>
             </div>
           )}
@@ -468,7 +447,11 @@ export default function PdfChat() {
           >
             <div className="w-full">
               <div className="flex flex-col items-center gap-2 rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
-                <div className="flex-1 min-w-0 flex items-center gap-2 w-full">
+                <div
+                  className={`flex-1 min-w-0 flex gap-2 w-full ${
+                    isMultiline ? "flex-col" : "items-center"
+                  }`}
+                >
                   <div className="flex-1 min-w-0">
                     <textarea
                       ref={textareaRef}
