@@ -3,7 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useRef, useState } from "react";
-import useAutoScroll from "@/utils/useAutoScroll";
+import useAutoScroll from "@/utils/chat/useAutoScroll";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import MarkdownRenderer from "../shared/renderer/markdown-renderer";
@@ -196,13 +196,6 @@ export default function PdfChat() {
           <Bot className="h-5 w-5 text-muted-foreground" />
           <h2 className="font-medium text-foreground">Chat sul PDF</h2>
         </div>
-        <DownloadMenuButton
-          messages={messages as any[]}
-          fileNameBase={`pdf-chat${subject ? `-${subject}` : ""}${
-            noteSlug ? `-${noteSlug}` : ""
-          }`}
-          className="flex border-none shadow-none"
-        />
       </div>
 
       {/* Chat Content Placeholder */}
@@ -476,30 +469,43 @@ export default function PdfChat() {
                       disabled={status !== "ready"}
                     />
                   </div>
-                  {status === "ready" ? (
-                    <Button
-                      type="submit"
-                      size="icon"
-                      className={`h-10 w-10 rounded-full text-white ${
-                        input.trim()
-                          ? "bg-[var(--subject-color)]/95 hover:bg-[var(--subject-color)]"
-                          : ""
+                  <div className="flex items-center gap-2 justify-between">
+                    <DownloadMenuButton
+                      messages={messages as any[]}
+                      fileNameBase={`pdf-chat${subject ? `-${subject}` : ""}${
+                        noteSlug ? `-${noteSlug}` : ""
                       }`}
-                      variant={"secondary"}
-                    >
-                      <ArrowUp className="h-5 w-5" />
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="secondary"
-                      className="h-10 w-10 rounded-full"
-                      onClick={() => stop()}
-                    >
-                      <Square className="h-5 w-5" />
-                    </Button>
-                  )}
+                      className="flex border-none shadow-none"
+                      getMetadata={() => ({
+                        title: "Chat sul PDF",
+                        date: new Date(),
+                      })}
+                    />
+                    {status === "ready" ? (
+                      <Button
+                        type="submit"
+                        size="icon"
+                        className={`h-10 w-10 rounded-full text-white ${
+                          input.trim()
+                            ? "bg-[var(--subject-color)]/95 hover:bg-[var(--subject-color)]"
+                            : ""
+                        }`}
+                        variant={"secondary"}
+                      >
+                        <ArrowUp className="h-5 w-5" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="secondary"
+                        className="h-10 w-10 rounded-full"
+                        onClick={() => stop()}
+                      >
+                        <Square className="h-5 w-5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

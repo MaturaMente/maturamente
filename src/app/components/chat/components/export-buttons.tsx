@@ -7,7 +7,7 @@ import {
   exportChatAsMarkdown,
   exportChatAsPdf,
   ChatMessage as ExportChatMessage,
-} from "@/utils/chat-export";
+} from "@/utils/chat/chat-export";
 
 type Props = {
   messages: any[];

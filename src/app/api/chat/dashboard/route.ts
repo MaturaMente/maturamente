@@ -6,7 +6,7 @@ import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/
 import {
   balancedSimilaritySearch,
   formatDistributionLog,
-} from "@/utils/balanced-rag-retrieval";
+} from "@/utils/chat/balanced-rag-retrieval";
 
 // Allow longer streaming; remove 30s cap
 export const maxDuration = 300;

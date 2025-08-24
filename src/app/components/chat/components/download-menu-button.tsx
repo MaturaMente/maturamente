@@ -13,7 +13,7 @@ import {
   exportChatAsMarkdown,
   exportChatAsPdf,
   ChatMessage as ExportChatMessage,
-} from "@/utils/chat-export";
+} from "@/utils/chat/chat-export";
 
 type Props = {
   messages: any[];
@@ -68,28 +68,29 @@ export default function DownloadMenuButton({
   const disabled = !messages || messages.length === 0;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          className={className}
-          size={buttonSize}
-          variant={buttonVariant}
-          disabled={disabled}
-          title="Scarica conversazione"
-        >
-          <Download className="h-5 w-5" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onClick={md}>
-          <FileText className="h-4 w-4 mr-2" />
-          Esporta Markdown
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={pdf}>
-          <FileDown className="h-4 w-4 mr-2" />
-          Esporta PDF
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      className={className}
+      size={buttonSize}
+      variant={buttonVariant}
+      disabled={disabled}
+      onClick={md}
+      title="Scarica conversazione"
+    >
+      <Download className="h-5 w-5" />
+    </Button>
+    // <DropdownMenu>
+    //   <DropdownMenuTrigger asChild>
+    //   </DropdownMenuTrigger>
+    //   <DropdownMenuContent align="end" className="w-44">
+    //     <DropdownMenuItem onClick={md}>
+    //       <FileText className="h-4 w-4 mr-2" />
+    //       Esporta Markdown
+    //     </DropdownMenuItem>
+    //     <DropdownMenuItem onClick={pdf}>
+    //       <FileDown className="h-4 w-4 mr-2" />
+    //       Esporta PDF
+    //     </DropdownMenuItem>
+    //   </DropdownMenuContent>
+    // </DropdownMenu>
   );
 }

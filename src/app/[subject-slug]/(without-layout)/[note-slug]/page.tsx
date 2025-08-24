@@ -46,7 +46,7 @@ async function NotePageServer({
 
 function NotePageLoading() {
   return (
-    <div className="flex h-screen">
+    <div className="flex flex-col lg:flex-row h-screen">
       {/* Left section - PDF placeholder */}
       <div className="flex-1 flex items-center justify-center bg-muted/20">
         <LoadingSpinner text="Caricamento appunto..." size="sm" />

@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import useAutoScroll from "@/utils/useAutoScroll";
+import useAutoScroll from "@/utils/chat/useAutoScroll";
 import { useSession } from "next-auth/react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // import MarkdownRenderer from "@/app/components/shared/renderer/markdown-renderer";
-import MarkdownRenderer from "./chat-markdown-renderer";
+import MarkdownRenderer from "./components/chat-markdown-renderer";
 import PromptCard from "./components/PromptCard";
 import DownloadMenuButton from "./components/download-menu-button";
 import {

@@ -3,12 +3,12 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useRef, useState } from "react";
-import useAutoScroll from "@/utils/useAutoScroll";
+import useAutoScroll from "@/utils/chat/useAutoScroll";
 import { useSession } from "next-auth/react";
 import PromptCard from "./components/PromptCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import MarkdownRenderer from "./chat-markdown-renderer";
+import MarkdownRenderer from "./components/chat-markdown-renderer";
 // import MarkdownRenderer from "../shared/renderer/markdown-renderer";
 import {
   ArrowUp,
@@ -811,7 +811,6 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                     buttonVariant="ghost"
                     buttonSize="icon"
                     label="Scarica"
-                    className="hidden sm:block"
                     getMetadata={() => ({
                       title: "Subject Chat",
                       userName: (session?.user?.name as string) || null,
