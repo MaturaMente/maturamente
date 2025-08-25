@@ -399,192 +399,197 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                 const messageText = extractTextFromMessage(message);
                 const isLastMessage = idx === messages.length - 1;
                 return (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      isUser ? "justify-end" : "justify-start"
-                    }`}
-                  >
+                  <div className="flex justify-end w-full">
                     <div
-                      className={`flex items-start gap-3 w-full ${
-                        isUser ? "flex-row-reverse" : ""
+                      key={message.id}
+                      className={`flex ${
+                        isUser ? "justify-end md:max-w-2/3" : "justify-start"
                       }`}
                     >
                       <div
-                        className={`group relative flex flex-col ${
-                          isUser ? "items-end" : "items-start"
+                        className={`flex items-start gap-3 w-full ${
+                          isUser ? "flex-row-reverse" : ""
                         }`}
                       >
                         <div
-                          className={`px-4 ${
-                            isUser
-                              ? "px-4 py-2 rounded-2xl bg-[var(--subject-color)]/95 dark:text-foreground text-primary-foreground"
-                              : "bg-none text-foreground w-full"
+                          className={`group relative flex flex-col ${
+                            isUser ? "items-end" : "items-start"
                           }`}
                         >
-                          {editingMessageId === message.id && isUser ? (
-                            <div className="w-full">
-                              <textarea
-                                autoFocus
-                                value={editingValue}
-                                onChange={(e) =>
-                                  setEditingValue(e.target.value)
-                                }
-                                onKeyDown={(e) => {
-                                  if (
-                                    (e.metaKey || e.ctrlKey) &&
-                                    e.key === "Enter"
-                                  ) {
-                                    e.preventDefault();
-                                    saveEdit();
-                                  } else if (e.key === "Escape") {
-                                    e.preventDefault();
-                                    cancelEdit();
+                          <div
+                            className={`px-4 ${
+                              isUser
+                                ? "px-4 py-2 rounded-2xl bg-[var(--subject-color)]/95 dark:text-foreground text-primary-foreground"
+                                : "bg-none text-foreground w-full"
+                            }`}
+                          >
+                            {editingMessageId === message.id && isUser ? (
+                              <div className="w-full">
+                                <textarea
+                                  autoFocus
+                                  value={editingValue}
+                                  onChange={(e) =>
+                                    setEditingValue(e.target.value)
                                   }
-                                }}
-                                className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
-                                placeholder="Modifica il messaggio"
-                              />
-                              <div className="mt-2 flex justify-end gap-2">
+                                  onKeyDown={(e) => {
+                                    if (
+                                      (e.metaKey || e.ctrlKey) &&
+                                      e.key === "Enter"
+                                    ) {
+                                      e.preventDefault();
+                                      saveEdit();
+                                    } else if (e.key === "Escape") {
+                                      e.preventDefault();
+                                      cancelEdit();
+                                    }
+                                  }}
+                                  className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
+                                  placeholder="Modifica il messaggio"
+                                />
+                                <div className="mt-2 flex justify-end gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={cancelEdit}
+                                  >
+                                    Cancella
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={saveEdit}
+                                    variant="secondary"
+                                    disabled={status !== "ready"}
+                                  >
+                                    Invia
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                {/* Assistant header with PIT */}
+                                {!isUser && (
+                                  <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                                    <Bot className="h-4 w-4" /> PIT
+                                  </div>
+                                )}
+                                {/* RAG disclaimer for assistant messages */}
+                                {!isUser &&
+                                  (() => {
+                                    const idx = messages.findIndex(
+                                      (m) => m.id === message.id
+                                    );
+                                    const prevUser = messages
+                                      .slice(0, idx)
+                                      .reverse()
+                                      .find((m) => m.role === "user");
+                                    const used = ((prevUser as any)?.metadata
+                                      ?.selectedNoteSlugs || []) as string[];
+                                    if (
+                                      Array.isArray(used) &&
+                                      used.length > 0
+                                    ) {
+                                      const titles = getTitlesFromSlugs(used);
+                                      if (titles.length > 0) {
+                                        return (
+                                          <div className="mb-2 text-xs text-muted-foreground italic line-clamp-1 hover:line-clamp-none">
+                                            {`Risposta generata partendo da: ${titles.join(
+                                              ", "
+                                            )}`}
+                                          </div>
+                                        );
+                                      }
+                                    }
+                                    return null;
+                                  })()}
+                                {message.parts.map((part, index) =>
+                                  part.type === "text" ? (
+                                    <MarkdownRenderer
+                                      content={part.text}
+                                      key={index}
+                                    />
+                                  ) : null
+                                )}
+                                {!isUser &&
+                                (status === "ready" || !isLastMessage) ? (
+                                  <div className="mt-3 h-px w-full bg-border" />
+                                ) : null}
+                                {!isUser &&
+                                isRetrieving &&
+                                status !== "streaming" &&
+                                pendingAssistantId === message.id ? (
+                                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                                    Sto recuperando i documenti selezionati...
+                                  </div>
+                                ) : null}
+                                {!isUser &&
+                                isThinking &&
+                                status !== "streaming" &&
+                                pendingAssistantId === message.id ? (
+                                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                                    Sto pensando...
+                                  </div>
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* hover actions below bubble, outside */}
+                          <div
+                            className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 md:opacity-0 opacity-100 transition-opacity duration-150 group-hover:opacity-100 ${
+                              isUser ? "justify-end" : "justify-start"
+                            }`}
+                          >
+                            {isUser ? (
+                              <>
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={cancelEdit}
+                                  className="h-8 px-2 text-xs"
+                                  onClick={() => handleCopy(messageText)}
                                 >
-                                  Cancella
+                                  <Copy className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   size="sm"
-                                  onClick={saveEdit}
-                                  variant="secondary"
+                                  variant="ghost"
+                                  className="h-8 px-2 text-xs"
                                   disabled={status !== "ready"}
+                                  onClick={() => beginEdit(message.id)}
                                 >
-                                  Invia
+                                  <Pencil className="h-4 w-4" />
                                 </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              {/* Assistant header with PIT */}
-                              {!isUser && (
-                                <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                                  <Bot className="h-4 w-4" /> PIT
-                                </div>
-                              )}
-                              {/* RAG disclaimer for assistant messages */}
-                              {!isUser &&
-                                (() => {
-                                  const idx = messages.findIndex(
-                                    (m) => m.id === message.id
-                                  );
-                                  const prevUser = messages
-                                    .slice(0, idx)
-                                    .reverse()
-                                    .find((m) => m.role === "user");
-                                  const used = ((prevUser as any)?.metadata
-                                    ?.selectedNoteSlugs || []) as string[];
-                                  if (Array.isArray(used) && used.length > 0) {
-                                    const titles = getTitlesFromSlugs(used);
-                                    if (titles.length > 0) {
-                                      return (
-                                        <div className="mb-2 text-xs text-muted-foreground italic">
-                                          {`Risposta generata partendo da: ${titles.join(
-                                            ", "
-                                          )}`}
-                                        </div>
-                                      );
-                                    }
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-2 text-xs"
+                                  onClick={() => handleCopy(messageText)}
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 px-2 text-xs"
+                                  disabled={
+                                    !(status === "ready" || status === "error")
                                   }
-                                  return null;
-                                })()}
-                              {message.parts.map((part, index) =>
-                                part.type === "text" ? (
-                                  <MarkdownRenderer
-                                    content={part.text}
-                                    key={index}
-                                  />
-                                ) : null
-                              )}
-                              {!isUser &&
-                              (status === "ready" || !isLastMessage) ? (
-                                <div className="mt-3 h-px w-full bg-border" />
-                              ) : null}
-                              {!isUser &&
-                              isRetrieving &&
-                              status !== "streaming" &&
-                              pendingAssistantId === message.id ? (
-                                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                                  Sto recuperando i documenti selezionati...
-                                </div>
-                              ) : null}
-                              {!isUser &&
-                              isThinking &&
-                              status !== "streaming" &&
-                              pendingAssistantId === message.id ? (
-                                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                                  Sto pensando...
-                                </div>
-                              ) : null}
-                            </div>
-                          )}
-                        </div>
+                                  onClick={() =>
+                                    regenerateWithCurrentSelection(message.id)
+                                  }
+                                >
+                                  <RefreshCw className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
 
-                        {/* hover actions below bubble, outside */}
-                        <div
-                          className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 md:opacity-0 opacity-100 transition-opacity duration-150 group-hover:opacity-100 ${
-                            isUser ? "justify-end" : "justify-start"
-                          }`}
-                        >
-                          {isUser ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => handleCopy(messageText)}
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 px-2 text-xs"
-                                disabled={status !== "ready"}
-                                onClick={() => beginEdit(message.id)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => handleCopy(messageText)}
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 px-2 text-xs"
-                                disabled={
-                                  !(status === "ready" || status === "error")
-                                }
-                                onClick={() =>
-                                  regenerateWithCurrentSelection(message.id)
-                                }
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
+                          {/* edit controls moved inside bubble */}
                         </div>
-
-                        {/* edit controls moved inside bubble */}
                       </div>
                     </div>
                   </div>
