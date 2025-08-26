@@ -14,8 +14,8 @@ interface ImagePreviewProps {
 
 export function ImagePreview({
   previewUrl,
-  width = 80,
-  height = 100,
+  width,
+  height,
   className,
   alt = "Note preview",
 }: ImagePreviewProps) {
@@ -31,6 +31,10 @@ export function ImagePreview({
     setIsLoading(false);
   };
 
+  // Use inline styles only if both width and height are provided
+  const containerStyle = width && height ? { width, height } : {};
+  const imageProps = width && height ? { width, height } : {};
+
   if (imageError) {
     return (
       <div
@@ -38,7 +42,7 @@ export function ImagePreview({
           "bg-gray-100 dark:bg-gray-800 rounded-md flex items-center justify-center",
           className
         )}
-        style={{ width, height }}
+        style={containerStyle}
       >
         <FileText className="h-8 w-8 text-gray-400" />
       </div>
@@ -46,11 +50,11 @@ export function ImagePreview({
   }
 
   return (
-    <div className={cn("relative", className)} style={{ width, height }}>
+    <div className={cn("relative", className)} style={containerStyle}>
       {isLoading && (
         <div
           className="absolute inset-0 bg-gray-100 dark:bg-gray-800 rounded-md flex items-center justify-center"
-          style={{ width, height }}
+          style={containerStyle}
         >
           <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-md w-full h-full" />
         </div>
@@ -58,10 +62,9 @@ export function ImagePreview({
       <img
         src={previewUrl}
         alt={alt}
-        width={width}
-        height={height}
+        {...imageProps}
         className={cn(
-          "rounded-md object-cover border border-gray-200 dark:border-gray-700",
+          "rounded-md object-top border border-gray-200 dark:border-gray-700",
           isLoading ? "opacity-0" : "opacity-100",
           "transition-opacity duration-200"
         )}

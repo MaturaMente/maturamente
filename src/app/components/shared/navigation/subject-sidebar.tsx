@@ -15,6 +15,7 @@ import {
   ChevronRight,
   MoreVertical,
   ArrowRight,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,7 @@ import {
 import { useSession, signOut } from "next-auth/react";
 import type { UserSubject } from "@/types/subjectsTypes";
 import { getSubjectIcon } from "@/utils/subject-icons";
+import { getUserSubjects } from "@/utils/subjects-data";
 
 // Define the navigation link type
 type NavLink =
@@ -75,8 +77,9 @@ export default function SubjectSidebar({
   const [isMounted, setIsMounted] = useState(false);
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userSubjects, setUserSubjects] = useState<UserSubject[]>([]);
 
-  // Check subscription status on component mount
+  // Check subscription status and fetch user subjects on component mount
   useEffect(() => {
     const checkSubscription = async () => {
       if (!user?.id) {
@@ -100,7 +103,19 @@ export default function SubjectSidebar({
       }
     };
 
+    const fetchUserSubjects = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const subjects = await getUserSubjects(user.id);
+        setUserSubjects(subjects);
+      } catch (error) {
+        console.error("Error fetching user subjects:", error);
+      }
+    };
+
     checkSubscription();
+    fetchUserSubjects();
   }, [user?.id]);
 
   const handleSettingsClick = () => {
@@ -191,23 +206,64 @@ export default function SubjectSidebar({
         {!collapsed ? (
           <div>
             {currentSubject ? (
-              <span className="flex items-center gap-2">
-                {(() => {
-                  const Icon = getSubjectIcon(currentSubject.name);
-                  return Icon ? (
-                    <Icon
-                      className="h-6 w-6"
-                      style={{ color: `${currentSubject.color}90` }}
-                    />
-                  ) : null;
-                })()}
-                <span
-                  className="font-semibold transition-colors text-2xl"
-                  style={{ color: currentSubject.color }}
-                >
-                  {currentSubject.name}
+              <div className="flex items-center gap-2 w-full">
+                <span className="flex items-center gap-2 flex-1">
+                  {(() => {
+                    const Icon = getSubjectIcon(currentSubject.name);
+                    return Icon ? (
+                      <Icon
+                        className="h-6 w-6"
+                        style={{ color: `${currentSubject.color}90` }}
+                      />
+                    ) : null;
+                  })()}
+                  <span
+                    className="font-semibold transition-colors text-2xl"
+                    style={{ color: currentSubject.color }}
+                  >
+                    {currentSubject.name}
+                  </span>
                 </span>
-              </span>
+                {userSubjects.length > 1 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 hover:bg-background/80"
+                        aria-label="Cambia materia"
+                      >
+                        <ChevronsUpDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      {userSubjects.map((subject) => {
+                        const isCurrentSubject = subject.id === currentSubject.id;
+                        const Icon = getSubjectIcon(subject.name);
+                        
+                        return (
+                          <DropdownMenuItem
+                            key={subject.id}
+                            onClick={() => router.push(`/${subject.slug}`)}
+                            className={cn(
+                              "flex items-center gap-2",
+                              isCurrentSubject && "bg-accent"
+                            )}
+                          >
+                            {Icon && (
+                              <Icon
+                                className="h-4 w-4"
+                                style={{ color: `${subject.color}90` }}
+                              />
+                            )}
+                            <span>{subject.name}</span>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
             ) : (
               navLinks.length > 0 && (
                 // Show loading state when we have navLinks (indicates we're in a subject page)

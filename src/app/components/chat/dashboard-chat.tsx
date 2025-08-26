@@ -20,6 +20,7 @@ import {
 // import MarkdownRenderer from "@/app/components/shared/renderer/markdown-renderer";
 import MarkdownRenderer from "./components/chat-markdown-renderer";
 import PromptCard from "./components/PromptCard";
+import MessageDocumentsDisplay from "./components/message-documents-display";
 import DownloadMenuButton from "./components/download-menu-button";
 import {
   ArrowUp,
@@ -535,6 +536,18 @@ export default function DashboardChat() {
                             : "bg-none text-foreground w-full"
                         }`}
                       >
+                        {/* Display selected documents for user messages */}
+                        {isUser && (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) && (
+                          <MessageDocumentsDisplay
+                            selectedNoteSlugs={selectedNoteSlugs}
+                            selectedFileSources={selectedFileSources}
+                            notes={notes}
+                            subjects={subjects}
+                            uploadedFiles={uploadedFiles}
+                            maxInitialDisplay={1}
+                          />
+                        )}
+                        
                         {editingMessageId === message.id && isUser ? (
                           <div className="w-full">
                             <textarea
@@ -800,7 +813,7 @@ export default function DashboardChat() {
         className="md:sticky fixed bottom-6 left-0 right-0 z-10 w-full bg-transparent px-6 pb-0 md:pb-3"
       >
         <div className="mx-auto w-full max-w-3xl">
-          <div className="flex flex-col items-center rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
+          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
             {(selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) && (
               <div className="mb-2 w-full">
                 <div
@@ -837,18 +850,18 @@ export default function DashboardChat() {
                     return (
                       <div
                         key={slug}
-                        className="relative flex items-center gap-3 rounded-2xl border bg-background px-3 py-2"
+                        className="relative flex items-center gap-1 rounded-2xl border bg-background p-2"
                       >
-                        <div className="flex p-1 items-center justify-center rounded-xl">
+                        <div className="flex p-1 items-center justify-center">
                           <FileText
-                            className="h-5 w-5"
+                            className="h-4 w-4"
                             style={{
                               color: subject?.color || "var(--subject-color)",
                             }}
                           />
                         </div>
                         <div className="leading-tight pr-2">
-                          <div className="font-medium max-w-[220px] line-clamp-1">
+                          <div className="font-medium text-sm max-w-[220px] line-clamp-1">
                             {mainTitle}
                           </div>
                           {subtitle && (
@@ -881,15 +894,15 @@ export default function DashboardChat() {
                     return (
                       <div
                         key={`file-${source}`}
-                        className="relative flex items-center gap-3 rounded-2xl border bg-primary/10 border-primary/20 px-3 py-2"
+                        className="relative flex items-center gap-1 rounded-2xl border bg-background p-2"
                       >
-                        <div className="flex p-1 items-center justify-center rounded-xl">
+                        <div className="flex p-1 items-center justify-center">
                           <FileUser
-                            className="h-5 w-5 text-primary"
+                            className="h-4 w-4 text-primary"
                           />
                         </div>
                         <div className="leading-tight pr-2">
-                          <div className="font-medium max-w-[220px] line-clamp-1">
+                          <div className="font-medium text-sm max-w-[220px] line-clamp-1">
                             {mainTitle}
                           </div>
                           {subtitle && (

@@ -34,6 +34,7 @@ import {
 import DownloadMenuButton from "./components/download-menu-button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import MessageDocumentsDisplay from "./components/message-documents-display";
 
 type UINote = {
   id: string;
@@ -90,6 +91,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
   // Removed legacy scroll refs/state in favor of useAutoScroll
   const [isMultiline, setIsMultiline] = useState(false);
   const [subjectColor, setSubjectColor] = useState<string | null>(null);
+  const [currentSubjectData, setCurrentSubjectData] = useState<any>(null);
   const { data: session } = useSession();
   const firstName = (session?.user?.name || "").split(" ")[0] || null;
 
@@ -121,6 +123,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
         const color = (data?.color as string) || "";
         if (!cancelled && color) {
           setSubjectColor(color);
+          setCurrentSubjectData(data);
           document.documentElement.style.setProperty("--subject-color", color);
         }
       } catch {}
@@ -401,9 +404,8 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                 const messageText = extractTextFromMessage(message);
                 const isLastMessage = idx === messages.length - 1;
                 return (
-                  <div className="flex justify-end w-full">
+                  <div key={message.id} className="flex justify-end w-full">
                     <div
-                      key={message.id}
                       className={`flex ${
                         isUser ? "justify-end md:max-w-2/3" : "justify-start w-full"
                       }`}
@@ -419,12 +421,24 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                           }`}
                         >
                           <div
-                            className={`px-4 ${
+                            className={`${
                               isUser
-                                ? "px-4 py-2 rounded-2xl bg-[var(--subject-color)]/95 dark:text-foreground text-primary-foreground"
-                                : "bg-none text-foreground w-full"
+                                ? "p-4 rounded-2xl bg-[var(--subject-color)]/95 dark:text-foreground text-primary-foreground"
+                                : "px-4 bg-none text-foreground w-full"
                             }`}
                           >
+                            {/* Display selected documents for user messages */}
+                            {isUser && selectedNoteSlugs.length > 0 && (
+                              <MessageDocumentsDisplay
+                                selectedNoteSlugs={selectedNoteSlugs}
+                                selectedFileSources={[]}
+                                notes={notes}
+                                subjects={currentSubjectData ? [currentSubjectData] : []}
+                                uploadedFiles={{}}
+                                maxInitialDisplay={1}
+                              />
+                            )}
+                            
                             {editingMessageId === message.id && isUser ? (
                               <div className="w-full">
                                 <textarea
@@ -723,16 +737,16 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                     return (
                       <div
                         key={slug}
-                        className="relative flex items-center gap-3 rounded-2xl border bg-background px-3 py-2"
+                        className="relative flex items-center gap-1 rounded-2xl border bg-background p-2"
                       >
-                        <div className="flex p-1 items-center justify-center rounded-xl">
+                        <div className="flex p-1 items-center justify-center">
                           <FileText
-                            className="h-5 w-5"
+                            className="h-4 w-4"
                             style={{ color: "var(--subject-color)" }}
                           />
                         </div>
                         <div className="leading-tight pr-2">
-                          <div className="font-medium max-w-[220px] line-clamp-1">
+                          <div className="font-medium text-sm max-w-[220px] line-clamp-1">
                             {mainTitle}
                           </div>
                           {subtitle && (

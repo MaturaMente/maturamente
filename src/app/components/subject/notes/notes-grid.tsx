@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Search, BookOpen } from "lucide-react";
 import { NoteRow } from "./note-row";
+import { NoteCard } from "./note-card";
 import type { Note, SubjectInfo } from "@/types/notesTypes";
 import { generatePreviewUrls } from "@/utils/preview-urls";
 
@@ -175,9 +176,9 @@ export function NotesGridClient({
               </h2>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredFavoriteNotes.map((note) => (
-                <NoteRow
+                <NoteCard
                   key={note.id}
                   note={note}
                   onToggleFavorite={handleToggleFavorite}

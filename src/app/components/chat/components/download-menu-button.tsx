@@ -69,7 +69,7 @@ export default function DownloadMenuButton({
 
   return (
     <Button
-      className={className}
+      className={className} 
       size={buttonSize}
       variant={buttonVariant}
       disabled={disabled}

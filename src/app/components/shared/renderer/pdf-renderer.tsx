@@ -422,18 +422,32 @@ export default function PdfViewer({
     }
   };
 
+  // Prevent context menu (right-click) to disable copying/saving
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    return false;
+  };
+
+  // Prevent drag and drop
+  const handleDragStart = (e: React.DragEvent) => {
+    e.preventDefault();
+    return false;
+  };
+
   return (
     <div
       ref={containerRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onContextMenu={handleContextMenu}
       className={`relative touch-none md:touch-auto ${className}`}
       style={{
         width: "100%",
         height: typeof height === "number" ? `${height}px` : height,
         position: "relative",
         overflow: "hidden",
+        userSelect: "none",
       }}
     >
       <div
@@ -576,9 +590,14 @@ export default function PdfViewer({
         >
           <canvas
             ref={canvasRef}
+            onContextMenu={handleContextMenu}
+            onDragStart={handleDragStart}
+            draggable={false}
             style={{
               display: "block",
               boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+              userSelect: "none",
+              pointerEvents: "auto",
             }}
           />
         </div>
