@@ -1,12 +1,22 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import useAutoScroll from "@/utils/chat/useAutoScroll";
 import { useSession } from "next-auth/react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 // import MarkdownRenderer from "@/app/components/shared/renderer/markdown-renderer";
 import MarkdownRenderer from "./components/chat-markdown-renderer";
 import PromptCard from "./components/PromptCard";
@@ -20,6 +30,7 @@ import {
   RefreshCw,
   Square,
   FileText,
+  FileUser,
   X,
   Star,
   Search,
@@ -34,6 +45,9 @@ import {
 } from "lucide-react";
 import { getSubjectIcon } from "@/utils/subject-icons";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FilesManagement from "@/app/components/files/files-management";
+import { toast } from "sonner";
 
 type UINote = {
   id: string;
@@ -74,7 +88,51 @@ export default function DashboardChat() {
   const [subjects, setSubjects] = useState<UISubject[]>([]);
   const [notesSearch, setNotesSearch] = useState("");
   const [selectedNoteSlugs, setSelectedNoteSlugs] = useState<string[]>([]);
+  const [selectedFileSources, setSelectedFileSources] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<{[key: string]: {title: string, description: string}}>({}); // Cache for file info
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [showCleanupConfirm, setShowCleanupConfirm] = useState(false);
+
+  // Fetch file info when files are selected  
+  const fetchFileInfo = useCallback(async (sources: string[]) => {
+    try {
+      const response = await fetch("/api/files/list");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.files) {
+          const fileMap: {[key: string]: {title: string, description: string}} = {};
+          const availableSources = new Set<string>();
+          
+          data.files.forEach((file: any) => {
+            fileMap[file.pinecone_source] = {
+              title: file.title,
+              description: file.description
+            };
+            availableSources.add(file.pinecone_source);
+          });
+          
+          setUploadedFiles(fileMap);
+          
+          // Remove any selected file sources that are no longer available (deleted files)
+          const currentlySelected = selectedFileSources.filter(source => availableSources.has(source));
+          if (currentlySelected.length !== selectedFileSources.length) {
+            console.log(`🧹 Cleaning up ${selectedFileSources.length - currentlySelected.length} deleted files from selection`);
+            setSelectedFileSources(currentlySelected);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching file info:", error);
+    }
+  }, [selectedFileSources]);
+
+  // Fetch file info when selected files change
+  useEffect(() => {
+    if (selectedFileSources.length > 0) {
+      fetchFileInfo(selectedFileSources);
+    }
+  }, [selectedFileSources, fetchFileInfo]);
   const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
   const [selectedSubjectForSearch, setSelectedSubjectForSearch] = useState<
     string | null
@@ -124,8 +182,9 @@ export default function DashboardChat() {
   const handleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
+      toast.success("Messaggio copiato negli appunti!");
     } catch {
-      // no-op
+      toast.error("Errore durante la copia del messaggio");
     }
   };
 
@@ -150,7 +209,7 @@ export default function DashboardChat() {
           ? {
               ...m,
               parts: [{ type: "text", text: editingValue }],
-              metadata: { ...(m.metadata || {}), selectedNoteSlugs },
+              metadata: { ...(m.metadata || {}), selectedNoteSlugs, selectedFileSources },
             }
           : m
       )
@@ -257,8 +316,31 @@ export default function DashboardChat() {
     setSelectedNoteSlugs([]);
   };
 
+  const handlePineconeCleanup = async () => {
+    setIsCleaningUp(true);
+    try {
+      const response = await fetch('/api/files/cleanup', {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('Tutti i documenti sono stati eliminati da Pinecone con successo!');
+      } else {
+        alert(`Errore durante la pulizia: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Cleanup error:', error);
+      alert('Errore durante la pulizia dell\'indice');
+    } finally {
+      setIsCleaningUp(false);
+      setShowCleanupConfirm(false);
+    }
+  };
+
   const regenerateWithCurrentSelection = (assistantId: string) => {
-    if (selectedNoteSlugs.length > 0) {
+    if (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) {
       setIsRetrieving(true);
       setIsThinking(false);
     } else {
@@ -273,7 +355,7 @@ export default function DashboardChat() {
       const before = [...prev];
       for (let i = idx - 1; i >= 0; i--) {
         if (before[i].role === "user") {
-          const meta = { ...(before[i].metadata || {}), selectedNoteSlugs };
+          const meta = { ...(before[i].metadata || {}), selectedNoteSlugs, selectedFileSources };
           before[i] = { ...before[i], metadata: meta };
           break;
         }
@@ -297,7 +379,7 @@ export default function DashboardChat() {
     const canCollapse = el.scrollHeight > SINGLE_ROW_MAX_PX + 1;
     setChipsCanCollapse(canCollapse);
     if (!canCollapse) setChipsExpanded(false);
-  }, [selectedNoteSlugs, notes]);
+  }, [selectedNoteSlugs, selectedFileSources, notes, uploadedFiles]);
 
   useEffect(() => {
     if (isRetrieving && (status === "streaming" || status === "error")) {
@@ -347,334 +429,343 @@ export default function DashboardChat() {
         aria-live="polite"
         aria-busy={status !== "ready"}
       >
-        <div>
-          {messages.length === 0 ? (
-            <div className="mx-auto w-full px-6 h-full md:py-48 py-24 mb-24 md:mb-0 space-y-2">
-              <div className="flex h-[98%] items-center justify-center">
-                <div className="text-center max-w-4xl">
-                  <div className="flex flex-col md:flex-wrap items-center justify-center md:gap-8 gap-4 md:pt-0 pt-12">
-                    {/* Hero */}
-                    <div className="flex flex-col items-center gap-3 mb-2">
-                      <div className="relative">
-                        <div className="pointer-events-none absolute -inset-2 rounded-2xl bg-blue-500/30 blur-md" />
-                        <div className="hidden dark:block absolute -top-px left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-70" />
-                        <div className="relative h-12 w-12 rounded-2xl bg-blue-500 text-background flex items-center justify-center shadow-sm">
-                          <Bot className="h-5 w-5 text-white" />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-2xl md:text-3xl font-semibold tracking-tight">
-                          {`Bentornato${
-                            firstName ? ` ${firstName}` : ""
-                          }, cosa devi studiare oggi?`}
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          Chiedi spiegazioni, riassunti o crea quiz partendo dai
-                          tuoi appunti.
-                        </div>
+
+        {messages.length === 0 ? (
+          <div className="mx-auto w-full px-6 h-full md:py-48 py-24 mb-24 md:mb-0 space-y-2">
+            <div className="flex h-[98%] items-center justify-center">
+              <div className="text-center max-w-4xl">
+                <div className="flex flex-col md:flex-wrap items-center justify-center md:gap-8 gap-4 md:pt-0 pt-12">
+                  {/* Hero */}
+                  <div className="flex flex-col items-center gap-3 mb-2">
+                    <div className="relative">
+                      <div className="pointer-events-none absolute -inset-2 rounded-2xl bg-blue-500/30 blur-md" />
+                      <div className="hidden dark:block absolute -top-px left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-70" />
+                      <div className="relative h-12 w-12 rounded-2xl bg-blue-500 text-background flex items-center justify-center shadow-sm">
+                        <Bot className="h-5 w-5 text-white" />
                       </div>
                     </div>
-                    {/* Prompt cards */}
-                    <div className="w-full grid grid-cols-1 lg:grid-cols-3 lg:gap-8 gap-4">
-                      <PromptCard
-                        title="Spiegami facilmente"
-                        description="Ottieni una spiegazione semplice con esempi chiari."
-                        Icon={Sparkles}
-                        variant="dashboard"
-                        onClick={() =>
-                          usePrompt(
-                            "Spiegami questi argomenti come se avessi 12 anni, con esempi concreti e analogie semplici."
-                          )
-                        }
-                      />
-                      <PromptCard
-                        title="Riassumi e organizza"
-                        description="Crea un riassunto con punti chiave ordinati."
-                        Icon={Wand2}
-                        variant="dashboard"
-                        onClick={() =>
-                          usePrompt(
-                            "Riassumi i concetti chiave dagli appunti selezionati e crea una mini mappa mentale con bullet point."
-                          )
-                        }
-                      />
-                      <PromptCard
-                        title="Crea quiz"
-                        description="Genera domande per metterti alla prova."
-                        Icon={ListChecks}
-                        variant="dashboard"
-                        onClick={() =>
-                          usePrompt(
-                            "Crea 5 domande a risposta multipla sui contenuti selezionati, con spiegazione della soluzione."
-                          )
-                        }
-                      />
+                    <div>
+                      <div className="text-2xl md:text-3xl font-semibold tracking-tight">
+                        {`Bentornato${
+                          firstName ? ` ${firstName}` : ""
+                        }, cosa devi studiare oggi?`}
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        Chiedi spiegazioni, riassunti o crea quiz partendo dai
+                        tuoi appunti.
+                      </div>
                     </div>
-                    <Button
-                      className="text-white"
-                      variant="default"
-                      size="lg"
-                      onClick={openNotesOverlay}
-                      title="Seleziona gli appunti"
-                    >
-                      Scegli gli appunti
-                    </Button>
                   </div>
+                  {/* Prompt cards */}
+                  <div className="w-full grid grid-cols-1 lg:grid-cols-3 lg:gap-8 gap-4">
+                    <PromptCard
+                      title="Spiegami facilmente"
+                      description="Ottieni una spiegazione semplice con esempi chiari."
+                      Icon={Sparkles}
+                      variant="dashboard"
+                      onClick={() =>
+                        usePrompt(
+                          "Spiegami questi argomenti come se avessi 12 anni, con esempi concreti e analogie semplici."
+                        )
+                      }
+                    />
+                    <PromptCard
+                      title="Riassumi e organizza"
+                      description="Crea un riassunto con punti chiave ordinati."
+                      Icon={Wand2}
+                      variant="dashboard"
+                      onClick={() =>
+                        usePrompt(
+                          "Riassumi i concetti chiave dagli appunti selezionati e crea una mini mappa mentale con bullet point."
+                        )
+                      }
+                    />
+                    <PromptCard
+                      title="Crea quiz"
+                      description="Genera domande per metterti alla prova."
+                      Icon={ListChecks}
+                      variant="dashboard"
+                      onClick={() =>
+                        usePrompt(
+                          "Crea 5 domande a risposta multipla sui contenuti selezionati, con spiegazione della soluzione."
+                        )
+                      }
+                    />
+                  </div>
+                  <Button
+                    className="text-white"
+                    variant="default"
+                    size="lg"
+                    onClick={openNotesOverlay}
+                    title="Seleziona gli appunti"
+                  >
+                    Scegli gli appunti
+                  </Button>
                 </div>
               </div>
             </div>
-          ) : (
-            <div
-              className={cn(
-                "mx-auto w-full max-w-3xl px-6 h-full pt-24 pb-[260px] space-y-2",
-                selectedNoteSlugs.length > 0 ? "pb-[260px]" : "pb-[160px]"
-              )}
-            >
-              {messages.map((message, idx) => {
-                const isUser = message.role === "user";
-                const messageText = extractTextFromMessage(message);
-                const isLastMessage = idx === messages.length - 1;
-                return (
-                  <div className="flex justify-end w-full">
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "mx-auto w-full max-w-3xl px-6 h-full pt-24 pb-[260px] space-y-2",
+              (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) ? "pb-[260px]" : "pb-[160px]"
+            )}
+          >
+            {messages.map((message, idx) => {
+              const isUser = message.role === "user";
+              const messageText = extractTextFromMessage(message);
+              const isLastMessage = idx === messages.length - 1;
+              return (
+                <div key={message.id} className="flex justify-end w-full">
+                  <div
+                    className={`flex ${
+                      isUser ? "justify-end md:max-w-2/3" : "justify-start w-full"
+                    }`}
+                  >
                     <div
-                      key={message.id}
-                      className={`flex ${
-                        isUser ? "justify-end md:max-w-2/3" : "justify-start"
+                      className={`group relative flex flex-col ${
+                        isUser ? "items-end" : "items-start"
                       }`}
                     >
                       <div
-                        className={`group relative flex flex-col ${
-                          isUser ? "items-end" : "items-start"
+                        className={`px-4 ${
+                          isUser
+                            ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
+                            : "bg-none text-foreground w-full"
                         }`}
                       >
-                        <div
-                          className={`px-4 ${
-                            isUser
-                              ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
-                              : "bg-none text-foreground w-full"
-                          }`}
-                        >
-                          {editingMessageId === message.id && isUser ? (
-                            <div className="w-full">
-                              <textarea
-                                autoFocus
-                                value={editingValue}
-                                onChange={(e) =>
-                                  setEditingValue(e.target.value)
+                        {editingMessageId === message.id && isUser ? (
+                          <div className="w-full">
+                            <textarea
+                              autoFocus
+                              value={editingValue}
+                              onChange={(e) =>
+                                setEditingValue(e.target.value)
+                              }
+                              onKeyDown={(e) => {
+                                if (
+                                  (e.metaKey || e.ctrlKey) &&
+                                  e.key === "Enter"
+                                ) {
+                                  e.preventDefault();
+                                  saveEdit();
+                                } else if (e.key === "Escape") {
+                                  e.preventDefault();
+                                  cancelEdit();
                                 }
-                                onKeyDown={(e) => {
-                                  if (
-                                    (e.metaKey || e.ctrlKey) &&
-                                    e.key === "Enter"
-                                  ) {
-                                    e.preventDefault();
-                                    saveEdit();
-                                  } else if (e.key === "Escape") {
-                                    e.preventDefault();
-                                    cancelEdit();
-                                  }
-                                }}
-                                className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
-                                placeholder="Modifica il messaggio"
-                              />
-                              <div className="mt-2 flex justify-end gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={cancelEdit}
-                                >
-                                  Cancella
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={saveEdit}
-                                  variant="secondary"
-                                  disabled={status !== "ready"}
-                                >
-                                  Invia
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              {/* Assistant header with PIT */}
-                              {!isUser && (
-                                <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                                  <Bot className="h-4 w-4" /> PIT
-                                </div>
-                              )}
-                              {!isUser &&
-                                (() => {
-                                  const idx = messages.findIndex(
-                                    (m) => m.id === message.id
-                                  );
-                                  const prevUser = messages
-                                    .slice(0, idx)
-                                    .reverse()
-                                    .find((m) => m.role === "user");
-                                  const used = ((prevUser as any)?.metadata
-                                    ?.selectedNoteSlugs || []) as string[];
-                                  if (Array.isArray(used) && used.length > 0) {
-                                    const titles = getTitlesFromSlugs(used);
-                                    if (titles.length > 0) {
-                                      return (
-                                        <div className="mb-2 text-xs text-muted-foreground italic line-clamp-1 hover:line-clamp-none">
-                                          {`Risposta generata partendo da: ${titles.join(
-                                            ", "
-                                          )}`}
-                                        </div>
-                                      );
-                                    }
-                                  }
-                                  return null;
-                                })()}
-                              {message.parts.map((part, index) =>
-                                part.type === "text" ? (
-                                  <MarkdownRenderer
-                                    content={part.text}
-                                    key={index}
-                                  />
-                                ) : null
-                              )}
-                              {!isUser &&
-                              (status === "ready" || !isLastMessage) ? (
-                                <div className="mt-3 h-px w-full bg-border" />
-                              ) : null}
-                              {!isUser &&
-                              isRetrieving &&
-                              status !== "streaming" &&
-                              pendingAssistantId === message.id ? (
-                                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                                  Sto recuperando i documenti selezionati...
-                                </div>
-                              ) : null}
-                              {!isUser &&
-                              isThinking &&
-                              status !== "streaming" &&
-                              pendingAssistantId === message.id ? (
-                                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                                  Sto pensando...
-                                </div>
-                              ) : null}
-                            </div>
-                          )}
-                        </div>
-                        <div
-                          className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 md:opacity-0 opacity-100 transition-opacity duration-150 group-hover:opacity-100 ${
-                            isUser ? "justify-end" : "justify-start"
-                          }`}
-                        >
-                          {isUser ? (
-                            <>
+                              }}
+                              className="w-full min-h-24 bg-transparent outline-none resize-y text-base"
+                              placeholder="Modifica il messaggio"
+                            />
+                            <div className="mt-2 flex justify-end gap-2">
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => handleCopy(messageText)}
+                                onClick={cancelEdit}
                               >
-                                <Copy className="h-4 w-4" />
+                                Cancella
                               </Button>
                               <Button
                                 size="sm"
-                                variant="ghost"
-                                className="h-8 px-2 text-xs"
+                                onClick={saveEdit}
+                                variant="secondary"
                                 disabled={status !== "ready"}
-                                onClick={() => beginEdit(message.id)}
                               >
-                                <Pencil className="h-4 w-4" />
+                                Invia
                               </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => handleCopy(messageText)}
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 px-2 text-xs"
-                                disabled={
-                                  !(status === "ready" || status === "error")
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            {/* Assistant header with PIT */}
+                            {!isUser && (
+                              <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                                <Bot className="h-4 w-4" /> PIT
+                              </div>
+                            )}
+                            {!isUser &&
+                              (() => {
+                                const idx = messages.findIndex(
+                                  (m) => m.id === message.id
+                                );
+                                const prevUser = messages
+                                  .slice(0, idx)
+                                  .reverse()
+                                  .find((m) => m.role === "user");
+                                const usedSlugs = ((prevUser as any)?.metadata
+                                  ?.selectedNoteSlugs || []) as string[];
+                                const usedFiles = ((prevUser as any)?.metadata
+                                  ?.selectedFileSources || []) as string[];
+                                
+                                const noteTitles = getTitlesFromSlugs(usedSlugs);
+                                const fileTitles = usedFiles.map(source => {
+                                  const fileInfo = uploadedFiles[source];
+                                  const title = fileInfo?.title || source.replace(/\.[^/.]+$/, "");
+                                  const sep = title.indexOf(" - ");
+                                  return sep !== -1 ? title.slice(0, sep) : title;
+                                });
+                                
+                                const allTitles = [...noteTitles, ...fileTitles];
+                                
+                                if (allTitles.length > 0) {
+                                  return (
+                                    <div className="mb-2 text-xs text-muted-foreground italic line-clamp-1 hover:line-clamp-none">
+                                      {`Risposta generata partendo da: ${allTitles.join(
+                                        ", "
+                                      )}`}
+                                    </div>
+                                  );
                                 }
-                                onClick={() =>
-                                  regenerateWithCurrentSelection(message.id)
-                                }
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                                return null;
+                              })()}
+                            {message.parts.map((part, index) =>
+                              part.type === "text" ? (
+                                <MarkdownRenderer
+                                  content={part.text}
+                                  key={index}
+                                />
+                              ) : null
+                            )}
+                            {!isUser &&
+                            (status === "ready" || !isLastMessage) ? (
+                              <div className="mt-3 h-px w-full bg-border" />
+                            ) : null}
+                            {!isUser &&
+                            isRetrieving &&
+                            status !== "streaming" &&
+                            pendingAssistantId === message.id ? (
+                              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                                Sto recuperando i documenti selezionati...
+                              </div>
+                            ) : null}
+                            {!isUser &&
+                            isThinking &&
+                            status !== "streaming" &&
+                            pendingAssistantId === message.id ? (
+                              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                                Sto pensando...
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
+                      <div
+                        className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 md:opacity-0 opacity-100 transition-opacity duration-150 group-hover:opacity-100 ${
+                          isUser ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        {isUser ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              onClick={() => handleCopy(messageText)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              disabled={status !== "ready"}
+                              onClick={() => beginEdit(message.id)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              onClick={() => handleCopy(messageText)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-xs"
+                              disabled={
+                                !(status === "ready" || status === "error")
+                              }
+                              onClick={() =>
+                                regenerateWithCurrentSelection(message.id)
+                              }
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
-                );
-              })}
-              {isRetrieving && status !== "streaming" && !pendingAssistantId ? (
-                <div className="flex justify-start">
-                  <div className="px-4 text-foreground w-full">
-                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                      Sto recuperando i documenti selezionati...
-                    </div>
+                </div>
+              );
+            })}
+            {isRetrieving && status !== "streaming" && !pendingAssistantId ? (
+              <div className="flex justify-start w-full">
+                <div className="px-4 text-foreground w-full">
+                  <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                    Sto recuperando i documenti selezionati...
                   </div>
                 </div>
-              ) : null}
-              {isThinking && status !== "streaming" && !pendingAssistantId ? (
-                <div className="flex justify-start">
-                  <div className="px-4 text-foreground w-full">
-                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                      Sto pensando...
-                    </div>
+              </div>
+            ) : null}
+            {isThinking && status !== "streaming" && !pendingAssistantId ? (
+              <div className="flex justify-start w-full">
+                <div className="px-4 text-foreground w-full">
+                  <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                    Sto pensando...
                   </div>
                 </div>
-              ) : null}
-            </div>
-          )}
-          {messages.length === 0 &&
-          isRetrieving &&
-          status !== "streaming" &&
-          !pendingAssistantId ? (
-            <div className="flex justify-start">
-              <div className="px-4 text-foreground w-full">
-                <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                  Sto recuperando i documenti selezionati...
-                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+        {messages.length === 0 &&
+        isRetrieving &&
+        status !== "streaming" &&
+        !pendingAssistantId ? (
+          <div className="flex justify-start w-full">
+            <div className="px-4 text-foreground w-full">
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                Sto recuperando i documenti selezionati...
               </div>
             </div>
-          ) : null}
-          {messages.length === 0 &&
-          isThinking &&
-          status !== "streaming" &&
-          !pendingAssistantId ? (
-            <div className="flex justify-start">
-              <div className="px-4 text-foreground w-full">
-                <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
-                  Sto pensando...
-                </div>
+          </div>
+        ) : null}
+        {messages.length === 0 &&
+        isThinking &&
+        status !== "streaming" &&
+        !pendingAssistantId ? (
+          <div className="flex justify-start w-full">
+            <div className="px-4 text-foreground w-full">
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
+                Sto pensando...
               </div>
             </div>
-          ) : null}
-          {/* bottom anchor optional */}
-        </div>
+          </div>
+        ) : null}
+        {/* bottom anchor optional */}
       </div>
+
 
       {/* New messages indicator */}
       {hasNewItems && (
         <div
           className={cn(
             "fixed left-1/2 -translate-x-1/2 z-10",
-            selectedNoteSlugs.length > 0 ? "bottom-62" : "bottom-36"
+            (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) ? "bottom-62" : "bottom-36"
           )}
         >
           <Button
@@ -695,14 +786,14 @@ export default function DashboardChat() {
           e.preventDefault();
           if (status !== "ready") return;
           if (input.trim()) {
-            if (selectedNoteSlugs.length > 0) {
+            if (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) {
               setIsRetrieving(true);
               setIsThinking(false);
             } else {
               setIsThinking(true);
               setIsRetrieving(false);
             }
-            sendMessage({ text: input, metadata: { selectedNoteSlugs } });
+            sendMessage({ text: input, metadata: { selectedNoteSlugs, selectedFileSources } });
             setInput("");
           }
         }}
@@ -710,7 +801,7 @@ export default function DashboardChat() {
       >
         <div className="mx-auto w-full max-w-3xl">
           <div className="flex flex-col items-center rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
-            {selectedNoteSlugs.length > 0 && (
+            {(selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) && (
               <div className="mb-2 w-full">
                 <div
                   ref={chipsRef}
@@ -718,6 +809,7 @@ export default function DashboardChat() {
                     chipsExpanded ? "max-h-[999px]" : "max-h-[64px]"
                   }`}
                 >
+                  {/* Note chips */}
                   {selectedNoteSlugs.map((slug) => {
                     const note = notes.find((n) => n.slug === slug);
                     const subject = subjects.find(
@@ -776,6 +868,47 @@ export default function DashboardChat() {
                       </div>
                     );
                   })}
+                  
+                  {/* File chips */}
+                  {selectedFileSources.map((source) => {
+                    // Get file info from cached data
+                    const fileInfo = uploadedFiles[source];
+                    const title = fileInfo?.title || source.replace(/\.[^/.]+$/, "");
+                    const sep = title.indexOf(" - ");
+                    const mainTitle = sep !== -1 ? title.slice(0, sep) : title;
+                    const subtitle = sep !== -1 ? title.slice(sep + 3) : (fileInfo?.description && fileInfo.description !== title ? fileInfo.description : null);
+                    
+                    return (
+                      <div
+                        key={`file-${source}`}
+                        className="relative flex items-center gap-3 rounded-2xl border bg-primary/10 border-primary/20 px-3 py-2"
+                      >
+                        <div className="flex p-1 items-center justify-center rounded-xl">
+                          <FileUser
+                            className="h-5 w-5 text-primary"
+                          />
+                        </div>
+                        <div className="leading-tight pr-2">
+                          <div className="font-medium max-w-[220px] line-clamp-1">
+                            {mainTitle}
+                          </div>
+                          {subtitle && (
+                            <div className="text-xs text-muted-foreground line-clamp-1">
+                              {subtitle}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          aria-label={`Rimuovi ${mainTitle}`}
+                          className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-gray-700 dark:bg-gray-300 text-primary-foreground shadow"
+                          onClick={() => setSelectedFileSources(prev => prev.filter(s => s !== source))}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
                 {chipsCanCollapse && (
                   <button
@@ -799,7 +932,7 @@ export default function DashboardChat() {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       if (status === "ready" && input.trim()) {
-                        if (selectedNoteSlugs.length > 0) {
+                        if (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) {
                           setIsRetrieving(true);
                           setIsThinking(false);
                         } else {
@@ -808,7 +941,7 @@ export default function DashboardChat() {
                         }
                         sendMessage({
                           text: input,
-                          metadata: { selectedNoteSlugs },
+                          metadata: { selectedNoteSlugs, selectedFileSources },
                         });
                         setInput("");
                       }
@@ -831,7 +964,7 @@ export default function DashboardChat() {
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="h-10 w-10 rounded-full"
+                    className="h-10 w-10 rounded-xl"
                     onClick={openNotesOverlay}
                     title="Seleziona appunti per il RAG"
                   >
@@ -839,6 +972,7 @@ export default function DashboardChat() {
                   </Button>
                   <DownloadMenuButton
                     messages={messages as any[]}
+                    className="rounded-xl"
                     fileNameBase={`dashboard-chat`}
                     buttonVariant="ghost"
                     buttonSize="icon"
@@ -881,28 +1015,89 @@ export default function DashboardChat() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-2xl rounded-xl border bg-background shadow-xl">
             <div className="p-5">
-              {/* Selected Notes Section - Always Visible */}
+              {/* Selected Items Section - Always Visible */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">
-                    {selectedNoteSlugs.length > 0
-                      ? `Appunti selezionati - ${selectedNoteSlugs.length}`
-                      : "Appunti selezionati"}
+                    {(selectedNoteSlugs.length + selectedFileSources.length) > 0
+                      ? `Documenti selezionati - ${selectedNoteSlugs.length + selectedFileSources.length}`
+                      : "Documenti selezionati"}
                   </span>
-                  {selectedNoteSlugs.length > 0 && (
-                    <Button
+                  <div className="flex gap-2">
+                    {(selectedNoteSlugs.length + selectedFileSources.length) > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedNoteSlugs([]);
+                          setSelectedFileSources([]);
+                        }}
+                        className="text-xs h-7 px-2"
+                      >
+                        Rimuovi Tutti
+                      </Button>
+                    )}
+                    {/* <Button
                       type="button"
-                      variant="ghost"
+                      variant="destructive"
                       size="sm"
-                      onClick={clearAllSelectedNotes}
+                      onClick={() => setShowCleanupConfirm(true)}
+                      disabled={isCleaningUp}
                       className="text-xs h-7 px-2"
                     >
-                      Rimuovi Tutti
-                    </Button>
-                  )}
+                      {isCleaningUp ? "Pulizia..." : "Pulisci Pinecone"}
+                    </Button> */}
+                  </div>
                 </div>
-                {selectedNoteSlugs.length > 0 ? (
+                {(selectedNoteSlugs.length + selectedFileSources.length) > 0 ? (
                   <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
+                    {/* Selected Files */}
+                    {selectedFileSources.map((source) => {
+                      // Get file info from cached data
+                      const fileInfo = uploadedFiles[source];
+                      const title = fileInfo?.title || source.replace(/\.[^/.]+$/, "");
+                      const sep = title.indexOf(" - ");
+                      const mainTitle = sep !== -1 ? title.slice(0, sep) : title;
+                      const subtitle = sep !== -1 ? title.slice(sep + 3) : (fileInfo?.description && fileInfo.description !== title ? fileInfo.description : null);
+                      
+                      return (
+                        <div
+                          key={`file-${source}`}
+                          className="flex-shrink-0 relative flex items-center gap-2 rounded-lg border bg-primary/5 border-primary/20 hover:shadow-xs/2 hover:border-primary/40 transition-all duration-200 min-w-[200px] max-w-[250px] px-3 py-2"
+                          style={
+                            {
+                              "--subject-color": "hsl(var(--primary))",
+                            } as React.CSSProperties
+                          }
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <FileUser className="h-4 w-4 flex-shrink-0 text-primary" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium text-sm line-clamp-1">
+                                {mainTitle}
+                              </div>
+                              {subtitle && (
+                                <div className="text-xs text-muted-foreground line-clamp-1">
+                                  {subtitle}
+                                </div>
+                              )}
+                              <div className="text-xs text-muted-foreground">
+                                File caricato
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFileSources(prev => prev.filter(s => s !== source))}
+                            className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-gray-700 dark:bg-gray-300 text-background shadow"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {/* Selected Notes */}
                     {selectedNoteSlugs.map((slug) => {
                       const note = notes.find((n) => n.slug === slug);
                       const subject = subjects.find(
@@ -924,7 +1119,7 @@ export default function DashboardChat() {
 
                       return (
                         <div
-                          key={slug}
+                          key={`note-${slug}`}
                           style={
                             {
                               "--subject-color": subject?.color || "#000000",
@@ -943,12 +1138,15 @@ export default function DashboardChat() {
                                   {subtitle}
                                 </div>
                               )}
+                              <div className="text-xs text-muted-foreground">
+                                Appunto
+                              </div>
                             </div>
                           </div>
                           <button
                             type="button"
                             onClick={() => toggleNote(slug)}
-                            className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--subject-color)]/90 text-background shadow"
+                            className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-gray-700 dark:bg-gray-300 text-background shadow"
                           >
                             <X className="h-3 w-3" />
                           </button>
@@ -959,90 +1157,98 @@ export default function DashboardChat() {
                 ) : (
                   <div className="h-[70px] border border-dashed border-border/60 rounded-lg bg-muted/20 p-2 flex items-center justify-center">
                     <div className="text-sm text-muted-foreground">
-                      Nessun appunto selezionato
+                      Nessun documento selezionato
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Enhanced Search Bar */}
-              <div className="relative mb-4">
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      value={notesSearch}
-                      onChange={(e) => setNotesSearch(e.target.value)}
-                      placeholder={
-                        selectedSubjectForSearch
-                          ? "Scrivi il titolo dell'appunto..."
-                          : "Cerca appunti o seleziona una materia..."
-                      }
-                      className="pl-9 py-6 rounded-xl"
-                      disabled={isLoadingNotes}
-                    />
-                    {selectedSubjectForSearch && (
-                      <button
-                        type="button"
-                        onClick={clearSubjectFilter}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="relative subject-dropdown-container">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() =>
-                        setShowSubjectDropdown(!showSubjectDropdown)
-                      }
-                      className="h-12 px-4 rounded-xl"
-                    >
-                      <Filter className="h-3.5 w-3.5 mr-2" />
-                      Materia
-                      <ChevronDown className="h-4 w-4 ml-2" />
-                    </Button>
-                    {showSubjectDropdown && (
-                      <div className="absolute top-full right-0 mt-2 w-64 rounded-lg border bg-background shadow-lg z-10">
-                        <div className="p-2 max-h-64 overflow-y-auto">
-                          <div className="space-y-1">
-                            {subjects.map((subject) => {
-                              const Icon = getSubjectIcon(subject.name);
-                              return (
-                                <button
-                                  key={subject.id}
-                                  onClick={() =>
-                                    selectSubjectForSearch(subject)
-                                  }
-                                  className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors flex items-center gap-3"
-                                  style={
-                                    {
-                                      "--subject-color": subject.color,
-                                    } as React.CSSProperties
-                                  }
-                                >
-                                  <div className="flex items-center gap-2">
-                                    {Icon && (
-                                      <Icon className="h-4 w-4 text-[var(--subject-color)]" />
-                                    )}
-                                  </div>
-                                  <span className="font-medium text-[var(--subject-color)]">
-                                    {subject.name}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              {/* Tabbed Interface */}
+              <Tabs defaultValue="appunti" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="appunti">Appunti</TabsTrigger>
+                  <TabsTrigger value="documenti">I tuoi documenti</TabsTrigger>
+                </TabsList>
 
-              {isLoadingNotes ? (
+                <TabsContent value="appunti" className="space-y-4">
+                  {/* Enhanced Search Bar */}
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={notesSearch}
+                          onChange={(e) => setNotesSearch(e.target.value)}
+                          placeholder={
+                            selectedSubjectForSearch
+                              ? "Scrivi il titolo dell'appunto..."
+                              : "Cerca appunti o seleziona una materia..."
+                          }
+                          className="pl-9 py-6 rounded-xl"
+                          disabled={isLoadingNotes}
+                        />
+                        {selectedSubjectForSearch && (
+                          <button
+                            type="button"
+                            onClick={clearSubjectFilter}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative subject-dropdown-container">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() =>
+                            setShowSubjectDropdown(!showSubjectDropdown)
+                          }
+                          className="h-12 px-4 rounded-xl"
+                        >
+                          <Filter className="h-3.5 w-3.5 mr-2" />
+                          Materia
+                          <ChevronDown className="h-4 w-4 ml-2" />
+                        </Button>
+                        {showSubjectDropdown && (
+                          <div className="absolute top-full right-0 mt-2 w-64 rounded-lg border bg-background shadow-lg z-10">
+                            <div className="p-2 max-h-64 overflow-y-auto">
+                              <div className="space-y-1">
+                                {subjects.map((subject) => {
+                                  const Icon = getSubjectIcon(subject.name);
+                                  return (
+                                    <button
+                                      key={subject.id}
+                                      onClick={() =>
+                                        selectSubjectForSearch(subject)
+                                      }
+                                      className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors flex items-center gap-3"
+                                      style={
+                                        {
+                                          "--subject-color": subject.color,
+                                        } as React.CSSProperties
+                                      }
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {Icon && (
+                                          <Icon className="h-4 w-4 text-[var(--subject-color)]" />
+                                        )}
+                                      </div>
+                                      <span className="font-medium text-[var(--subject-color)]">
+                                        {subject.name}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {isLoadingNotes ? (
                 <div className="max-h-[50vh] overflow-auto space-y-2 pr-1">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div
@@ -1077,13 +1283,8 @@ export default function DashboardChat() {
                     );
                   }
 
-                  // Sort with favorites first
-                  filtered = filtered
-                    .slice()
-                    .sort(
-                      (a: any, b: any) =>
-                        (b.is_favorite ? 1 : 0) - (a.is_favorite ? 1 : 0)
-                    );
+                  // Remove the favorites first sorting to fix recent notes logic
+                  filtered = filtered.slice();
 
                   const subjectFiltered =
                     selectedSubjectIds.length > 0
@@ -1095,12 +1296,28 @@ export default function DashboardChat() {
                   const recentSet = new Set(
                     (recentStudiedNotes || []).map((r) => r.slug)
                   );
-                  const recentFiltered = subjectFiltered.filter((n) =>
-                    recentSet.has(n.slug)
-                  );
-                  const remaining = subjectFiltered.filter(
-                    (n) => !recentSet.has(n.slug)
-                  );
+                  // Sort recent notes by their order in recentStudiedNotes (most recent first)
+                  const recentFiltered = (recentStudiedNotes || [])
+                    .map(recentNote => filtered.find(n => n.slug === recentNote.slug))
+                    .filter(Boolean); // Remove any notes that weren't found in filtered
+                  
+                  const favoriteFiltered = subjectFiltered
+                    .filter((n) => n.is_favorite && !recentSet.has(n.slug))
+                    .sort((a: any, b: any) => a.title?.localeCompare(b.title || "") || 0);
+                  
+                  const remaining = subjectFiltered
+                    .filter((n) => !recentSet.has(n.slug) && !n.is_favorite)
+                    .sort((a: any, b: any) => a.title?.localeCompare(b.title || "") || 0);
+
+                  // Group remaining notes by subject
+                  const groupedBySubject = remaining.reduce((acc: any, note: any) => {
+                    const subjectId = note.subject_id || 'unknown';
+                    if (!acc[subjectId]) {
+                      acc[subjectId] = [];
+                    }
+                    acc[subjectId].push(note);
+                    return acc;
+                  }, {});
                   const renderRow = (n: any) => {
                     const subject = subjects.find((s) => s.id === n.subject_id);
                     return (
@@ -1175,13 +1392,38 @@ export default function DashboardChat() {
                       {recentFiltered.length > 0 && (
                         <div className="flex flex-col gap-2">
                           <div className="text-sm font-medium text-muted-foreground">
-                            Studiati di recente
+                            STUDIATI DI RECENTE
                           </div>
                           {recentFiltered.slice(0, 3).map((n) => renderRow(n))}
                           <div className="h-px w-full bg-border my-1" />
                         </div>
                       )}
-                      {remaining.map((n) => renderRow(n))}
+                      
+                      {favoriteFiltered.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                          <div className="text-sm font-medium text-muted-foreground">
+                            APPUNTI PREFERITI
+                          </div>
+                          {favoriteFiltered.map((n) => renderRow(n))}
+                          <div className="h-px w-full bg-border my-1" />
+                        </div>
+                      )}
+                      
+                      {Object.entries(groupedBySubject).map(([subjectId, subjectNotes]: [string, any]) => {
+                        const subject = subjects.find(s => s.id === subjectId);
+                        const subjectName = subject?.name || 'Unknown Subject';
+                        
+                        return (
+                          <div key={subjectId} className="flex flex-col gap-2">
+                            <div className="text-sm font-medium text-muted-foreground uppercase">
+                              {subjectName}
+                            </div>
+                            {subjectNotes.map((n: any) => renderRow(n))}
+                            <div className="h-px w-full bg-border my-1" />
+                          </div>
+                        );
+                      })}
+                      
                       {subjectFiltered.length === 0 && (
                         <div className="text-sm text-muted-foreground">
                           Nessun appunto trovato.
@@ -1190,18 +1432,25 @@ export default function DashboardChat() {
                     </div>
                   );
                 })()
-              )}
+                  )}
+                </TabsContent>
+
+                <TabsContent value="documenti" className="space-y-4">
+                  <FilesManagement
+                    selectedFileSources={selectedFileSources}
+                    onFileSelectionChange={setSelectedFileSources}
+                  />
+                </TabsContent>
+              </Tabs>
             </div>
             <div className="flex items-center justify-between gap-2 px-5 py-4 border-t">
               <Button
                 variant="ghost"
                 onClick={() => {
-                  setSelectedNoteSlugs([]);
-                  setSelectedSubjectIds([]);
                   setShowNotesOverlay(false);
                 }}
               >
-                Cancella
+                Chiudi
               </Button>
               <div className="flex items-center gap-2">
                 <Button
@@ -1215,6 +1464,31 @@ export default function DashboardChat() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Dialog for Pinecone Cleanup */}
+      <AlertDialog open={showCleanupConfirm} onOpenChange={setShowCleanupConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Conferma pulizia Pinecone</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare tutti i documenti dal database Pinecone? 
+              Questa azione eliminerà definitivamente tutti i tuoi dati vettoriali e non può essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCleaningUp}>
+              Annulla
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePineconeCleanup}
+              disabled={isCleaningUp}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCleaningUp ? "Pulizia in corso..." : "Conferma pulizia"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

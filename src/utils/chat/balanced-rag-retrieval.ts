@@ -26,14 +26,16 @@ export interface BalancedRetrievalResult {
 
 /**
  * Implements balanced retrieval across multiple documents to ensure fair representation
- * from each selected PDF rather than all chunks coming from a single document.
+ * from each selected document rather than all chunks coming from a single document.
+ * Handles both note slugs (which need .pdf appended) and user file sources (which are already complete)
  */
 export async function balancedSimilaritySearch(
   vectorStore: any, // Using any for now to avoid import issues
   query: string,
-  selectedNoteSlugs: string[],
+  selectedSources: string[], // Can be note slugs or user file sources
   options: BalancedRetrievalOptions,
-  subjectFilter?: string
+  subjectFilter?: string,
+  isUserFile?: boolean[] // Array indicating which sources are user files
 ): Promise<BalancedRetrievalResult> {
   const {
     totalChunks,
@@ -42,7 +44,13 @@ export async function balancedSimilaritySearch(
     enforceDistribution = true,
   } = options;
 
-  const allowedSources = selectedNoteSlugs.map((s) => `${s}.pdf`);
+  // Handle both note slugs (need .pdf) and user files (already have extension)
+  const allowedSources = selectedSources.map((source, index) => {
+    const isUserFileSource = isUserFile && isUserFile[index];
+    return isUserFileSource ? source : `${source}.pdf`;
+  });
+
+  console.log(`📚 Balanced search - sources:`, { selectedSources, allowedSources, isUserFile });
 
   if (allowedSources.length === 0) {
     return { chunks: [], distribution: {}, totalRetrieved: 0 };

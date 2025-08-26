@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
 import { CookieConsent } from "./components/auth/cookie-consent";
 import { AuthProvider } from "./components/auth/auth-provider";
+import { Toaster } from "sonner";
 
 const funnelDisplay = Funnel_Display({
   variable: "--font-funnel-display",
@@ -128,6 +129,7 @@ export default function RootLayout({
         >
           <AuthProvider>{children}</AuthProvider>
           <CookieConsent />
+          <Toaster richColors />
         </ThemeProvider>
         <SpeedInsights debug={process.env.NODE_ENV === "development"} />
         <Analytics />

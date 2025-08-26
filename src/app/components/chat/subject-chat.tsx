@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import DownloadMenuButton from "./components/download-menu-button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type UINote = {
   id: string;
@@ -142,8 +143,9 @@ export default function SubjectChat({ subject }: { subject?: string }) {
   const handleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
+      toast.success("Messaggio copiato negli appunti!");
     } catch {
-      // no-op
+      toast.error("Errore durante la copia del messaggio");
     }
   };
 
@@ -403,7 +405,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                     <div
                       key={message.id}
                       className={`flex ${
-                        isUser ? "justify-end md:max-w-2/3" : "justify-start"
+                        isUser ? "justify-end md:max-w-2/3" : "justify-start w-full"
                       }`}
                     >
                       <div
@@ -596,7 +598,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                 );
               })}
               {isRetrieving && status !== "streaming" && !pendingAssistantId ? (
-                <div className="flex justify-start">
+                <div className="flex justify-start w-full">
                   <div className="px-4 text-foreground w-full">
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
@@ -606,7 +608,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                 </div>
               ) : null}
               {isThinking && status !== "streaming" && !pendingAssistantId ? (
-                <div className="flex justify-start">
+                <div className="flex justify-start w-full">
                   <div className="px-4 text-foreground w-full">
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
@@ -621,7 +623,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
           isRetrieving &&
           status !== "streaming" &&
           !pendingAssistantId ? (
-            <div className="flex justify-start">
+            <div className="flex justify-start w-full">
               <div className="px-4 text-foreground w-full">
                 <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
@@ -634,7 +636,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
           isThinking &&
           status !== "streaming" &&
           !pendingAssistantId ? (
-            <div className="flex justify-start">
+            <div className="flex justify-start w-full">
               <div className="px-4 text-foreground w-full">
                 <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
@@ -804,7 +806,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="h-10 w-10 rounded-full"
+                    className="h-10 w-10 rounded-2xl"
                     onClick={openNotesOverlay}
                     title="Seleziona appunti per il RAG"
                   >
@@ -816,6 +818,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                     buttonVariant="ghost"
                     buttonSize="icon"
                     label="Scarica"
+                    className="rounded-2xl"
                     getMetadata={() => ({
                       title: "Subject Chat",
                       userName: (session?.user?.name as string) || null,
@@ -921,7 +924,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                           <button
                             type="button"
                             onClick={() => toggleNote(slug)}
-                            className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--subject-color)]/90 text-background shadow"
+                            className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-gray-700 dark:bg-gray-300 text-background shadow"
                           >
                             <X className="h-3 w-3" />
                           </button>
@@ -968,21 +971,23 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                             .includes(notesSearch.toLowerCase())
                         )
                       : notes
-                  )
-                    .slice()
-                    .sort(
-                      (a: any, b: any) =>
-                        (b.is_favorite ? 1 : 0) - (a.is_favorite ? 1 : 0)
-                    );
+                  ).slice();
+                  
                   const recentSet = new Set(
                     (recentStudiedNotes || []).map((r) => r.slug)
                   );
-                  const recentFiltered = filtered.filter((n) =>
-                    recentSet.has(n.slug)
-                  );
-                  const remaining = filtered.filter(
-                    (n) => !recentSet.has(n.slug)
-                  );
+                  // Sort recent notes by their order in recentStudiedNotes (most recent first)
+                  const recentFiltered = (recentStudiedNotes || [])
+                    .map(recentNote => filtered.find(n => n.slug === recentNote.slug))
+                    .filter(Boolean); // Remove any notes that weren't found in filtered
+                  
+                  const favoriteFiltered = filtered
+                    .filter((n) => n.is_favorite && !recentSet.has(n.slug))
+                    .sort((a: any, b: any) => a.title?.localeCompare(b.title || "") || 0);
+                  
+                  const remaining = filtered
+                    .filter((n) => !recentSet.has(n.slug) && !n.is_favorite)
+                    .sort((a: any, b: any) => a.title?.localeCompare(b.title || "") || 0);
                   const renderRow = (n: any) => (
                     <div
                       key={n.id + "-row"}
@@ -1042,12 +1047,23 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                       {recentFiltered.length > 0 && (
                         <div className="flex flex-col gap-2">
                           <div className="text-sm font-medium text-muted-foreground">
-                            Studiati di recente
+                          STUDIATI DI RECENTE
                           </div>
                           {recentFiltered.slice(0, 3).map((n) => renderRow(n))}
                           <div className="h-px w-full bg-border my-1" />
                         </div>
                       )}
+                      
+                      {favoriteFiltered.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                          <div className="text-sm font-medium text-muted-foreground">
+                            APPUNTI PREFERITI
+                          </div>
+                          {favoriteFiltered.map((n) => renderRow(n))}
+                          <div className="h-px w-full bg-border my-1" />
+                        </div>
+                      )}
+                      
                       {remaining.map((n) => renderRow(n))}
                       {filtered.length === 0 && (
                         <div className="text-sm text-muted-foreground">
@@ -1066,7 +1082,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                   setShowNotesOverlay(false);
                 }}
               >
-                Cancella
+                Chiudi
               </Button>
               <Button
                 onClick={() => setShowNotesOverlay(false)}

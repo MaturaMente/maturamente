@@ -7,11 +7,17 @@ import {
   balancedSimilaritySearch,
   formatDistributionLog,
 } from "@/utils/chat/balanced-rag-retrieval";
+import { auth } from "@/lib/auth";
+import { searchUserFiles } from "@/utils/files/pinecone-storage";
 
 // Allow longer streaming; remove 30s cap
 export const maxDuration = 300;
 
 export async function POST(req: Request) {
+  // Get user session
+  const session = await auth();
+  const userId = session?.user?.id;
+
   const body = (await req.json()) as {
     messages: UIMessage[];
     data?: any;
@@ -22,6 +28,7 @@ export async function POST(req: Request) {
   // optional list of selected note slugs for targeted retrieval
   // Prefer extracting from the latest user message metadata so it also works with regenerate()
   let selectedNoteSlugs: string[] | undefined = undefined;
+  let selectedFileSources: string[] | undefined = undefined;
   try {
     const lastUserWithMeta = [...(body?.messages || [])]
       .reverse()
@@ -29,6 +36,9 @@ export async function POST(req: Request) {
     const meta: any = (lastUserWithMeta as any)?.metadata || undefined;
     if (meta && Array.isArray(meta.selectedNoteSlugs)) {
       selectedNoteSlugs = meta.selectedNoteSlugs as string[];
+    }
+    if (meta && Array.isArray(meta.selectedFileSources)) {
+      selectedFileSources = meta.selectedFileSources as string[];
     }
   } catch {}
 
@@ -50,7 +60,8 @@ export async function POST(req: Request) {
   let contextText = "";
   try {
     const shouldUseRag =
-      Array.isArray(selectedNoteSlugs) && selectedNoteSlugs.length > 0;
+      (Array.isArray(selectedNoteSlugs) && selectedNoteSlugs.length > 0) ||
+      (Array.isArray(selectedFileSources) && selectedFileSources.length > 0);
     if (
       shouldUseRag &&
       process.env.PINECONE_API_KEY &&
@@ -72,24 +83,44 @@ export async function POST(req: Request) {
         process.env.PINECONE_SUBJECT_KEY || "subject";
 
       // For dashboard chat, we allow documents from any subject since the user
-      // can select notes from multiple subjects
-      // Only include a source $in filter if present; otherwise pass no filter.
-      const filter =
-        selectedNoteSlugs && selectedNoteSlugs.length > 0
-          ? { source: { $in: selectedNoteSlugs.map((s) => `${s}.pdf`) } }
-          : undefined;
+      // can select notes from multiple subjects and uploaded files
+      // Build filter for both notes and user files
+      let allSources: string[] = [];
+      if (selectedNoteSlugs && selectedNoteSlugs.length > 0) {
+        allSources.push(...selectedNoteSlugs.map((s) => `${s}.pdf`));
+      }
+      if (selectedFileSources && selectedFileSources.length > 0) {
+        allSources.push(...selectedFileSources);
+      }
+      
+      const filter = allSources.length > 0
+        ? { source: { $in: allSources } }
+        : undefined;
       try {
-        // Use balanced retrieval for multi-document queries across subjects
+        // Use balanced retrieval for multi-document queries across subjects and user files
+        const allSelectedSources = [
+          ...(selectedNoteSlugs || []),
+          ...(selectedFileSources || [])
+        ];
+        
+        // Create flag array to identify user files vs note slugs
+        const isUserFileFlags = [
+          ...Array(selectedNoteSlugs?.length || 0).fill(false), // Note slugs = false
+          ...Array(selectedFileSources?.length || 0).fill(true)  // User files = true
+        ];
+        
         const balancedResult = await balancedSimilaritySearch(
           vectorStore,
           lastUserQuery,
-          selectedNoteSlugs || [],
+          allSelectedSources,
           {
             totalChunks: 16,
             minChunksPerDoc: 1,
             maxChunksPerDoc: 4,
             enforceDistribution: true,
-          }
+          },
+          undefined, // no subject filter for dashboard
+          isUserFileFlags
         );
 
         console.log(
@@ -98,7 +129,9 @@ export async function POST(req: Request) {
         );
         console.log("RAG query", {
           index: indexName,
-          selectedDocuments: selectedNoteSlugs?.length || 0,
+          selectedNotes: selectedNoteSlugs?.length || 0,
+          selectedFiles: selectedFileSources?.length || 0,
+          totalSelected: allSelectedSources.length,
           totalRetrieved: balancedResult.totalRetrieved,
         });
 
@@ -123,11 +156,11 @@ export async function POST(req: Request) {
           docs = await vectorStore.similaritySearch(lastUserQuery, 6);
         }
 
-        // Hard filter by selected sources
-        const allowedSources = (selectedNoteSlugs || []).map((s) => `${s}.pdf`);
+        // Hard filter by selected sources (both notes and user files)
         const filteredDocs = docs.filter((d: any) => {
-          const bySource = allowedSources.length
-            ? allowedSources.includes((d.metadata?.source ?? "").toString())
+          const source = (d.metadata?.source ?? "").toString();
+          const bySource = allSources.length
+            ? allSources.includes(source)
             : true;
           return bySource;
         });
@@ -147,15 +180,15 @@ export async function POST(req: Request) {
     Rispondi SEMPRE in italiano, in modo conciso ma completo. Parla come un tutor umano: incoraggiante, rispettoso e focalizzato sugli obiettivi dello studente.
 
     Linee guida fondamentali:
-      1. Dai priorità assoluta alle informazioni contenute nei PDF forniti (RAG).
+      1. Dai priorità assoluta alle informazioni contenute nei documenti forniti (appunti PDF e file caricati dall'utente).
       2. Quando possibile, indica da quale documento e pagina/sezione proviene l'informazione.
-      3. Se più PDF trattano lo stesso argomento, integra le informazioni in un'unica risposta coerente.
-      4. Mantieni le risposte ancorate ai PDF: non inventare contenuti assenti.
-      5. Se i PDF non bastano, dichiaralo e aggiungi (se appropriato) una sezione "Conoscenza generale" separata.
+      3. Se più documenti trattano lo stesso argomento, integra le informazioni in un'unica risposta coerente.
+      4. Mantieni le risposte ancorate ai documenti: non inventare contenuti assenti.
+      5. Se i documenti non bastano, dichiaralo e aggiungi (se appropriato) una sezione "Conoscenza generale" separata.
       6. Preferisci strutture leggibili: brevi paragrafi, elenchi puntati, esempi semplici, analogie.
       7. Alla fine, proponi sempre un piccolo passo successivo ("Prossimo passo suggerito").
 
-    Contesto estratto dai PDF selezionati (bilanciato):\n${contextText}`.trim();
+    Contesto estratto dai documenti selezionati (bilanciato):\n${contextText}`.trim();
 
   const result = streamText({
     model: deepseek("deepseek-chat"),

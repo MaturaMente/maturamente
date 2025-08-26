@@ -22,6 +22,7 @@ import {
   MessageCircle,
   Bot,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function PdfChat() {
   const params = useParams();
@@ -77,7 +78,10 @@ export default function PdfChat() {
   const handleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-    } catch {}
+      toast.success("Messaggio copiato negli appunti!");
+    } catch {
+      toast.error("Errore durante la copia del messaggio");
+    }
   };
 
   const beginEdit = (messageId: string) => {
@@ -257,7 +261,7 @@ export default function PdfChat() {
                     <div
                       key={message.id}
                       className={`flex ${
-                        isUser ? "justify-end md:max-w-2/3" : "justify-start"
+                        isUser ? "justify-end md:max-w-2/3" : "justify-start w-full"
                       }`}
                     >
                       <div
@@ -341,7 +345,7 @@ export default function PdfChat() {
                         </div>
 
                         <div
-                          className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${
+                          className={`pointer-events-auto mt-2 px-4 flex text-muted-foreground items-center gap-1 md:opacity-0 opacity-100 transition-opacity duration-150 group-hover:opacity-100 ${
                             isUser ? "justify-end" : "justify-start"
                           }`}
                         >
@@ -396,7 +400,7 @@ export default function PdfChat() {
               })
             )}
             {isThinking && status !== "streaming" && !pendingAssistantId ? (
-              <div className="flex justify-start">
+                <div className="flex justify-start w-full">
                 <div className="px-4 text-foreground w-full">
                   <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
@@ -474,7 +478,7 @@ export default function PdfChat() {
                       fileNameBase={`pdf-chat${subject ? `-${subject}` : ""}${
                         noteSlug ? `-${noteSlug}` : ""
                       }`}
-                      className="flex border-none shadow-none"
+                      className="flex border-none shadow-none rounded-2xl"
                       getMetadata={() => ({
                         title: "Chat sul PDF",
                         date: new Date(),
