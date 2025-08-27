@@ -529,25 +529,23 @@ export default function DashboardChat() {
                         isUser ? "items-end" : "items-start"
                       }`}
                     >
-                      <div
-                        className={`px-4 ${
-                          isUser
-                            ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
-                            : "bg-none text-foreground w-full"
-                        }`}
-                      >
-                        {/* Display selected documents for user messages */}
-                        {isUser && (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) && (
+                      {/* Display selected documents for user messages */}
+                      {isUser && (((message as any)?.metadata?.selectedNoteSlugs && (message as any).metadata.selectedNoteSlugs.length > 0) || ((message as any)?.metadata?.selectedFileSources && (message as any).metadata.selectedFileSources.length > 0)) && (
                           <MessageDocumentsDisplay
-                            selectedNoteSlugs={selectedNoteSlugs}
-                            selectedFileSources={selectedFileSources}
+                            message={message}
                             notes={notes}
                             subjects={subjects}
                             uploadedFiles={uploadedFiles}
                             maxInitialDisplay={1}
                           />
                         )}
-                        
+                      <div
+                        className={`px-4 ${
+                          isUser
+                            ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
+                            : "bg-none text-foreground w-full"
+                        }`}
+                      > 
                         {editingMessageId === message.id && isUser ? (
                           <div className="w-full">
                             <textarea
@@ -621,15 +619,6 @@ export default function DashboardChat() {
                                 
                                 const allTitles = [...noteTitles, ...fileTitles];
                                 
-                                if (allTitles.length > 0) {
-                                  return (
-                                    <div className="mb-2 text-xs text-muted-foreground italic line-clamp-1 hover:line-clamp-none">
-                                      {`Risposta generata partendo da: ${allTitles.join(
-                                        ", "
-                                      )}`}
-                                    </div>
-                                  );
-                                }
                                 return null;
                               })()}
                             {message.parts.map((part, index) =>
@@ -813,7 +802,7 @@ export default function DashboardChat() {
         className="md:sticky fixed bottom-6 left-0 right-0 z-10 w-full bg-transparent px-6 pb-0 md:pb-3"
       >
         <div className="mx-auto w-full max-w-3xl">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
+          <div className="flex flex-col items-center rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
             {(selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) && (
               <div className="mb-2 w-full">
                 <div
@@ -850,7 +839,7 @@ export default function DashboardChat() {
                     return (
                       <div
                         key={slug}
-                        className="relative flex items-center gap-1 rounded-2xl border bg-background p-2"
+                        className="relative h-[54px] flex items-center gap-1 rounded-2xl border bg-background p-2"
                       >
                         <div className="flex p-1 items-center justify-center">
                           <FileText
@@ -894,7 +883,7 @@ export default function DashboardChat() {
                     return (
                       <div
                         key={`file-${source}`}
-                        className="relative flex items-center gap-1 rounded-2xl border bg-background p-2"
+                        className="relative h-[54px] flex items-center gap-1 rounded-2xl border bg-background p-2"
                       >
                         <div className="flex p-1 items-center justify-center">
                           <FileUser
@@ -1026,8 +1015,8 @@ export default function DashboardChat() {
 
       {showNotesOverlay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-xl border bg-background shadow-xl">
-            <div className="p-5">
+          <div className="w-full max-w-2xl max-h-[90vh] rounded-xl border bg-background shadow-xl flex flex-col">
+            <div className="p-5 flex-1 overflow-hidden flex flex-col">
               {/* Selected Items Section - Always Visible */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
@@ -1177,17 +1166,17 @@ export default function DashboardChat() {
               </div>
 
               {/* Tabbed Interface */}
-              <Tabs defaultValue="appunti" className="w-full">
+              <Tabs defaultValue="appunti" className="w-full flex-1 flex flex-col overflow-hidden">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="appunti">Appunti</TabsTrigger>
                   <TabsTrigger value="documenti">I tuoi documenti</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="appunti" className="space-y-4">
+                <TabsContent value="appunti" className="space-y-4 flex-1 overflow-hidden flex flex-col">
                   {/* Enhanced Search Bar */}
                   <div className="relative">
                     <div className="flex gap-2">
-                      <div className="relative flex-1">
+                      <div className="relative flex-1 hidden md:block">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           value={notesSearch}
@@ -1197,6 +1186,25 @@ export default function DashboardChat() {
                               ? "Scrivi il titolo dell'appunto..."
                               : "Cerca appunti o seleziona una materia..."
                           }
+                          className="pl-9 py-6 rounded-xl"
+                          disabled={isLoadingNotes}
+                        />
+                        {selectedSubjectForSearch && (
+                          <button
+                            type="button"
+                            onClick={clearSubjectFilter}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative flex-1 block md:hidden">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={notesSearch}
+                          onChange={(e) => setNotesSearch(e.target.value)}
+                          placeholder="Cerca appunti..."
                           className="pl-9 py-6 rounded-xl"
                           disabled={isLoadingNotes}
                         />
@@ -1262,7 +1270,7 @@ export default function DashboardChat() {
                   </div>
 
                   {isLoadingNotes ? (
-                <div className="max-h-[50vh] overflow-auto space-y-2 pr-1">
+                <div className="flex-1 overflow-auto space-y-2 pr-1">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div
                       key={i}
@@ -1401,7 +1409,7 @@ export default function DashboardChat() {
                     );
                   };
                   return (
-                    <div className="max-h-[50vh] overflow-auto space-y-2 pr-1">
+                    <div className="flex-1 overflow-auto space-y-2 pr-1">
                       {recentFiltered.length > 0 && (
                         <div className="flex flex-col gap-2">
                           <div className="text-sm font-medium text-muted-foreground">
@@ -1448,7 +1456,7 @@ export default function DashboardChat() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="documenti" className="space-y-4">
+                <TabsContent value="documenti" className="space-y-4 flex-1 overflow-hidden flex flex-col">
                   <FilesManagement
                     selectedFileSources={selectedFileSources}
                     onFileSelectionChange={setSelectedFileSources}
@@ -1456,7 +1464,7 @@ export default function DashboardChat() {
                 </TabsContent>
               </Tabs>
             </div>
-            <div className="flex items-center justify-between gap-2 px-5 py-4 border-t">
+            <div className="flex items-center justify-between gap-2 px-5 py-4 border-t flex-shrink-0">
               <Button
                 variant="ghost"
                 onClick={() => {

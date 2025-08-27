@@ -207,34 +207,27 @@ export default function SubjectSidebar({
           <div>
             {currentSubject ? (
               <div className="flex items-center gap-2 w-full">
-                <span className="flex items-center gap-2 flex-1">
-                  {(() => {
-                    const Icon = getSubjectIcon(currentSubject.name);
-                    return Icon ? (
-                      <Icon
-                        className="h-6 w-6"
-                        style={{ color: `${currentSubject.color}90` }}
-                      />
-                    ) : null;
-                  })()}
-                  <span
-                    className="font-semibold transition-colors text-2xl"
-                    style={{ color: currentSubject.color }}
-                  >
-                    {currentSubject.name}
-                  </span>
-                </span>
-                {userSubjects.length > 1 && (
+                {userSubjects.length > 1 ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 hover:bg-background/80"
-                        aria-label="Cambia materia"
-                      >
-                        <ChevronsUpDown className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-2 flex-1 cursor-pointer hover:bg-background/50 rounded-md px-2 py-1 transition-colors">
+                        {(() => {
+                          const Icon = getSubjectIcon(currentSubject.name);
+                          return Icon ? (
+                            <Icon
+                              className="h-6 w-6"
+                              style={{ color: `${currentSubject.color}90` }}
+                            />
+                          ) : null;
+                        })()}
+                        <span
+                          className="font-semibold transition-colors text-2xl"
+                          style={{ color: currentSubject.color }}
+                        >
+                          {currentSubject.name}
+                        </span>
+                        <ChevronsUpDown className="h-4 w-4 ml-auto" />
+                      </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
                       {userSubjects.map((subject) => {
@@ -262,6 +255,24 @@ export default function SubjectSidebar({
                       })}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                ) : (
+                  <span className="flex items-center gap-2 flex-1">
+                    {(() => {
+                      const Icon = getSubjectIcon(currentSubject.name);
+                      return Icon ? (
+                        <Icon
+                          className="h-6 w-6"
+                          style={{ color: `${currentSubject.color}90` }}
+                        />
+                      ) : null;
+                    })()}
+                    <span
+                      className="font-semibold transition-colors text-2xl"
+                      style={{ color: currentSubject.color }}
+                    >
+                      {currentSubject.name}
+                    </span>
+                  </span>
                 )}
               </div>
             ) : (

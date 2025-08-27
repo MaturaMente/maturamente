@@ -155,7 +155,7 @@ export default function FilesManagement({
   }, [onFileSelectionChange, fetchFiles]);
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`space-y-4 flex-1 flex flex-col overflow-hidden ${className}`}>
       {/* Files list */}
       <UserFilesList
         files={files}

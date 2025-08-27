@@ -176,9 +176,9 @@ export default function UserFilesList({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex-1 flex flex-col overflow-hidden">
       {/* Search bar */}
-      <div className="relative flex-1">
+      <div className="relative flex-shrink-0">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Cerca nei tuoi documenti..."
@@ -189,7 +189,7 @@ export default function UserFilesList({
       </div>
 
       {/* Files list */}
-      <ScrollArea className="h-[400px]">
+      <ScrollArea className="flex-1 min-h-0">
         {filteredFiles.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <FileText className="h-12 w-12 text-muted-foreground mb-3" />

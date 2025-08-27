@@ -3,11 +3,9 @@
 import React, { useState } from "react";
 import { FileUser, X, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 interface MessageDocumentsDisplayProps {
-  selectedNoteSlugs: string[];
-  selectedFileSources: string[];
+  message: any; // The message object containing metadata
   notes: any[];
   subjects: any[];
   uploadedFiles: { [key: string]: { title: string; description: string } };
@@ -15,14 +13,17 @@ interface MessageDocumentsDisplayProps {
 }
 
 export default function MessageDocumentsDisplay({
-  selectedNoteSlugs,
-  selectedFileSources,
+  message,
   notes,
   subjects,
   uploadedFiles,
   maxInitialDisplay = 1,
 }: MessageDocumentsDisplayProps) {
   const [showAll, setShowAll] = useState(false);
+  
+  // Extract documents from message metadata
+  const selectedNoteSlugs: string[] = message?.metadata?.selectedNoteSlugs || [];
+  const selectedFileSources: string[] = message?.metadata?.selectedFileSources || [];
   
   const totalDocuments = selectedNoteSlugs.length + selectedFileSources.length;
   
@@ -43,8 +44,10 @@ export default function MessageDocumentsDisplay({
     })),
   ];
 
-  const documentsToShow = showAll ? allDocuments : allDocuments.slice(0, maxInitialDisplay);
-  const hasMore = allDocuments.length > maxInitialDisplay;
+  // Simple heuristic: if 3 or more documents, use collapse functionality
+  // For 1-2 documents, always show all (they usually fit in one line)
+  const needsCollapse = totalDocuments > 2;
+  const documentsToShow = (needsCollapse && !showAll) ? allDocuments.slice(0, maxInitialDisplay) : allDocuments;
 
   const renderFileDocument = (source: string) => {
     const fileInfo = uploadedFiles[source];
@@ -55,22 +58,19 @@ export default function MessageDocumentsDisplay({
 
     return (
       <div
-        className="flex-shrink-0 flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 min-w-[180px] max-w-[250px]"
+        className="flex-shrink-0 h-[54px] flex items-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 min-w-[180px] max-w-[250px]"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <FileUser className="h-5 w-5 flex-shrink-0 text-primary" />
           <div className="min-w-0 flex-1">
-            <div className="font-medium text-sm line-clamp-1 text-black">
+            <div className="font-medium text-sm line-clamp-1 text-foreground">
               {mainTitle}
             </div>
             {subtitle && (
-              <div className="text-xs text-muted-black line-clamp-1">
+              <div className="text-xs text-muted-foreground line-clamp-1">
                 {subtitle}
               </div>
             )}
-            <div className="text-xs text-muted-black">
-              File caricato
-            </div>
           </div>
         </div>
       </div>
@@ -96,32 +96,29 @@ export default function MessageDocumentsDisplay({
 
     return (
       <div
-        className="relative flex items-center gap-1 rounded-xl border bg-white p-2"
+        className="relative h-[54px] flex items-center gap-1 rounded-2xl border bg-background p-2"
         style={{ ["--subject-color" as any]: subject?.color }}
       >
         <div className="flex p-1 items-center justify-center">
             <FileText className="h-4 w-4 flex-shrink-0 text-[var(--subject-color)]"/>
         </div>
         <div className="leading-tight pr-2">
-            <div className="font-medium text-sm max-w-[220px] line-clamp-1 text-black">
+            <div className="font-medium text-sm max-w-[220px] line-clamp-1 text-foreground">
                 {mainTitle}
             </div>
             {subtitle && (
-                <div className="text-xs text-gray-600 line-clamp-1">
+                <div className="text-xs text-muted-foreground line-clamp-1">
                 {subtitle}
                 </div>
             )}
-            <div className="text-xs" style={{ color: subject?.color }}>
-                {subject?.name || ""}
-            </div>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="w-full">
-      <div className="flex flex-wrap gap-2 w-full overflow-hidden transition-[max-height] duration-200 max-h-[999px]">
+    <div className="w-full py-2">
+      <div className="flex flex-wrap gap-2 w-full overflow-hidden transition-[max-height] duration-200">
         {documentsToShow.map((doc) => (
           <div key={doc.id}>
             {doc.type === 'file' 
@@ -132,12 +129,12 @@ export default function MessageDocumentsDisplay({
         ))}
       </div>
       
-      {hasMore && (
+      {needsCollapse && (
         <Button
           variant="link"
           size="sm"
           onClick={() => setShowAll(!showAll)}
-          className="text-xs text-white px-0"
+          className="text-xs text-muted-foreground px-0"
         >
           {showAll ? (
             <>
@@ -147,7 +144,7 @@ export default function MessageDocumentsDisplay({
           ) : (
             <>
               <ChevronDown className="h-3 w-3 mr-1" />
-              Mostra più ({totalDocuments - maxInitialDisplay})
+              Mostra tutti ({totalDocuments - maxInitialDisplay})
             </>
           )}
         </Button>

@@ -340,7 +340,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                       </div>
                       <div className="mt-1 text-sm text-muted-foreground">
                         Pronto ad aiutarti con spiegazioni, riassunti e quiz dai
-                        tuoi appunti.
+                        tuoi appunti di <span className="font-semibold">{currentSubjectData?.name}</span>.
                       </div>
                     </div>
                   </div>
@@ -428,10 +428,9 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                             }`}
                           >
                             {/* Display selected documents for user messages */}
-                            {isUser && selectedNoteSlugs.length > 0 && (
+                            {isUser && ((message as any)?.metadata?.selectedNoteSlugs && (message as any).metadata.selectedNoteSlugs.length > 0) && (
                               <MessageDocumentsDisplay
-                                selectedNoteSlugs={selectedNoteSlugs}
-                                selectedFileSources={[]}
+                                message={message}
                                 notes={notes}
                                 subjects={currentSubjectData ? [currentSubjectData] : []}
                                 uploadedFiles={{}}
@@ -500,21 +499,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                                       .find((m) => m.role === "user");
                                     const used = ((prevUser as any)?.metadata
                                       ?.selectedNoteSlugs || []) as string[];
-                                    if (
-                                      Array.isArray(used) &&
-                                      used.length > 0
-                                    ) {
-                                      const titles = getTitlesFromSlugs(used);
-                                      if (titles.length > 0) {
-                                        return (
-                                          <div className="mb-2 text-xs text-muted-foreground italic line-clamp-1 hover:line-clamp-none">
-                                            {`Risposta generata partendo da: ${titles.join(
-                                              ", "
-                                            )}`}
-                                          </div>
-                                        );
-                                      }
-                                    }
+
                                     return null;
                                   })()}
                                 {message.parts.map((part, index) =>
@@ -703,7 +688,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
         className="md:sticky fixed bottom-6 left-0 right-0 z-10 w-full bg-transparent px-6 pb-0 md:pb-3"
       >
         <div className="mx-auto w-full max-w-3xl">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
+          <div className="flex flex-col items-center rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
             {selectedNoteSlugs.length > 0 && (
               <div className="mb-2 w-full">
                 <div
@@ -737,7 +722,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                     return (
                       <div
                         key={slug}
-                        className="relative flex items-center gap-1 rounded-2xl border bg-background p-2"
+                        className="relative h-[54px] flex items-center gap-1 rounded-2xl border bg-background p-2"
                       >
                         <div className="flex p-1 items-center justify-center">
                           <FileText
@@ -877,8 +862,8 @@ export default function SubjectChat({ subject }: { subject?: string }) {
       </form>
       {showNotesOverlay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-xl border bg-background shadow-xl">
-            <div className="p-5">
+          <div className="w-full max-w-2xl max-h-[90vh] rounded-xl border bg-background shadow-xl flex flex-col">
+            <div className="p-5 flex-1 overflow-hidden flex flex-col">
               {/* Selected Notes Section - Always Visible */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
@@ -967,7 +952,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                 />
               </div>
               {isLoadingNotes ? (
-                <div className="max-h-[50vh] overflow-auto space-y-2 pr-1">
+                <div className="flex-1 overflow-auto space-y-2 pr-1">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div
                       key={i}
@@ -1057,7 +1042,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                     </div>
                   );
                   return (
-                    <div className="max-h-[50vh] overflow-auto space-y-2 pr-1">
+                    <div className="flex-1 overflow-auto space-y-2 pr-1">
                       {recentFiltered.length > 0 && (
                         <div className="flex flex-col gap-2">
                           <div className="text-sm font-medium text-muted-foreground">
@@ -1089,7 +1074,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                 })()
               )}
             </div>
-            <div className="flex items-center justify-between gap-2 px-5 py-4 border-t">
+            <div className="flex items-center justify-between gap-2 px-5 py-4 border-t flex-shrink-0">
               <Button
                 variant="ghost"
                 onClick={() => {
