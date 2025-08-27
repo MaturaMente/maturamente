@@ -63,7 +63,7 @@ export function ResponsiveSkeletonWrapper({
 
     // Simple fallback if none provided
     return (
-      <div className="animate-pulse space-y-6" aria-hidden="true">
+      <div className="animate-pulse space-y-6">
         <div className="h-10 bg-muted rounded-md w-48"></div>
         <div className="grid grid-cols-1 gap-6">
           <div className="h-40 bg-muted rounded-md"></div>

@@ -56,7 +56,7 @@ export function ImagePreview({
           className="absolute inset-0 bg-gray-100 dark:bg-gray-800 rounded-md flex items-center justify-center"
           style={containerStyle}
         >
-          <div className="animate-pulse bg-muted rounded-md w-full h-full" aria-hidden="true" />
+          <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-md w-full h-full" />
         </div>
       )}
       <img

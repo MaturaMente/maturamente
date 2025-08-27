@@ -261,8 +261,16 @@ export const getRecentStudiedNotes = cache(
 
       // For each note, aggregate the total study time spent on the SAME DAY
       // as the latest session (sum of all overlapping sessions within that day)
+      // Filter to last month and limit to 5 most recent
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+      const filteredRecent = recentStudiedNotesQuery
+        .filter((row) => new Date(row.last_studied_at) >= oneMonthAgo)
+        .slice(0, 5);
+
       const results: RecentNote[] = await Promise.all(
-        recentStudiedNotesQuery.map(async (row) => {
+        filteredRecent.map(async (row) => {
           const latestSessionDate = new Date(row.last_studied_at);
           const dayStart = new Date(latestSessionDate);
           dayStart.setHours(0, 0, 0, 0);

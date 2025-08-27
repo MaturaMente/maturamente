@@ -226,7 +226,7 @@ export default function SubjectSidebar({
                         >
                           {currentSubject.name}
                         </span>
-                        <ChevronsUpDown className="h-4 w-4 ml-auto" />
+                        <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">

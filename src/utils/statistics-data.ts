@@ -853,12 +853,16 @@ export async function getRecentActivity(
       topicName: exerciseCard.topic_name,
     }));
 
-  // Combine all activities, sort globally, then take top 5
+  // Combine all activities, filter to last month, sort globally, then take top 5
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
   const allActivities = [
     ...recentSimulations,
     ...recentTheory,
     ...recentExerciseCards,
   ]
+    .filter((activity) => new Date(activity.date) >= oneMonthAgo)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5)
     .map((activity) => ({

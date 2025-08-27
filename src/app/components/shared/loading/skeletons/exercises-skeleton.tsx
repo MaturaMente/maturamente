@@ -1,4 +1,5 @@
-import { SkeletonText, SkeletonCard, SkeletonList } from "../index";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BaseCardSkeleton } from "./base-card-skeleton";
 import { HeaderSkeleton } from "./header-skeleton";
 import { ResponsiveSkeletonWrapper } from "./responsive-skeleton-wrapper";
 import { ExercisesMobileSkeleton } from "./exercises-mobile-skeleton";
@@ -9,19 +10,15 @@ import { ExercisesMobileSkeleton } from "./exercises-mobile-skeleton";
 function TopicsSidebarSkeleton() {
   return (
     <div className="bg-card/50 rounded-lg border p-4 sticky top-20">
-      <SkeletonText numberOfLines={1} height="h-7" width="w-36" className="mb-5" />
+      <Skeleton className="h-7 w-36 mb-5" />
       <div className="space-y-4">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="space-y-2.5">
-            <SkeletonText numberOfLines={1} height="h-7" width="w-full" />
+            <Skeleton className="h-7 w-full rounded-md" />
             <div className="pl-4 space-y-2">
-              <SkeletonList
-                count={i === 0 ? 4 : 3}
-                variant="simple"
-                itemHeight="h-6"
-                gap="gap-2"
-                itemClassName="w-[90%]"
-              />
+              {Array.from({ length: i === 0 ? 4 : 3 }).map((_, j) => (
+                <Skeleton key={j} className="h-6 w-[90%] rounded-md" />
+              ))}
             </div>
           </div>
         ))}
@@ -37,15 +34,13 @@ function SubtopicSectionSkeleton() {
   return (
     <div className="space-y-4 mb-8">
       <div className="lg:border-l-4 lg:border-border lg:pl-2">
-        <SkeletonText numberOfLines={1} height="h-8" width="w-52" />
+        <Skeleton className="h-8 w-52 rounded-md" />
       </div>
-      <SkeletonList
-        count={3}
-        variant="card"
-        gridColumns="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-        className="grid gap-4"
-        renderItem={(i) => <SkeletonCard key={i} height="h-[180px]" />}
-      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <BaseCardSkeleton key={i} height="h-[180px]" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -64,7 +59,7 @@ export function ExercisesDesktopSkeleton() {
           <div className="space-y-10">
             {Array.from({ length: 2 }).map((_, i) => (
               <div key={i} className="space-y-8">
-                <SkeletonText numberOfLines={1} height="h-9" width="w-64" />
+                <Skeleton className="h-9 w-64 rounded-md" />
                 {Array.from({ length: 2 }).map((_, j) => (
                   <SubtopicSectionSkeleton key={j} />
                 ))}

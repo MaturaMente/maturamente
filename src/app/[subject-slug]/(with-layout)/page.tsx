@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { NotesDataServer } from "@/app/components/subject/notes/notes-data-server";
-import { SkeletonText, SkeletonCard, SkeletonList } from "@/app/components/shared/loading";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SubjectPageProps {
   params: Promise<{
@@ -14,9 +14,9 @@ function NotesLoadingSkeleton() {
       {/* Header Skeleton */}
       <div className="space-y-4">
         <div className="flex items-center justify-between border-b border-border pb-2">
-          <SkeletonText numberOfLines={1} height="h-9" width="w-48" />
+          <Skeleton className="h-9 w-48" />
           <div className="relative w-full sm:max-w-xs">
-            <SkeletonCard height="h-10" width="w-full" />
+            <Skeleton className="h-10 w-full" />
           </div>
         </div>
       </div>
@@ -24,29 +24,25 @@ function NotesLoadingSkeleton() {
       {/* Favorites Section Skeleton */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
-          <SkeletonText numberOfLines={1} height="h-7" width="w-24" />
+          <Skeleton className="h-7 w-24" />
         </div>
-        <SkeletonList
-          count={3}
-          variant="card"
-          gridColumns="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          className="grid gap-4"
-          renderItem={(i) => <SkeletonCard key={i} height="h-42" />}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-56 rounded-lg w-full"></Skeleton>
+          ))}
+        </div>
       </section>
 
       {/* All Notes Section Skeleton */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
-          <SkeletonText numberOfLines={1} height="h-7" width="w-32" />
+          <Skeleton className="h-7 w-32" />
         </div>
-        <SkeletonList
-          count={8}
-          variant="card"
-          gridColumns="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          className="grid gap-4"
-          renderItem={(i) => <SkeletonCard key={i} height="h-42" />}
-        />
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-lg w-full"></Skeleton>
+          ))}
+        </div>
       </section>
     </div>
   );

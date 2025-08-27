@@ -1,4 +1,5 @@
-import { SkeletonCard, SkeletonList } from "../index";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BaseListSkeleton } from "./base-list-skeleton";
 import { HeaderSkeleton } from "./header-skeleton";
 
 /**
@@ -11,16 +12,16 @@ export function ExercisesMobileSkeleton() {
 
       {/* Mobile Topic Dropdown Skeleton */}
       <div className="mb-6">
-        <SkeletonCard height="h-12" width="w-full" />
+        <Skeleton className="h-12 w-full rounded-md" />
       </div>
 
       {/* Exercise List Skeleton */}
       <div className="rounded-md border overflow-hidden">
-        <SkeletonList
+        <BaseListSkeleton
           count={5}
-          variant="simple"
           itemHeight="h-[120px]"
           gap="gap-0"
+          withBorder={false}
           itemClassName="border-b border-border last:border-0"
         />
       </div>

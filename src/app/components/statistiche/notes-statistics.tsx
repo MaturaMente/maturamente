@@ -252,7 +252,7 @@ export function NotesStatistics({
       </Tabs>
 
       {/* Call to action */}
-      <Card className="bg-gradient-to-br from-[color:var(--subject-color)]/5 to-background border-[color:var(--subject-color)]/20">
+      <Card className="hidden md:block bg-gradient-to-br from-[color:var(--subject-color)]/5 to-background border-[color:var(--subject-color)]/20">
         <CardHeader className="mb-0 pb-0">
           <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
             <Star className="h-4 w-4 md:h-5 md:w-5 text-[color:var(--subject-color)] flex-shrink-0" />
@@ -310,7 +310,7 @@ export function NotesStatistics({
 
           {/* Action Buttons */}
           <div className="flex flex-col md:flex-row gap-2 md:gap-4 pt-2">
-            <Button asChild className="w-full text-white text-sm">
+            <Button asChild className="w-full text-white text-sm bg-[color:var(--subject-color)] hover:bg-[color:var(--subject-color)]/90" variant="secondary">
               <Link href={`/${subjectSlug}`}>
                 <FileText className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                 Visualizza tutti gli appunti
