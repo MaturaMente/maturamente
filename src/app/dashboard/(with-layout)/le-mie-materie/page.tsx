@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { SubjectsDataServer } from "@/app/components/dashboard/le-mie-materie/subjects-data-server";
+import { SkeletonText, SkeletonCard, SkeletonList } from "@/app/components/shared/loading";
 import { SubjectsGrid } from "@/app/components/dashboard/le-mie-materie/subjects-grid-client";
 import { UnauthenticatedOverlay } from "@/app/components/auth/unauthenticated-overlay";
 import { isAuthenticated } from "@/utils/user-context";
@@ -22,15 +23,17 @@ export const metadata: Metadata = {
 function SubjectsLoadingSkeleton() {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-4 md:py-8">
-      <div className="space-y-2">
-        <div className="h-8 w-48 bg-muted rounded animate-pulse" />
-        <div className="h-5 w-32 bg-muted rounded animate-pulse" />
+      <div className="space-y-2 mb-8">
+        <SkeletonText numberOfLines={1} height="h-8" width="w-48" />
+        <SkeletonText numberOfLines={1} height="h-5" width="w-32" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-48 bg-muted rounded-lg animate-pulse" />
-        ))}
-      </div>
+      <SkeletonList
+        count={6}
+        variant="card"
+        gridColumns="grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+        className="grid gap-6"
+        renderItem={(i) => <SkeletonCard key={i} height="h-48" />}
+      />
     </div>
   );
 }
