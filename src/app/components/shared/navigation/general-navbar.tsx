@@ -287,9 +287,9 @@ export function GeneralNavbar({ variant = "landing" }: NavbarProps) {
 
   // Dashboard navigation links -> point to landing sections/pages
   const dashboardLinks = [
-    { href: "/", label: "Home" },
-    { href: "/#features", label: "Cosa trovi" },
-    { href: "/pricing", label: "Prezzi" },
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/dashboard/le-mie-materie", label: "Le Mie Materie" },
+    { href: "/dashboard/pit", label: "Pit" },
   ];
 
   return (
