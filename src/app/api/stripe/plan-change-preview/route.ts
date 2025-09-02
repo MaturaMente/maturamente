@@ -145,13 +145,10 @@ export async function POST(request: NextRequest) {
       // Get the new line items for the target subscription
       const newLineItems = getStripeLineItemsForCustom(newSubjectCount);
 
-      // Calculate proration manually since we want to provide an accurate preview
-      // This calculates how much of the billing period remains and prorates accordingly
-      const periodProgress = getCurrentPeriodProgress(currentSubscription);
+      // No prorated pricing - users always pay full price for subject additions
       const priceDifference = newPrice - currentPrice;
       // For downgrades, no proration credit is given - user keeps access until period end
-      const prorationAmount =
-        changeType === "downgrade" ? 0 : priceDifference * (1 - periodProgress);
+      const prorationAmount = changeType === "downgrade" ? 0 : 0; // Always 0 for upgrades
 
       console.log("Preview calculation:", {
         currentPrice,
@@ -161,7 +158,6 @@ export async function POST(request: NextRequest) {
         newSubjectCount,
         changeType,
         prorationAmount,
-        periodProgress,
         priceDifference,
         pendingChangesCount: pendingChanges.length,
       });
@@ -178,15 +174,14 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error("Error calculating preview:", error);
 
-      // Fallback calculation if Stripe preview fails
-      const periodProgress = getCurrentPeriodProgress(currentSubscription);
+      // Fallback calculation if Stripe preview fails - no prorated pricing
       const priceDifference = newPrice - currentPrice;
       // For downgrades, no proration credit is given - user keeps access until period end
-      const estimatedProration =
-        changeType === "downgrade" ? 0 : priceDifference * (1 - periodProgress);
+      const estimatedProration = changeType === "downgrade" ? 0 : 0; // Always 0 for upgrades
 
       console.log("Using fallback calculation:", {
-        periodProgress,
+        currentPrice,
+        newPrice,
         priceDifference,
         estimatedProration,
       });

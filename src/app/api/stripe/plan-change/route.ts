@@ -131,8 +131,7 @@ export async function POST(request: NextRequest) {
         newLineItems,
       });
 
-      let immediateChargeAmount = 0;
-      let invoiceId = null;
+      // No prorated pricing - no immediate charges
 
       // Update subscription items with different proration behavior based on change type
       const updateParams: Stripe.SubscriptionUpdateParams = {
@@ -148,10 +147,9 @@ export async function POST(request: NextRequest) {
             quantity: item.quantity,
           })),
         ],
-        // For upgrades, use always_invoice to immediately charge
-        // For downgrades, use none to avoid proration credits - user keeps access until period end
-        proration_behavior:
-          changeType === "upgrade" ? "always_invoice" : "none",
+        // No prorated pricing - users pay full price regardless of timing
+        // For both upgrades and downgrades, use none to avoid any proration
+        proration_behavior: "none",
       };
 
       const updatedSubscription = await stripe.subscriptions.update(
@@ -161,82 +159,7 @@ export async function POST(request: NextRequest) {
 
       console.log("Stripe subscription updated successfully");
 
-      // For upgrades with always_invoice, Stripe automatically creates and attempts to pay an invoice
-      if (changeType === "upgrade") {
-        try {
-          // Get the latest invoice for this customer to find the proration charge
-          const invoices = await stripe.invoices.list({
-            customer: stripeSubscription.customer as string,
-            limit: 5,
-            status: "open", // Look for open invoices first
-          });
-
-          // Look for an open invoice (unpaid) that was just created
-          let latestInvoice = invoices.data.find(
-            (invoice) =>
-              invoice.status === "open" &&
-              invoice.amount_due > 0 &&
-              invoice.lines.data.some(
-                (line) => (line as any).proration === true
-              )
-          );
-
-          // If no open invoice found, check for recent paid invoices
-          if (!latestInvoice) {
-            const paidInvoices = await stripe.invoices.list({
-              customer: stripeSubscription.customer as string,
-              limit: 5,
-              status: "paid",
-            });
-
-            latestInvoice = paidInvoices.data.find(
-              (invoice) =>
-                invoice.created > Date.now() / 1000 - 60 && // Created in last minute
-                invoice.lines.data.some(
-                  (line) => (line as any).proration === true
-                )
-            );
-          }
-
-          if (latestInvoice) {
-            invoiceId = latestInvoice.id;
-
-            if (latestInvoice.status === "open") {
-              // If invoice is open, try to pay it
-              console.log("Found open proration invoice, attempting to pay...");
-              try {
-                const paidInvoice = await stripe.invoices.pay(
-                  latestInvoice.id!
-                );
-                immediateChargeAmount = paidInvoice.amount_paid / 100;
-                console.log("Immediate charge processed successfully:", {
-                  invoiceId: paidInvoice.id,
-                  amountPaid: immediateChargeAmount,
-                  status: paidInvoice.status,
-                });
-              } catch (payError) {
-                console.error("Error paying invoice:", payError);
-                immediateChargeAmount = 0;
-              }
-            } else if (latestInvoice.status === "paid") {
-              // Invoice was already paid automatically
-              immediateChargeAmount = latestInvoice.amount_paid / 100;
-              console.log("Invoice was already paid automatically:", {
-                invoiceId: latestInvoice.id,
-                amountPaid: immediateChargeAmount,
-                status: latestInvoice.status,
-              });
-            }
-          } else {
-            console.log(
-              "No proration invoice found, charge will appear on next regular invoice"
-            );
-          }
-        } catch (invoiceError) {
-          console.error("Error processing immediate charge:", invoiceError);
-          // Continue with subscription update even if charging fails
-        }
-      }
+      // No prorated pricing - no immediate charges for upgrades
 
       // Update our local database
       if (changeType === "upgrade") {
@@ -300,17 +223,11 @@ export async function POST(request: NextRequest) {
 
       console.log("Local subscription data updated successfully");
 
-      // Prepare response message based on change type and charging result
+      // Prepare response message based on change type
       let message = "";
       if (changeType === "upgrade") {
-        if (immediateChargeAmount > 0) {
-          message = `Subscription upgraded successfully! You have been charged €${immediateChargeAmount.toFixed(
-            2
-          )} for the remaining billing period.`;
-        } else {
-          message =
-            "Subscription upgraded successfully! The prorated amount will be added to your next invoice.";
-        }
+        message =
+          "Subscription upgraded successfully! The new subjects are now available and you'll be charged the full price starting from your next billing cycle.";
       } else {
         message =
           "Subscription downgraded successfully! You'll keep access to all subjects until the end of your current billing period. Your next invoice will reflect the new lower price.";
@@ -323,9 +240,6 @@ export async function POST(request: NextRequest) {
         timing: effectiveTiming,
         newSubjectCount,
         newPrice,
-        immediateChargeAmount,
-        chargedImmediately: immediateChargeAmount > 0,
-        invoiceId,
         subscriptionId: updatedSubscription.id,
       });
     } catch (error) {

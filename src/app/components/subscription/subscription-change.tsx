@@ -41,7 +41,6 @@ type Subject = SubjectUI;
 interface PlanChangePreview {
   currentPrice: number;
   newPrice: number;
-  prorationAmount: number;
   isUpgrade: boolean;
   isDowngrade: boolean;
   changeType: "upgrade" | "downgrade" | "no_change";
@@ -259,18 +258,6 @@ export default function SubscriptionChange({
       if (response.ok) {
         // Change applied successfully
         toast.success(result.message || "Abbonamento aggiornato con successo");
-
-        // Show additional info for immediate charges
-        if (result.chargedImmediately && result.immediateChargeAmount > 0) {
-          setTimeout(() => {
-            toast.info(
-              `💳 Addebito immediato: €${result.immediateChargeAmount.toFixed(
-                2
-              )} è stato elaborato`,
-              { duration: 5000 }
-            );
-          }, 1000);
-        }
 
         setConfirmDialogOpen(false);
         onChangeComplete();
@@ -561,30 +548,6 @@ export default function SubscriptionChange({
                   </div>
                 </div>
 
-                {/* Proration Amount */}
-                {preview.prorationAmount !== 0 && (
-                  <div className="rounded-lg p-4 border-2 bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
-                    <div className="flex md:items-center items-start justify-between md:flex-row flex-col gap-2 md:gap-0">
-                      <div>
-                        <div className="font-medium text-green-800 dark:text-green-500">
-                          {preview.isUpgrade
-                            ? "Addebito Immediato"
-                            : "Credito Applicato"}
-                        </div>
-                        <div className="text-sm text-green-600">
-                          {preview.isUpgrade
-                            ? "Per il periodo rimanente di questo mese"
-                            : "Applicato alla prossima fattura"}
-                        </div>
-                      </div>
-                      <div className="text-xl font-bold text-green-600">
-                        {preview.isUpgrade ? "+" : "-"} €
-                        {Math.abs(preview.prorationAmount).toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Summary */}
                 <div className="bg-muted/30 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between items-center">
@@ -605,6 +568,19 @@ export default function SubscriptionChange({
                         : nextPeriodStart || "Prossimo mese"}
                     </span>
                   </div>
+                  {preview.isUpgrade && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Costo Immediato:
+                      </span>
+                      <span className="font-medium">
+                        €{" "}
+                        {Math.abs(
+                          preview.newPrice - preview.currentPrice || 0
+                        ).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground bg-blue-500/5 p-3 rounded-lg border border-blue-500/20 text-blue-500">
@@ -650,7 +626,7 @@ export default function SubscriptionChange({
                   disabled={!preview || previewLoading}
                 >
                   {preview?.isUpgrade
-                    ? "Aggiorna e Addebita Ora"
+                    ? "Aggiorna Piano"
                     : "Passa a un piano inferiore"}
                 </Button>
               </AlertDialogTrigger>
@@ -659,7 +635,7 @@ export default function SubscriptionChange({
                   <AlertDialogTitle className="flex items-center gap-2">
                     {preview?.isUpgrade ? (
                       <>
-                        <CreditCard className="w-5 h-5 text-green-600" />
+                        <Plus className="w-5 h-5 text-green-600" />
                         Conferma Aggiornamento
                       </>
                     ) : (
@@ -707,7 +683,7 @@ export default function SubscriptionChange({
                     </div>
                   </div>
 
-                  {/* Immediate Action Info */}
+                  {/* Action Info */}
                   {preview?.isUpgrade ? (
                     <div className="bg-green-500/5 border border-green-500/20 p-4 rounded-lg">
                       <div className="flex items-center gap-2">
@@ -717,7 +693,9 @@ export default function SubscriptionChange({
                           </div>
                           <div className="text-sm text-green-600">
                             Verrai addebitato di €
-                            {Math.abs(preview?.prorationAmount || 0).toFixed(2)}{" "}
+                            {Math.abs(
+                              preview?.newPrice - preview?.currentPrice || 0
+                            ).toFixed(2)}{" "}
                             per il periodo di fatturazione rimanente.
                           </div>
                         </div>
@@ -754,7 +732,7 @@ export default function SubscriptionChange({
                         Elaborazione...
                       </>
                     ) : preview?.isUpgrade ? (
-                      "Conferma e Addebita Ora"
+                      "Conferma Aggiornamento"
                     ) : (
                       "Conferma Modifica"
                     )}

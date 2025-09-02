@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   stripe,
-  STRIPE_PRICE_IDS,
   SUBSCRIPTION_PLANS,
   getStripeLineItemsForCustom,
   calculateCustomPrice,

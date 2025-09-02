@@ -19,7 +19,7 @@ export type SubscriptionPlan = keyof typeof SUBSCRIPTION_PLANS;
 
 // Custom pricing constants
 export const CUSTOM_PRICING = {
-  FIRST_SUBJECT_PRICE: 4.99,
+  FIRST_SUBJECT_PRICE: 5.99,
   ADDITIONAL_SUBJECT_PRICE: 2.49,
 } as const;
 

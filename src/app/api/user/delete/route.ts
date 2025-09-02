@@ -17,6 +17,7 @@ import {
   completedSimulationsTable,
   flaggedSimulationsTable,
   flaggedNotesTable,
+  uploadedFilesTable,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -155,6 +156,12 @@ export async function DELETE(request: NextRequest) {
         .delete(flaggedSimulationsTable)
         .where(eq(flaggedSimulationsTable.user_id, user.id));
       console.log("Deleted flagged simulations");
+
+      // Delete all user's uploaded files
+      await db
+        .delete(uploadedFilesTable)
+        .where(eq(uploadedFilesTable.user_id, user.id));
+      console.log("Deleted uploaded files");
 
       // Finally, delete the user
       await db.delete(users).where(eq(users.id, user.id));

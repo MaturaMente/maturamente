@@ -115,7 +115,7 @@ export function SubjectCard({
 
           {state === "current" && !isSelected && (
             <div className="flex flex-wrap gap-1">
-              <Badge variant="destructive" className="text-xs">
+              <Badge variant="destructive" className="text-xs text-white">
                 Rimozione
               </Badge>
             </div>
