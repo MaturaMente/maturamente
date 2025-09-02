@@ -4,17 +4,17 @@ import Landing from "./components/landing/index";
 export const metadata: Metadata = {
   title: "Home",
   description:
-    "Benvenuto su MaturaMate, la piattaforma completa per la preparazione alla maturità scientifica. Accedi a teoria dettagliata, simulazioni d'esame e esercizi interattivi per matematica e fisica.",
+    "Benvenuto su MaturaMente, la piattaforma completa per la preparazione alla maturità scientifica. Accedi a teoria dettagliata, simulazioni d'esame e esercizi interattivi per matematica e fisica.",
   openGraph: {
-    title: "MaturaMate - Preparazione Maturità Matematica Online",
+    title: "MaturaMente - Preparazione Maturità Matematica Online",
     description:
-      "Benvenuto su MaturaMate, la piattaforma completa per la preparazione alla maturità scientifica. Accedi a teoria dettagliata, simulazioni d'esame e esercizi interattivi.",
+      "Benvenuto su MaturaMente, la piattaforma completa per la preparazione alla maturità scientifica. Accedi a teoria dettagliata, simulazioni d'esame e esercizi interattivi.",
     url: "/",
   },
   twitter: {
-    title: "MaturaMate - Preparazione Maturità Matematica Online",
+    title: "MaturaMente - Preparazione Maturità Matematica Online",
     description:
-      "Benvenuto su MaturaMate, la piattaforma completa per la preparazione alla maturità scientifica.",
+      "Benvenuto su MaturaMente, la piattaforma completa per la preparazione alla maturità scientifica.",
   },
   alternates: {
     canonical: "/",

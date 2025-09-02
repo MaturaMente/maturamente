@@ -76,13 +76,13 @@ export async function generateMetadata({
         "carte studio",
       ],
       openGraph: {
-        title: ` ${cardTitle} | MaturaMate`,
+        title: ` ${cardTitle} | MaturaMente`,
         description: cardDescription,
         url: `/${subjectSlug}/simulazioni/card/${slug}`,
         type: "article",
       },
       twitter: {
-        title: ` ${cardTitle} | MaturaMate`,
+        title: ` ${cardTitle} | MaturaMente`,
         description: cardDescription,
       },
       alternates: {
@@ -94,7 +94,7 @@ export async function generateMetadata({
     return {
       title: "Carta Simulazione",
       description:
-        "Esercitati con le carte simulazione di maturità su MaturaMate.",
+        "Esercitati con le carte simulazione di maturità su MaturaMente.",
     };
   }
 }

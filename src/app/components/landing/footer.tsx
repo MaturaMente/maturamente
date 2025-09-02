@@ -31,34 +31,26 @@ interface FooterProps {
 
 export default function FooterSection({
   logo = <LaunchUI />,
-  name = "MaturaMate",
+  name = "MaturaMente",
   columns = [
     {
       title: "Landing",
       links: [
         { text: "Home", href: "/" },
         { text: "Features", href: "/#features" },
-        { text: "FAQ", href: "/#faq" },
+        { text: "Pricing", href: "/pricing" },
       ],
     },
     {
-      title: "Dashbaord",
+      title: "Dashboard",
       links: [
-        { text: "Teoria", href: "/dashboard/teoria" },
-        { text: "Esercizi", href: "/dashboard/esercizi" },
-        { text: "Simulazioni", href: "/dashboard/simulazioni" },
-      ],
-    },
-    {
-      title: "Il Tuo Studio",
-      links: [
-        { text: "Tutor AI", href: "/dashboard/pit" },
-        { text: "Preferiti", href: "/dashboard/preferiti" },
-        { text: "Statistiche", href: "/dashboard/statistiche" },
+        { text: "Dashboard", href: "/dashboard" },
+        { text: "Le tue materie", href: "/dashboard/le-mie-materie" },
+        { text: "Pit", href: "/dashboard/pit" },
       ],
     },
   ],
-  copyright = "© 2025 MaturaMate. All rights reserved",
+  copyright = "© 2025 MaturaMente. All rights reserved",
   policies = [
     { text: "Privacy Policy", href: "/privacy-policy" },
     { text: "Terms and Conditions", href: "/terms-and-conditions" },

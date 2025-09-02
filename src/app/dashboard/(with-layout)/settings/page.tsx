@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Impostazioni",
   description:
-    "Personalizza il tuo profilo MaturaMate. Modifica dati personali, preferenze di studio, notifiche e impostazioni di privacy per ottimizzare la tua esperienza di apprendimento.",
+    "Personalizza il tuo profilo MaturaMente. Modifica dati personali, preferenze di studio, notifiche e impostazioni di privacy per ottimizzare la tua esperienza di apprendimento.",
   keywords: [
     "impostazioni profilo",
     "preferenze utente",
@@ -20,15 +20,15 @@ export const metadata: Metadata = {
     "notifiche app",
   ],
   openGraph: {
-    title: "Impostazioni | MaturaMate",
+    title: "Impostazioni | MaturaMente",
     description:
-      "Personalizza il tuo profilo MaturaMate. Modifica dati personali, preferenze di studio e impostazioni privacy.",
+      "Personalizza il tuo profilo MaturaMente. Modifica dati personali, preferenze di studio e impostazioni privacy.",
     url: "/dashboard/settings",
   },
   twitter: {
-    title: "Impostazioni | MaturaMate",
+    title: "Impostazioni | MaturaMente",
     description:
-      "Personalizza il tuo profilo MaturaMate. Modifica preferenze di studio e impostazioni.",
+      "Personalizza il tuo profilo MaturaMente. Modifica preferenze di studio e impostazioni.",
   },
   alternates: {
     canonical: "/dashboard/settings",

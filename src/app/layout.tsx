@@ -14,10 +14,10 @@ const funnelDisplay = Funnel_Display({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://maturamate.it"),
+  metadataBase: new URL("https://MaturaMente.it"),
   title: {
-    template: "%s | MaturaMate",
-    default: "MaturaMate - Preparazione Maturità Matematica Online",
+    template: "%s | MaturaMente",
+    default: "MaturaMente - Preparazione Maturità Matematica Online",
   },
   description:
     "Piattaforma online per la preparazione alla maturità scientifica. Teoria completa, simulazioni d'esame, esercizi interattivi e tracce svolte per matematica e fisica.",
@@ -42,9 +42,9 @@ export const metadata: Metadata = {
     "e-learning",
     "ripetizioni matematica",
   ],
-  authors: [{ name: "MaturaMate Team" }],
-  creator: "MaturaMate",
-  publisher: "MaturaMate",
+  authors: [{ name: "MaturaMente Team" }],
+  creator: "MaturaMente",
+  publisher: "MaturaMente",
   robots: {
     index: true,
     follow: true,
@@ -59,9 +59,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "it_IT",
-    url: "https://maturamate.it",
-    siteName: "MaturaMate",
-    title: "MaturaMate - Preparazione Maturità Matematica Online",
+    url: "https://MaturaMente.it",
+    siteName: "MaturaMente",
+    title: "MaturaMente - Preparazione Maturità Matematica Online",
     description:
       "Piattaforma online per la preparazione alla maturità scientifica. Teoria completa, simulazioni d'esame, esercizi interattivi e tracce svolte.",
     images: [
@@ -69,18 +69,18 @@ export const metadata: Metadata = {
         url: "/opengraph-image.png",
         width: 1200,
         height: 630,
-        alt: "MaturaMate - Preparazione Maturità Matematica Online",
+        alt: "MaturaMente - Preparazione Maturità Matematica Online",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "MaturaMate - Preparazione Maturità Matematica Online",
+    title: "MaturaMente - Preparazione Maturità Matematica Online",
     description:
       "Piattaforma online per la preparazione alla maturità scientifica. Teoria completa, simulazioni d'esame, esercizi interattivi.",
     images: ["/opengraph-image.png"],
-    creator: "@maturamate",
-    site: "@maturamate",
+    creator: "@MaturaMente",
+    site: "@MaturaMente",
   },
   verification: {
     google: "your-google-verification-code",
@@ -88,7 +88,7 @@ export const metadata: Metadata = {
   category: "education",
   classification: "Educational Platform",
   appleWebApp: {
-    title: "MaturaMate",
+    title: "MaturaMente",
     statusBarStyle: "default",
     capable: true,
   },
@@ -96,7 +96,7 @@ export const metadata: Metadata = {
     telephone: false,
   },
   alternates: {
-    canonical: "https://maturamate.it",
+    canonical: "https://MaturaMente.it",
   },
 };
 

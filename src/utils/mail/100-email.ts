@@ -5,14 +5,14 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function send100thEmail(email: string, name: string) {
   const token = generateUnsubscribeToken(email);
-  const unsubscribeUrl = `https://maturamate.it/unsubscribe?email=${encodeURIComponent(
+  const unsubscribeUrl = `https://MaturaMente.it/unsubscribe?email=${encodeURIComponent(
     email
   )}&token=${token}`;
 
   return resend.emails.send({
     from: process.env.FROM_EMAIL!,
     to: email,
-    subject: "Grazie di cuore da Maturamate! 💙",
+    subject: "Grazie di cuore da MaturaMente! 💙",
     html: `
       <!DOCTYPE html>
       <html lang="it" dir="ltr" style="color-scheme: light dark; supported-color-schemes: light dark;">
@@ -20,7 +20,7 @@ export async function send100thEmail(email: string, name: string) {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="color-scheme" content="light dark">
-        <title>Grazie di cuore da Maturamate!</title>
+        <title>Grazie di cuore da MaturaMente!</title>
         <style>
           
           /* Base styles */
@@ -308,7 +308,7 @@ export async function send100thEmail(email: string, name: string) {
                   
                   <!-- Celebration announcement -->
                   <div class="celebration-box">
-                    <h2>🎉 Sei ufficialmente il 100° utente iscritto a Maturamate! 🎉</h2>
+                    <h2>🎉 Sei ufficialmente il 100° utente iscritto a MaturaMente! 🎉</h2>
                     <p>Un traguardo speciale che condividiamo con te!</p>
                   </div>
                   
@@ -319,10 +319,10 @@ export async function send100thEmail(email: string, name: string) {
                   <!-- Call to action -->
                   <div class="cta-section">
                     <h2>✨ Ti va di aiutarci a crescere ancora?</h2>
-                    <p>Se ti piace quello che hai trovato su Maturamate, ti chiediamo un piccolo grande gesto: <strong>condividilo con amici, compagni di classe o chiunque possa averne bisogno.</strong></p>
+                    <p>Se ti piace quello che hai trovato su MaturaMente, ti chiediamo un piccolo grande gesto: <strong>condividilo con amici, compagni di classe o chiunque possa averne bisogno.</strong></p>
                     <p>Puoi semplicemente condividere questo link:</p>
                     <div class="share-link">
-                      👉 https://maturamate.it
+                      👉 https://MaturaMente.it
                     </div>
                     <p>Ogni persona in più significa una maturità un po' più leggera per tutti 😊</p>
                   </div>
@@ -332,13 +332,13 @@ export async function send100thEmail(email: string, name: string) {
                   <!-- Signature -->
                   <div class="signature">
                     <p>A presto,</p>
-                    <p class="team-name">Il team di MaturaMate</p>
+                    <p class="team-name">Il team di MaturaMente</p>
                   </div>
                 </div>
                 
                 <!-- Footer -->
                 <div class="email-footer">
-                  <p>Ricevi questa email perché ti sei iscritto alla lista d'attesa su maturamate.it</p>
+                  <p>Ricevi questa email perché ti sei iscritto alla lista d'attesa su MaturaMente.it</p>
                   <p>
                     Non vuoi più ricevere email da noi?
                     <a href="${unsubscribeUrl}" class="unsubscribe-link">Clicca qui per disiscriverti</a>

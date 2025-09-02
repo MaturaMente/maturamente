@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Disiscrizione Newsletter",
   description:
-    "Disiscrizione dalla newsletter di MaturaMate. Gestisci le tue preferenze email e annulla l'iscrizione alle comunicazioni che non desideri più ricevere.",
+    "Disiscrizione dalla newsletter di MaturaMente. Gestisci le tue preferenze email e annulla l'iscrizione alle comunicazioni che non desideri più ricevere.",
   keywords: [
     "disiscrizione",
     "unsubscribe",
@@ -14,15 +14,15 @@ export const metadata: Metadata = {
     "preferenze comunicazioni",
   ],
   openGraph: {
-    title: "Disiscrizione Newsletter | MaturaMate",
+    title: "Disiscrizione Newsletter | MaturaMente",
     description:
-      "Gestisci le tue preferenze email e disiscrizione dalla newsletter MaturaMate.",
+      "Gestisci le tue preferenze email e disiscrizione dalla newsletter MaturaMente.",
     url: "/unsubscribe",
   },
   twitter: {
-    title: "Disiscrizione Newsletter | MaturaMate",
+    title: "Disiscrizione Newsletter | MaturaMente",
     description:
-      "Gestisci le preferenze email per le comunicazioni MaturaMate.",
+      "Gestisci le preferenze email per le comunicazioni MaturaMente.",
   },
   alternates: {
     canonical: "/unsubscribe",

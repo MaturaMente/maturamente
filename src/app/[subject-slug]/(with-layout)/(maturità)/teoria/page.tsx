@@ -41,13 +41,13 @@ export async function generateMetadata({
       "maturità scientifica teoria",
     ],
     openGraph: {
-      title: "Teoria Matematica | MaturaMate",
+      title: "Teoria Matematica | MaturaMente",
       description:
         "Sezione teoria completa per la maturità scientifica. Studia analisi matematica, limiti, derivate, integrali e studio di funzioni.",
       url: `/${subjectSlug}/teoria`,
     },
     twitter: {
-      title: "Teoria Matematica | MaturaMate",
+      title: "Teoria Matematica | MaturaMente",
       description:
         "Sezione teoria completa per la maturità scientifica. Studia analisi matematica, limiti, derivate e integrali.",
     },

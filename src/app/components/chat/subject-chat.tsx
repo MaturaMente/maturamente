@@ -340,7 +340,11 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                       </div>
                       <div className="mt-1 text-sm text-muted-foreground">
                         Pronto ad aiutarti con spiegazioni, riassunti e quiz dai
-                        tuoi appunti di <span className="font-semibold">{currentSubjectData?.name}</span>.
+                        tuoi appunti di{" "}
+                        <span className="font-semibold">
+                          {currentSubjectData?.name}
+                        </span>
+                        .
                       </div>
                     </div>
                   </div>
@@ -407,7 +411,9 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                   <div key={message.id} className="flex justify-end w-full">
                     <div
                       className={`flex ${
-                        isUser ? "justify-end md:max-w-2/3" : "justify-start w-full"
+                        isUser
+                          ? "justify-end md:max-w-2/3"
+                          : "justify-start w-full"
                       }`}
                     >
                       <div
@@ -428,16 +434,23 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                             }`}
                           >
                             {/* Display selected documents for user messages */}
-                            {isUser && ((message as any)?.metadata?.selectedNoteSlugs && (message as any).metadata.selectedNoteSlugs.length > 0) && (
-                              <MessageDocumentsDisplay
-                                message={message}
-                                notes={notes}
-                                subjects={currentSubjectData ? [currentSubjectData] : []}
-                                uploadedFiles={{}}
-                                maxInitialDisplay={1}
-                              />
-                            )}
-                            
+                            {isUser &&
+                              (message as any)?.metadata?.selectedNoteSlugs &&
+                              (message as any).metadata.selectedNoteSlugs
+                                .length > 0 && (
+                                <MessageDocumentsDisplay
+                                  message={message}
+                                  notes={notes}
+                                  subjects={
+                                    currentSubjectData
+                                      ? [currentSubjectData]
+                                      : []
+                                  }
+                                  uploadedFiles={{}}
+                                  maxInitialDisplay={1}
+                                />
+                              )}
+
                             {editingMessageId === message.id && isUser ? (
                               <div className="w-full">
                                 <textarea
@@ -481,10 +494,10 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                               </div>
                             ) : (
                               <div>
-                                {/* Assistant header with PIT */}
+                                {/* Assistant header with Pit */}
                                 {!isUser && (
                                   <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                                    <Bot className="h-4 w-4" /> PIT
+                                    <Bot className="h-4 w-4" /> Pit
                                   </div>
                                 )}
                                 {/* RAG disclaimer for assistant messages */}
@@ -971,22 +984,30 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                         )
                       : notes
                   ).slice();
-                  
+
                   const recentSet = new Set(
                     (recentStudiedNotes || []).map((r) => r.slug)
                   );
                   // Sort recent notes by their order in recentStudiedNotes (most recent first)
                   const recentFiltered = (recentStudiedNotes || [])
-                    .map(recentNote => filtered.find(n => n.slug === recentNote.slug))
+                    .map((recentNote) =>
+                      filtered.find((n) => n.slug === recentNote.slug)
+                    )
                     .filter(Boolean); // Remove any notes that weren't found in filtered
-                  
+
                   const favoriteFiltered = filtered
                     .filter((n) => n.is_favorite && !recentSet.has(n.slug))
-                    .sort((a: any, b: any) => a.title?.localeCompare(b.title || "") || 0);
-                  
+                    .sort(
+                      (a: any, b: any) =>
+                        a.title?.localeCompare(b.title || "") || 0
+                    );
+
                   const remaining = filtered
                     .filter((n) => !recentSet.has(n.slug) && !n.is_favorite)
-                    .sort((a: any, b: any) => a.title?.localeCompare(b.title || "") || 0);
+                    .sort(
+                      (a: any, b: any) =>
+                        a.title?.localeCompare(b.title || "") || 0
+                    );
                   const renderRow = (n: any) => (
                     <div
                       key={n.id + "-row"}
@@ -1046,13 +1067,13 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                       {recentFiltered.length > 0 && (
                         <div className="flex flex-col gap-2">
                           <div className="text-sm font-medium text-muted-foreground">
-                          STUDIATI DI RECENTE
+                            STUDIATI DI RECENTE
                           </div>
                           {recentFiltered.slice(0, 3).map((n) => renderRow(n))}
                           <div className="h-px w-full bg-border my-1" />
                         </div>
                       )}
-                      
+
                       {favoriteFiltered.length > 0 && (
                         <div className="flex flex-col gap-2">
                           <div className="text-sm font-medium text-muted-foreground">
@@ -1062,7 +1083,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                           <div className="h-px w-full bg-border my-1" />
                         </div>
                       )}
-                      
+
                       {remaining.map((n) => renderRow(n))}
                       {filtered.length === 0 && (
                         <div className="text-sm text-muted-foreground">

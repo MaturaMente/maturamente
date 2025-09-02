@@ -1,5 +1,6 @@
 import Hero from "./hero";
-import { LandingTabs } from "./tabs";
+import { LandingTabsNotes } from "./tabs-notes";
+import { LandingTabMaturità } from "./tabs-maturità";
 import { Pit } from "./pit";
 import Pricing from "./pricing";
 import Faq from "./faq";
@@ -10,11 +11,13 @@ import { LandingNavbar } from "../shared/navigation/general-navbar";
 export default function Landing() {
   return (
     <div>
-      <div className="flex flex-col gap-16 md:gap-24 pt-8">
+      <div className="flex flex-col gap-24 md:gap-32 pt-8">
         <LandingNavbar />
         <Hero />
-        <LandingTabs />
+        <LandingTabsNotes />
+        <LandingTabMaturità />
         <Pit />
+        <Pricing />
         <Faq />
         <Cta />
         <Footer />

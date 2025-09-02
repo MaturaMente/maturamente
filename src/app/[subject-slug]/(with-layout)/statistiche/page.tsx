@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Statistiche",
   description:
-    "Visualizza le tue statistiche di studio su MaturaMate. Monitora i progressi negli appunti, simulazioni, teoria completata e aree di miglioramento per la maturità.",
+    "Visualizza le tue statistiche di studio su MaturaMente. Monitora i progressi negli appunti, simulazioni, teoria completata e aree di miglioramento per la maturità.",
   keywords: [
     "statistiche studio",
     "progresso maturità",
@@ -34,15 +34,15 @@ export const metadata: Metadata = {
     "dashboard analytics",
   ],
   openGraph: {
-    title: "Statistiche | MaturaMate",
+    title: "Statistiche | MaturaMente",
     description:
-      "Visualizza le tue statistiche di studio su MaturaMate. Monitora i progressi negli appunti e nella preparazione alla maturità.",
+      "Visualizza le tue statistiche di studio su MaturaMente. Monitora i progressi negli appunti e nella preparazione alla maturità.",
     url: "/statistiche",
   },
   twitter: {
-    title: "Statistiche | MaturaMate",
+    title: "Statistiche | MaturaMente",
     description:
-      "Visualizza le tue statistiche di studio su MaturaMate. Monitora i progressi negli appunti.",
+      "Visualizza le tue statistiche di studio su MaturaMente. Monitora i progressi negli appunti.",
   },
   alternates: {
     canonical: "/statistiche",

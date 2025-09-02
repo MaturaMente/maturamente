@@ -105,7 +105,7 @@ export default function SubjectSidebar({
 
     const fetchUserSubjects = async () => {
       if (!user?.id) return;
-      
+
       try {
         const subjects = await getUserSubjects(user.id);
         setUserSubjects(subjects);
@@ -231,9 +231,10 @@ export default function SubjectSidebar({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
                       {userSubjects.map((subject) => {
-                        const isCurrentSubject = subject.id === currentSubject.id;
+                        const isCurrentSubject =
+                          subject.id === currentSubject.id;
                         const Icon = getSubjectIcon(subject.name);
-                        
+
                         return (
                           <DropdownMenuItem
                             key={subject.id}

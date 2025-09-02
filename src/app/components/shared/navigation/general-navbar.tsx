@@ -285,11 +285,11 @@ export function GeneralNavbar({ variant = "landing" }: NavbarProps) {
     return pathname === href || pathname.startsWith(href + "/");
   };
 
-  // Dashboard navigation links
+  // Dashboard navigation links -> point to landing sections/pages
   const dashboardLinks = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/dashboard/le-mie-materie", label: "Le mie materie" },
-    { href: "/dashboard/pit", label: "PIT" },
+    { href: "/", label: "Home" },
+    { href: "/#features", label: "Cosa trovi" },
+    { href: "/pricing", label: "Prezzi" },
   ];
 
   return (
@@ -316,14 +316,14 @@ export function GeneralNavbar({ variant = "landing" }: NavbarProps) {
                     section="features"
                     className="text-gray-700 dark:text-gray-300"
                   >
-                    Features
+                    Cosa trovi
                   </ScrollLink>
                   <ScrollLink
-                    href="#faq"
-                    section="faq"
+                    href="#pricing"
+                    section="pricing"
                     className="text-gray-700 dark:text-gray-300"
                   >
-                    FAQ
+                    Prezzi
                   </ScrollLink>
                 </>
               ) : (
@@ -421,14 +421,14 @@ export function GeneralNavbar({ variant = "landing" }: NavbarProps) {
                   </ScrollLink>
 
                   <ScrollLink
-                    href="#faq"
-                    section="faq"
+                    href="#pricing"
+                    section="pricing"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={cn(
                       "relative text-gray-700 dark:text-gray-300 block py-2 transition-colors"
                     )}
                   >
-                    <span className="block">FAQ</span>
+                    <span className="block">Pricing</span>
                   </ScrollLink>
                 </>
               ) : (

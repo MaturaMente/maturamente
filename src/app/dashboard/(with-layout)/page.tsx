@@ -187,14 +187,14 @@ async function DashboardContent() {
               </Card>
             </div>
 
-            {/* Row 2: PIT (smaller) + Ore di studio (larger) */}
+            {/* Row 2: Pit (smaller) + Ore di studio (larger) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* PIT Section - takes 1/3 of the width */}
+              {/* Pit Section - takes 1/3 of the width */}
               <Card className="lg:col-span-1 overflow-hidden rounded-2xl border bg-card/80 backdrop-blur-sm shadow-xl h-full flex flex-col">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Bot className="h-5 w-5 text-primary" />
-                    PIT
+                    Pit
                   </CardTitle>
                   <CardDescription>
                     Le tue materie studiate di recente
@@ -232,7 +232,7 @@ async function DashboardContent() {
                           return (
                             <Link
                               key={n.subjectSlug}
-                              href={`/${n.subjectSlug}/pit`}
+                              href={`/${n.subjectSlug}/Pit`}
                               className="group block"
                               style={cardStyle}
                             >
@@ -281,7 +281,7 @@ async function DashboardContent() {
                 <CardFooter>
                   <Button asChild className="w-full text-white">
                     <Link href="/dashboard/pit">
-                      Parla con PIT
+                      Parla con Pit
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>

@@ -1,5 +1,5 @@
 /**
- * Core type definitions for the MaturaMate exercises system
+ * Core type definitions for the MaturaMente exercises system
  */
 
 import { TopicType, SubtopicType, TopicWithSubtopicsType } from "./topicsTypes";

@@ -1,5 +1,5 @@
 /**
- * Core type definitions for the MaturaMate favorites/preferiti system
+ * Core type definitions for the MaturaMente favorites/preferiti system
  */
 
 /**

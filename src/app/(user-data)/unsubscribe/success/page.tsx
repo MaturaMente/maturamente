@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Disiscrizione Completata",
   description:
-    "Disiscrizione dalla newsletter completata con successo. La tua email è stata rimossa dalla lista di distribuzione delle comunicazioni MaturaMate.",
+    "Disiscrizione dalla newsletter completata con successo. La tua email è stata rimossa dalla lista di distribuzione delle comunicazioni MaturaMente.",
   robots: {
     index: false,
     follow: false,

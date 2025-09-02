@@ -163,13 +163,13 @@ export async function generateMetadata({
         "spiegazione quesiti",
       ].filter(Boolean),
       openGraph: {
-        title: `${solutionsTitle} | MaturaMate`,
+        title: `${solutionsTitle} | MaturaMente`,
         description: solutionsDescription,
         url: `/${subjectSlug}/simulazioni/${slug}/soluzioni`,
         type: "article",
       },
       twitter: {
-        title: `${solutionsTitle} | MaturaMate`,
+        title: `${solutionsTitle} | MaturaMente`,
         description: solutionsDescription,
       },
       alternates: {

@@ -1,5 +1,5 @@
 /**
- * Core type definitions for the MaturaMate topics and subtopics system
+ * Core type definitions for the MaturaMente topics and subtopics system
  */
 
 /**

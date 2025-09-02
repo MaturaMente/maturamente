@@ -28,7 +28,7 @@ interface UnauthenticatedOverlayProps {
 export function UnauthenticatedOverlay({
   children,
   title = "Accedi per vedere i tuoi dati",
-  description = "Crea un account gratuito per accedere a tutte le funzionalità di MaturaMate",
+  description = "Crea un account gratuito per accedere a tutte le funzionalità di MaturaMente",
   features = [
     "Monitora i tuoi progressi",
     "Salva i tuoi risultati",

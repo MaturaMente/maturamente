@@ -3,23 +3,23 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Termini e Condizioni",
   description:
-    "Termini e condizioni d'uso di MaturaMate. Leggi le regole e le condizioni per l'utilizzo della piattaforma di preparazione alla maturità scientifica.",
+    "Termini e condizioni d'uso di MaturaMente. Leggi le regole e le condizioni per l'utilizzo della piattaforma di preparazione alla maturità scientifica.",
   keywords: [
     "termini e condizioni",
     "condizioni d'uso",
     "regolamento piattaforma",
     "terms of service",
-    "condizioni utilizzo MaturaMate",
+    "condizioni utilizzo MaturaMente",
   ],
   openGraph: {
-    title: "Termini e Condizioni | MaturaMate",
+    title: "Termini e Condizioni | MaturaMente",
     description:
-      "Termini e condizioni d'uso di MaturaMate. Regole per l'utilizzo della piattaforma educativa.",
+      "Termini e condizioni d'uso di MaturaMente. Regole per l'utilizzo della piattaforma educativa.",
     url: "/terms-and-conditions",
   },
   twitter: {
-    title: "Termini e Condizioni | MaturaMate",
-    description: "Termini e condizioni d'uso della piattaforma MaturaMate.",
+    title: "Termini e Condizioni | MaturaMente",
+    description: "Termini e condizioni d'uso della piattaforma MaturaMente.",
   },
   alternates: {
     canonical: "/terms-and-conditions",
@@ -45,14 +45,14 @@ export default function TermsAndConditions() {
 
         <div className="space-y-4 text-muted-foreground">
           <p className="text-lg">
-            We are Maturamate ("Company," "we," "us," "our"), a company
+            We are MaturaMente ("Company," "we," "us," "our"), a company
             registered in Italy at Via Leopoldo Ruspoli, 00149. We operate the
-            website http://www.maturamate.it (the "Site"), as well as any other
+            website http://www.MaturaMente.it (the "Site"), as well as any other
             related products and services that refer or link to these legal
             terms (the "Legal Terms") (collectively, the "Services").
           </p>
           <p>
-            MaturaMate is a digital platform designed specifically to support
+            MaturaMente is a digital platform designed specifically to support
             students in preparing for the mathematics portion of the State Exam.
             The site integrates various educational components into a single
             digital solution:
@@ -79,17 +79,17 @@ export default function TermsAndConditions() {
           <p>
             You can contact us by email at{" "}
             <a
-              href="mailto:maturamate.help@gmail.com"
+              href="mailto:MaturaMente.help@gmail.com"
               className="text-primary underline hover:text-primary/80"
             >
-              maturamate.help@gmail.com
+              MaturaMente.help@gmail.com
             </a>{" "}
             or by mail to Italy.
           </p>
           <p>
             These Legal Terms constitute a legally binding agreement made
             between you, whether personally or on behalf of an entity ("you"),
-            and Maturamate, concerning your access to and use of the Services.
+            and MaturaMente, concerning your access to and use of the Services.
             You agree that by accessing the Services, you have read, understood,
             and agreed to be bound by all of these Legal Terms.
           </p>
@@ -336,10 +336,10 @@ export default function TermsAndConditions() {
               We care about data privacy and security. Please review our Privacy
               Policy:{" "}
               <a
-                href="https://maturamate.it/privacy-policy"
+                href="https://MaturaMente.it/privacy-policy"
                 className="text-primary underline hover:text-primary/80"
               >
-                https://maturamate.it/privacy-policy
+                https://MaturaMente.it/privacy-policy
               </a>
               . By using the Services, you agree to be bound by our Privacy
               Policy, which is incorporated into these Legal Terms.
@@ -403,7 +403,7 @@ export default function TermsAndConditions() {
             for the International Sales of Goods is expressly excluded. If your
             habitual residence is in the EU, and you are a consumer, you
             additionally possess the protection provided to you by obligatory
-            provisions of the law in your country to residence. Maturamate and
+            provisions of the law in your country to residence. MaturaMente and
             yourself both agree to submit to the non-exclusive jurisdiction of
             the courts of Roma, which means that you may make a claim to defend
             your consumer protection rights in regards to these Legal Terms in
@@ -547,14 +547,14 @@ export default function TermsAndConditions() {
               receive further information regarding use of the Services, please
               contact us at:
             </p>
-            <p className="font-medium">Maturamate</p>
+            <p className="font-medium">MaturaMente</p>
             <p>Italy</p>
             <p className="text-primary">
               <a
-                href="mailto:maturamate.help@gmail.com"
+                href="mailto:MaturaMente.help@gmail.com"
                 className="underline hover:text-primary/80"
               >
-                maturamate.help@gmail.com
+                MaturaMente.help@gmail.com
               </a>
             </p>
           </div>

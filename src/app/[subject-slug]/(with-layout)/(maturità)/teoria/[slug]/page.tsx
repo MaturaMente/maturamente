@@ -52,13 +52,13 @@ export async function generateMetadata({
         "studio teoria",
       ],
       openGraph: {
-        title: `${topicTitle} | Teoria | MaturaMate`,
+        title: `${topicTitle} | Teoria | MaturaMente`,
         description: topicDescription,
         url: `/${subjectSlug}/teoria/${slug}`,
         type: "article",
       },
       twitter: {
-        title: `${topicTitle} | Teoria | MaturaMate`,
+        title: `${topicTitle} | Teoria | MaturaMente`,
         description: topicDescription,
       },
       alternates: {
@@ -70,7 +70,7 @@ export async function generateMetadata({
     return {
       title: "Teoria Matematica",
       description:
-        "Studia teoria matematica per la maturità scientifica su MaturaMate.",
+        "Studia teoria matematica per la maturità scientifica su MaturaMente.",
     };
   }
 }

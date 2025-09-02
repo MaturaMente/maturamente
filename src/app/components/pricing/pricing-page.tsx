@@ -218,16 +218,19 @@ export function PricingPage({ subjects }: PricingPageProps) {
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-3">
-                <Button onClick={handleGoToSettings} className="w-full">
-                  <Settings className="w-4 h-4 mr-2" />
+                <Button
+                  onClick={handleGoToSettings}
+                  className="w-full flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
                   Gestisci Abbonamento
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleReturnToDashboard}
-                  className="w-full"
+                  className="w-full flex items-center gap-2"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  <ArrowLeft className="w-4 h-4" />
                   Torna alla Dashboard
                 </Button>
               </CardFooter>

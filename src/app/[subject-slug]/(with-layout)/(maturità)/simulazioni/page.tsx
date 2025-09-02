@@ -40,13 +40,13 @@ export async function generateMetadata({
       "simulazioni online",
     ],
     openGraph: {
-      title: "Simulazioni Maturità | MaturaMate",
+      title: "Simulazioni Maturità | MaturaMente",
       description:
         "Simulazioni complete degli esami di maturità scientifica dal 2001 al 2024. Esercitati con tracce ufficiali e soluzioni dettagliate.",
       url: `/${subjectSlug}/simulazioni`,
     },
     twitter: {
-      title: "Simulazioni Maturità | MaturaMate",
+      title: "Simulazioni Maturità | MaturaMente",
       description:
         "Simulazioni complete degli esami di maturità scientifica dal 2001 al 2024. Esercitati con tracce ufficiali.",
     },

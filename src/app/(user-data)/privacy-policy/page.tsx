@@ -3,25 +3,25 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Informativa sulla privacy di MaturaMate. Leggi come raccogliamo, utilizziamo e proteggiamo i tuoi dati personali in conformità al GDPR e alle normative sulla privacy.",
+    "Informativa sulla privacy di MaturaMente. Leggi come raccogliamo, utilizziamo e proteggiamo i tuoi dati personali in conformità al GDPR e alle normative sulla privacy.",
   keywords: [
     "privacy policy",
     "informativa privacy",
     "GDPR",
     "protezione dati",
     "trattamento dati personali",
-    "privacy MaturaMate",
+    "privacy MaturaMente",
   ],
   openGraph: {
-    title: "Privacy Policy | MaturaMate",
+    title: "Privacy Policy | MaturaMente",
     description:
-      "Informativa sulla privacy di MaturaMate. Scopri come proteggiamo i tuoi dati personali.",
+      "Informativa sulla privacy di MaturaMente. Scopri come proteggiamo i tuoi dati personali.",
     url: "/privacy-policy",
   },
   twitter: {
-    title: "Privacy Policy | MaturaMate",
+    title: "Privacy Policy | MaturaMente",
     description:
-      "Informativa sulla privacy di MaturaMate e protezione dei dati personali.",
+      "Informativa sulla privacy di MaturaMente e protezione dei dati personali.",
   },
   alternates: {
     canonical: "/privacy-policy",
@@ -37,20 +37,20 @@ export default function PrivacyPolicy() {
     <div className="min-h-screen bg-background py-12">
       <div className="container mx-auto max-w-4xl space-y-8 px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold tracking-tight">
-          MaturaMate Privacy Policy
+          MaturaMente Privacy Policy
         </h1>
 
         <div className="space-y-4 text-muted-foreground">
           <p className="text-lg">
-            Your privacy is important to us. It is MaturaMate's policy to
+            Your privacy is important to us. It is MaturaMente's policy to
             respect your privacy and comply with any applicable law and
             regulation regarding any personal information we may collect about
             you, including across our website,{" "}
             <a
-              href="https://www.maturamate.it"
+              href="https://www.MaturaMente.it"
               className="text-primary underline hover:text-primary/80"
             >
-              https://www.maturamate.it
+              https://www.MaturaMente.it
             </a>
             , and other sites we own and operate.
           </p>
@@ -340,8 +340,8 @@ export default function PrivacyPolicy() {
               For any questions or concerns regarding your privacy, you may
               contact us using the following details:
             </p>
-            <p className="font-medium">MaturaMate Team</p>
-            <p className="text-primary">maturamate.help@gmail.com</p>
+            <p className="font-medium">MaturaMente Team</p>
+            <p className="text-primary">MaturaMente.help@gmail.com</p>
           </div>
         </section>
       </div>

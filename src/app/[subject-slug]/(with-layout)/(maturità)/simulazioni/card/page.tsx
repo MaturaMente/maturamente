@@ -22,13 +22,13 @@ export async function generateMetadata({
       "quiz matematica",
     ],
     openGraph: {
-      title: "Modalità Carte - Simulazioni | MaturaMate",
+      title: "Modalità Carte - Simulazioni | MaturaMente",
       description:
         "Simulazioni maturità in modalità carte interattive. Un modo innovativo per esercitarti con le tracce di matematica.",
       url: `/${subjectSlug}/simulazioni/card`,
     },
     twitter: {
-      title: "Modalità Carte - Simulazioni | MaturaMate",
+      title: "Modalità Carte - Simulazioni | MaturaMente",
       description:
         "Simulazioni maturità in modalità carte interattive per un apprendimento coinvolgente.",
     },

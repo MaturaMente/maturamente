@@ -35,6 +35,7 @@ export interface PricingColumnProps
     label: string;
     href: string;
   };
+  ctaOnClick?: () => void;
   features: string[];
 }
 
@@ -45,6 +46,7 @@ export function PricingColumn({
   price,
   priceNote,
   cta,
+  ctaOnClick,
   features,
   variant,
   className,
@@ -91,17 +93,31 @@ export function PricingColumn({
             )}
           </div>
         </div>
-        <Button
-          variant={cta.variant}
-          size="lg"
-          className={cn(
-            cta.variant === "glow" && "border border-white-300",
-            cta.variant === "default" && "border-b-1 border-white-300"
-          )}
-          asChild
-        >
-          <Link href={cta.href}>{cta.label}</Link>
-        </Button>
+        {ctaOnClick ? (
+          <Button
+            variant={cta.variant}
+            size="lg"
+            className={cn(
+              cta.variant === "glow" && "border border-white-300",
+              cta.variant === "default" && "border-b-1 border-white-300"
+            )}
+            onClick={ctaOnClick}
+          >
+            {cta.label}
+          </Button>
+        ) : (
+          <Button
+            variant={cta.variant}
+            size="lg"
+            className={cn(
+              cta.variant === "glow" && "border border-white-300",
+              cta.variant === "default" && "border-b-1 border-white-300"
+            )}
+            asChild
+          >
+            <Link href={cta.href}>{cta.label}</Link>
+          </Button>
+        )}
         <p className="text-muted-foreground min-h-[40px] max-w-[220px] text-sm">
           {priceNote}
         </p>

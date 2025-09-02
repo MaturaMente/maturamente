@@ -92,23 +92,22 @@ export async function POST(req: Request) {
       if (selectedFileSources && selectedFileSources.length > 0) {
         allSources.push(...selectedFileSources);
       }
-      
-      const filter = allSources.length > 0
-        ? { source: { $in: allSources } }
-        : undefined;
+
+      const filter =
+        allSources.length > 0 ? { source: { $in: allSources } } : undefined;
       try {
         // Use balanced retrieval for multi-document queries across subjects and user files
         const allSelectedSources = [
           ...(selectedNoteSlugs || []),
-          ...(selectedFileSources || [])
+          ...(selectedFileSources || []),
         ];
-        
+
         // Create flag array to identify user files vs note slugs
         const isUserFileFlags = [
           ...Array(selectedNoteSlugs?.length || 0).fill(false), // Note slugs = false
-          ...Array(selectedFileSources?.length || 0).fill(true)  // User files = true
+          ...Array(selectedFileSources?.length || 0).fill(true), // User files = true
         ];
-        
+
         const balancedResult = await balancedSimilaritySearch(
           vectorStore,
           lastUserQuery,
@@ -175,7 +174,7 @@ export async function POST(req: Request) {
   }
 
   const systemPrompt =
-    `Ti chiami PIT (Personal Intelligent Tutor): un tutor empatico, chiaro e competente.
+    `Ti chiami Pit (Personal Intelligent Tutor): un tutor empatico, chiaro e competente.
 
     Rispondi SEMPRE in italiano, in modo conciso ma completo. Parla come un tutor umano: incoraggiante, rispettoso e focalizzato sugli obiettivi dello studente.
 

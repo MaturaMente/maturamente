@@ -27,10 +27,10 @@ export function Pit() {
             Un tutor intelligente, sempre con te
           </h2>
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
-            Pit è il tuo Personal Intelligent Tutor. Conosce la teoria, gli
-            esercizi, le simulazioni e le tue statistiche personali. Ti segue
-            passo dopo passo, aiutandoti a prepararti al meglio per il tuo
-            esame.
+            Pit è il tuo Personal Intelligent Tutor. Conosce gli appunti, la
+            teoria, gli esercizi, le simulazioni e le tue statistiche personali.
+            Ti segue passo dopo passo, aiutandoti a prepararti al meglio per il
+            tuo esame.
           </p>
         </div>
 
@@ -39,17 +39,19 @@ export function Pit() {
           ref={containerRef}
           className="relative h-[300px] w-full flex items-center justify-center"
         >
-          {/* Center circle with Bot - fixed position to be truly centered */}
-          <div
-            ref={centerRef}
-            className="absolute z-10 flex items-center justify-center w-16 h-16 rounded-full bg-white dark:bg-neutral-800 shadow-sm border border-gray-100 dark:border-neutral-700"
-            style={{
-              left: "calc(50%)",
-              top: "calc(50%)",
-              transform: "translate(-50%, -50%)",
-            }}
-          >
-            <Bot size={28} className="text-primary" />
+          <div className="relative">
+            {/* Center circle with Bot - fixed position to be truly centered */}
+            <div
+              ref={centerRef}
+              className="absolute z-10 flex items-center justify-center h-16 w-16 rounded-2xl bg-blue-500 text-background flex items-center justify-center shadow-sm"
+              style={{
+                left: "calc(50%)",
+                top: "calc(50%)",
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              <Bot size={28} className="text-white" />
+            </div>
           </div>
 
           {/* Left side - Top */}

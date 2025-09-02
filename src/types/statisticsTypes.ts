@@ -1,5 +1,5 @@
 /**
- * Core type definitions for the MaturaMate statistics system
+ * Core type definitions for the MaturaMente statistics system
  */
 
 /**

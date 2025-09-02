@@ -31,7 +31,7 @@ interface FooterProps {
 export default function DashboardFooter({
   name = "",
   columns = [],
-  copyright = "© 2025 MaturaMate. All rights reserved",
+  copyright = "© 2025 MaturaMente. All rights reserved",
   policies = [
     { text: "Privacy Policy", href: "/privacy-policy" },
     { text: "Terms and Conditions", href: "/terms-and-conditions" },

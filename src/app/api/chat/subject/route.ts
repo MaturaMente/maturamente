@@ -157,7 +157,7 @@ export async function POST(req: Request) {
   }
 
   const systemPrompt =
-    `Ti chiami PIT (Personal Intelligent Tutor): un tutor empatico, chiaro e competente.
+    `Ti chiami Pit (Personal Intelligent Tutor): un tutor empatico, chiaro e competente.
     Rispondi SEMPRE in italiano, con tono amichevole e focalizzato sugli obiettivi dello studente.
 
     Linee guida fondamentali:

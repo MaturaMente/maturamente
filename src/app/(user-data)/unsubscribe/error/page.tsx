@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Errore Disiscrizione",
   description:
-    "Si è verificato un errore durante la disiscrizione dalla newsletter MaturaMate. Riprova o contatta il supporto per assistenza.",
+    "Si è verificato un errore durante la disiscrizione dalla newsletter MaturaMente. Riprova o contatta il supporto per assistenza.",
   robots: {
     index: false,
     follow: false,
@@ -19,7 +19,7 @@ export default function UnsubscribeError() {
           Il link per annullare l'iscrizione non è valido o è già stato usato.
         </p>
         <p className="text-gray-500 mt-2 text-sm">
-          Se hai bisogno di aiuto, scrivici a support@maturamate.it
+          Se hai bisogno di aiuto, scrivici a support@MaturaMente.it
         </p>
       </div>
     </main>

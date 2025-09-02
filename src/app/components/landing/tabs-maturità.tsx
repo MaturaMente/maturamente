@@ -4,11 +4,11 @@ import { useState, useEffect, useRef } from "react";
 
 import { ThemeImage } from "./theme-image";
 
-export function LandingTabs() {
+export function LandingTabMaturità() {
   // Define three tab types
-  type TabType = "experience" | "timeline" | "dashboard";
+  type TabType = "teoria" | "esercizi" | "simulazioni";
 
-  const [activeTab, setActiveTab] = useState<TabType>("experience");
+  const [activeTab, setActiveTab] = useState<TabType>("teoria");
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const [animationProgress, setAnimationProgress] = useState(0);
 
@@ -19,7 +19,7 @@ export function LandingTabs() {
 
   // Tab content
   const tabContent = {
-    experience: {
+    teoria: {
       title: "Teoria",
       description:
         "Tutti gli argomenti di matematica spiegati in modo chiaro e organizzato: categorie, formule, grafici, immagini ed esercizi collegati.",
@@ -32,7 +32,7 @@ export function LandingTabs() {
       mobileDarkImage:
         "https://pmnothvdbyxdqaiyugpg.supabase.co/storage/v1/object/public/landing/dark/teoria-mobile.png",
     },
-    timeline: {
+    esercizi: {
       title: "Esercizi",
       description:
         "Una raccolta completa di esercizi per ogni argomento, divisi per livello di difficoltà, e con la possibilità di fare domande all'AI.",
@@ -45,7 +45,7 @@ export function LandingTabs() {
       mobileDarkImage:
         "https://pmnothvdbyxdqaiyugpg.supabase.co/storage/v1/object/public/landing/dark/esercizi-mobile.png",
     },
-    dashboard: {
+    simulazioni: {
       title: "Simulazioni",
       description:
         "Tutte le simulazioni d'esame ufficiali degli anni passati, pronte da svolgere per allenarti come se fossi il giorno della maturità.",
@@ -61,7 +61,7 @@ export function LandingTabs() {
   };
 
   // Get the tab order for positioning and next tab selection
-  const tabOrder: TabType[] = ["experience", "timeline", "dashboard"];
+  const tabOrder: TabType[] = ["teoria", "esercizi", "simulazioni"];
 
   // Get the tab index (0, 1, or 2)
   const getTabIndex = (tab: TabType): number => tabOrder.indexOf(tab);
@@ -184,13 +184,13 @@ export function LandingTabs() {
     >
       {/* Improved title and subtitle styling */}
       <h1 className="w-full text-center text-3xl font-bold tracking-tight text-foreground mb-6 sm:text-4xl md:text-5xl md:leading-tight">
-        Troppi appunti, troppi siti, troppe perdite di tempo.{" "}
+        Maturità senza stress!{" "}
         {/* <span className="text-primary">non è semplice.</span> */}
       </h1>
       <p className="text-center max-w-3xl text-lg text-muted-foreground mb-12">
-        Tra mille materiali diversi è facile perdersi e sprecare tempo.
-        MaturaMate ti dà un percorso chiaro: tutto quello che ti serve, in un
-        unico posto.
+        Con MaturaMente affronti l’esame con serenità: simulazioni, spiegazioni
+        chiare e strumenti su misura per arrivare preparato. Niente più caos,
+        solo un percorso sicuro fino al giorno della maturità.
       </p>
 
       <div className="w-full flex flex-col gap-8">
@@ -199,13 +199,13 @@ export function LandingTabs() {
           <div className="h-full w-full p-6">
             {/* Display content based on active tab */}
             <div className="h-full bg-gray-50 dark:bg-neutral-800 rounded-lg w-full flex items-center justify-center overflow-hidden transition-all duration-300 ease-in-out p-4">
-              {activeTab === "experience" && (
+              {activeTab === "teoria" && (
                 <ThemeImage
-                  lightImage={tabContent.experience.lightImage}
-                  darkImage={tabContent.experience.darkImage}
-                  mobileLightImage={tabContent.experience.mobileLightImage}
-                  mobileDarkImage={tabContent.experience.mobileDarkImage}
-                  alt={tabContent.experience.title}
+                  lightImage={tabContent.teoria.lightImage}
+                  darkImage={tabContent.teoria.darkImage}
+                  mobileLightImage={tabContent.teoria.mobileLightImage}
+                  mobileDarkImage={tabContent.teoria.mobileDarkImage}
+                  alt={tabContent.teoria.title}
                   className="w-full h-full object-contain rounded-md shadow-lg transition-transform duration-300 hover:scale-[1.02]"
                   mobileBreakpoint={768}
                   width={1200}
@@ -213,13 +213,13 @@ export function LandingTabs() {
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                 />
               )}
-              {activeTab === "timeline" && (
+              {activeTab === "esercizi" && (
                 <ThemeImage
-                  lightImage={tabContent.timeline.lightImage}
-                  darkImage={tabContent.timeline.darkImage}
-                  mobileLightImage={tabContent.timeline.mobileLightImage}
-                  mobileDarkImage={tabContent.timeline.mobileDarkImage}
-                  alt={tabContent.timeline.title}
+                  lightImage={tabContent.esercizi.lightImage}
+                  darkImage={tabContent.esercizi.darkImage}
+                  mobileLightImage={tabContent.esercizi.mobileLightImage}
+                  mobileDarkImage={tabContent.esercizi.mobileDarkImage}
+                  alt={tabContent.esercizi.title}
                   className="w-full h-full object-contain rounded-md shadow-lg transition-transform duration-300 hover:scale-[1.02]"
                   mobileBreakpoint={768}
                   width={1200}
@@ -227,13 +227,13 @@ export function LandingTabs() {
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                 />
               )}
-              {activeTab === "dashboard" && (
+              {activeTab === "simulazioni" && (
                 <ThemeImage
-                  lightImage={tabContent.dashboard.lightImage}
-                  darkImage={tabContent.dashboard.darkImage}
-                  mobileLightImage={tabContent.dashboard.mobileLightImage}
-                  mobileDarkImage={tabContent.dashboard.mobileDarkImage}
-                  alt={tabContent.dashboard.title}
+                  lightImage={tabContent.simulazioni.lightImage}
+                  darkImage={tabContent.simulazioni.darkImage}
+                  mobileLightImage={tabContent.simulazioni.mobileLightImage}
+                  mobileDarkImage={tabContent.simulazioni.mobileDarkImage}
+                  alt={tabContent.simulazioni.title}
                   className="w-full h-full object-contain rounded-md shadow-lg transition-transform duration-300 hover:scale-[1.02]"
                   mobileBreakpoint={768}
                   width={1200}
@@ -248,7 +248,7 @@ export function LandingTabs() {
         {/* Tab component with animation */}
         <div ref={tabsContainerRef} className="relative w-full">
           {/* Unified border across all tabs - only visible on desktop */}
-          <div className="absolute top-0 left-0 w-full h-0.5 bg-gray-200 dark:bg-neutral-700 overflow-hidden hidden md:block">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-trasparent dark:bg-neutral-700 overflow-hidden hidden md:block">
             {/* Animated progress indicator */}
             <div
               className="absolute top-0 h-full bg-primary transition-all duration-300 ease-out"
@@ -258,18 +258,16 @@ export function LandingTabs() {
 
           {/* Tab buttons container - no gaps */}
           <div className="grid grid-cols-1 md:grid-cols-3 w-full md:border-t md:border-gray-100 dark:md:border-neutral-800">
-            {/* Experience Tab */}
+            {/* teoria Tab */}
             <button
-              onClick={() => handleTabClick("experience")}
+              onClick={() => handleTabClick("teoria")}
               className={`relative text-left p-6 transition-all duration-300 focus:outline-none md:border-r border-t md:border-t-0 border-gray-100 dark:border-neutral-800 ${
-                activeTab === "experience"
-                  ? "bg-gray-50 dark:bg-neutral-800"
-                  : ""
+                activeTab === "teoria" ? "bg-gray-50 dark:bg-neutral-800" : ""
               }`}
             >
               {/* Mobile progress indicator - only visible on mobile */}
-              <div className="absolute top-0 left-0 w-full h-0.5 bg-gray-200 dark:bg-neutral-700 md:hidden">
-                {activeTab === "experience" && (
+              <div className="absolute top-0 left-0 w-full h-0.5 bg-trasparent dark:bg-neutral-700 md:hidden">
+                {activeTab === "teoria" && (
                   <div
                     className="absolute top-0 h-full bg-primary transition-all duration-300 ease-out"
                     style={{ width: `${animationProgress}%` }}
@@ -279,29 +277,29 @@ export function LandingTabs() {
               <div className="flex flex-col gap-2">
                 <h3
                   className={`font-medium text-xl ${
-                    activeTab === "experience"
+                    activeTab === "teoria"
                       ? "text-primary"
                       : "text-gray-900 dark:text-gray-100"
                   }`}
                 >
-                  {tabContent.experience.title}
+                  {tabContent.teoria.title}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {tabContent.experience.description}
+                  {tabContent.teoria.description}
                 </p>
               </div>
             </button>
 
-            {/* Timeline Tab */}
+            {/* esercizi Tab */}
             <button
-              onClick={() => handleTabClick("timeline")}
+              onClick={() => handleTabClick("esercizi")}
               className={`relative text-left p-6 transition-all duration-300 focus:outline-none md:border-r border-t md:border-t-0 border-gray-100 dark:border-neutral-800 ${
-                activeTab === "timeline" ? "bg-gray-50 dark:bg-neutral-800" : ""
+                activeTab === "esercizi" ? "bg-gray-50 dark:bg-neutral-800" : ""
               }`}
             >
               {/* Mobile progress indicator - only visible on mobile */}
-              <div className="absolute top-0 left-0 w-full h-0.5 bg-gray-200 dark:bg-neutral-700 md:hidden">
-                {activeTab === "timeline" && (
+              <div className="absolute top-0 left-0 w-full h-0.5 bg-trasparent dark:bg-neutral-700 md:hidden">
+                {activeTab === "esercizi" && (
                   <div
                     className="absolute top-0 h-full bg-primary transition-all duration-300 ease-out"
                     style={{ width: `${animationProgress}%` }}
@@ -311,31 +309,31 @@ export function LandingTabs() {
               <div className="flex flex-col gap-2">
                 <h3
                   className={`font-medium text-xl ${
-                    activeTab === "timeline"
+                    activeTab === "esercizi"
                       ? "text-primary"
                       : "text-gray-900 dark:text-gray-100"
                   }`}
                 >
-                  {tabContent.timeline.title}
+                  {tabContent.esercizi.title}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {tabContent.timeline.description}
+                  {tabContent.esercizi.description}
                 </p>
               </div>
             </button>
 
-            {/* Dashboard Tab */}
+            {/* simulazioni Tab */}
             <button
-              onClick={() => handleTabClick("dashboard")}
+              onClick={() => handleTabClick("simulazioni")}
               className={`relative text-left p-6 transition-all duration-300 focus:outline-none border-t md:border-t-0 border-gray-100 dark:border-neutral-800 ${
-                activeTab === "dashboard"
+                activeTab === "simulazioni"
                   ? "bg-gray-50 dark:bg-neutral-800"
                   : ""
               }`}
             >
               {/* Mobile progress indicator - only visible on mobile */}
-              <div className="absolute top-0 left-0 w-full h-0.5 bg-gray-200 dark:bg-neutral-700 md:hidden">
-                {activeTab === "dashboard" && (
+              <div className="absolute top-0 left-0 w-full h-0.5 bg-trasparent dark:bg-neutral-700 md:hidden">
+                {activeTab === "simulazioni" && (
                   <div
                     className="absolute top-0 h-full bg-primary transition-all duration-300 ease-out"
                     style={{ width: `${animationProgress}%` }}
@@ -345,15 +343,15 @@ export function LandingTabs() {
               <div className="flex flex-col gap-2">
                 <h3
                   className={`font-medium text-xl ${
-                    activeTab === "dashboard"
+                    activeTab === "simulazioni"
                       ? "text-primary"
                       : "text-gray-900 dark:text-gray-100"
                   }`}
                 >
-                  {tabContent.dashboard.title}
+                  {tabContent.simulazioni.title}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {tabContent.dashboard.description}
+                  {tabContent.simulazioni.description}
                 </p>
               </div>
             </button>

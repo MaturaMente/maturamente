@@ -2,15 +2,17 @@
 
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDownIcon, ArrowRightIcon, ChevronDownIcon } from "lucide-react";
+import { ArrowRight, ArrowRightIcon } from "lucide-react";
 import { Section } from "@/components/ui/section";
-import { Mockup, MockupFrame } from "@/components/ui/mockup";
+import { Mockup } from "@/components/ui/mockup";
 import Glow from "@/components/ui/glow";
 import { ReactNode } from "react";
 import Screenshot from "@/components/ui/screenshot";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 const underlineImage = "/underline.svg";
 
@@ -46,12 +48,12 @@ interface ScreenshotProps {
 }
 
 export default function Hero({
-  description = "Lo strumento più avanzato per la tua preparazione all'esame di maturità: teoria, esercizi, simulazioni e molto altro.",
+  description = "Lo strumento più avanzato per la tua preparazione liceale: appunti, schemi, un tutor personale e molto altro.",
   mockup = (
     <Screenshot
-      srcLight="https://pmnothvdbyxdqaiyugpg.supabase.co/storage/v1/object/public/landing/light/landing-light.png"
-      srcDark="https://pmnothvdbyxdqaiyugpg.supabase.co/storage/v1/object/public/landing/dark/landing-dark.png"
-      alt="MaturaMate dashboard screenshot"
+      srcLight="https://pmnothvdbyxdqaiyugpg.supabase.co/storage/v1/object/public/landing/light/dashboard-light.png"
+      srcDark="https://pmnothvdbyxdqaiyugpg.supabase.co/storage/v1/object/public/landing/dark/dashboard-dark.png"
+      alt="MaturaMente dashboard screenshot"
       width={1248}
       height={765}
       className="w-full"
@@ -60,25 +62,21 @@ export default function Hero({
     />
   ),
   badge = (
-    <Badge variant="outline" className="animate-appear">
-      <span className="text-muted-foreground">
-        In arrivo Pit, il tuo AI tutor
-      </span>
-      <Link href="/" className="flex items-center gap-1">
-        Scopri di più
+    <Link href="/dashboard/pit" className="flex items-center gap-1">
+      <Badge variant="outline" className="animate-appear">
+        <span className="text-muted-foreground">
+          Prova Pit, il tuo Personal Intelligent Tutor
+        </span>
         <ArrowRightIcon className="size-3" />
-      </Link>
-    </Badge>
+      </Badge>
+    </Link>
   ),
-  buttons = [
-    {
-      href: "/",
-      text: "Migliora la tua preparazione",
-      variant: "default",
-    },
-  ],
   className,
 }: HeroProps) {
+  const { data: session } = useSession();
+  const isLoggedIn = !!session?.user?.id;
+
+  const router = useRouter();
   return (
     <Section
       className={cn(
@@ -95,7 +93,7 @@ export default function Hero({
             </span>
             <div className="relative inline-block ml-2">
               <span className="dark:text-primary text-blue-900">Matura</span>
-              <span className="dark:text-blue-400 text-primary">Mate</span>
+              <span className="dark:text-blue-400 text-primary">Mente</span>
               <span
                 className="absolute w-full left-0 top-full -translate-y-1/2 h-container bg-gradient-to-r from-blue-700 to-blue-400 dark:from-blue-500 dark:to-blue-400"
                 style={{
@@ -110,30 +108,37 @@ export default function Hero({
           <p className="text-md animate-appear text-muted-foreground relative z-10 max-w-[740px] font-medium text-balance opacity-0 delay-100 lg:text-xl">
             {description}
           </p>
-          {buttons !== false && buttons.length > 0 && (
-            <div className="animate-appear relative z-10 flex justify-center gap-4 opacity-0 delay-300">
-              {buttons.map((button, index) => (
-                <div key={index}>
-                  <Button
-                    onClick={() => {
-                      signIn("google", { callbackUrl: "/dashboard" });
-                    }}
-                    key={index}
-                    variant={button.variant || "default"}
-                    size="lg"
-                    className="flex items-center justify-center gap-2"
-                  >
-                    <Link href={button.href} className="text-white">
-                      {button.icon}
-                      {button.text}
-                      {button.iconRight}
-                    </Link>
-                    <ArrowRightIcon className="size-3 text-white" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="animate-appear relative z-10 flex justify-center gap-4 opacity-0 delay-300">
+            {isLoggedIn ? (
+              <Button
+                onClick={() => {
+                  router.push("/dashboard");
+                }}
+                variant={"default"}
+                size="lg"
+                className="flex items-center justify-center gap-2"
+              >
+                <Link href="/dashboard" className="text-white">
+                  Provalo subito
+                </Link>
+                <ArrowRightIcon className="size-3 text-white" />
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  signIn("google", { callbackUrl: "/dashboard" });
+                }}
+                variant={"default"}
+                size="lg"
+                className="flex items-center justify-center gap-2"
+              >
+                <Link href="/dashboard" className="text-white">
+                  Vai alla dashboard
+                </Link>
+                <ArrowRightIcon className="size-3 text-white" />
+              </Button>
+            )}
+          </div>
 
           {mockup !== false && (
             <div className="relative w-full pt-12 shadow-xl hidden sm:block">

@@ -76,13 +76,13 @@ export async function generateMetadata({
         "tracce svolte",
       ].filter(Boolean),
       openGraph: {
-        title: `${simulationTitle} | Simulazioni | MaturaMate`,
+        title: `${simulationTitle} | Simulazioni | MaturaMente`,
         description: simulationDescription,
         url: `/${subjectSlug}/simulazioni/${slug}`,
         type: "article",
       },
       twitter: {
-        title: `${simulationTitle} | Simulazioni | MaturaMate`,
+        title: `${simulationTitle} | Simulazioni | MaturaMente`,
         description: simulationDescription,
       },
       alternates: {
@@ -94,7 +94,7 @@ export async function generateMetadata({
     return {
       title: "Simulazione Maturità",
       description:
-        "Esercitati con le simulazioni di maturità scientifica su MaturaMate.",
+        "Esercitati con le simulazioni di maturità scientifica su MaturaMente.",
     };
   }
 }

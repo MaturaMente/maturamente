@@ -24,13 +24,13 @@ export default function Faq({
   title = "Domande frequenti",
   items = [
     {
-      question: "MaturaMate è davvero gratuito?",
+      question: "MaturaMente è davvero gratuito?",
       answer: (
         <>
           <p className="text-muted-foreground mb-4 max-w-[640px] text-balance">
-            Sì! Puoi iniziare subito con il piano Free, che ti dà accesso a
-            esercizi e simulazioni ufficiali limitate. Nessuna carta di credito
-            richiesta.
+            Sì! Puoi iniziare subito con il piano Free, che ti dà accesso ad
+            appunti, teoria, esercizi e simulazioni ufficiali limitate. Nessuna
+            carta di credito richiesta.
           </p>
         </>
       ),
@@ -58,7 +58,7 @@ export default function Faq({
       ),
     },
     {
-      question: "Posso usare MaturaMate anche da smartphone?",
+      question: "Posso usare MaturaMente anche da smartphone?",
       answer: (
         <>
           <p className="text-muted-foreground mb-4 max-w-[580px]">

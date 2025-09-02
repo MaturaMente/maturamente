@@ -90,43 +90,56 @@ export default function DashboardChat() {
   const [notesSearch, setNotesSearch] = useState("");
   const [selectedNoteSlugs, setSelectedNoteSlugs] = useState<string[]>([]);
   const [selectedFileSources, setSelectedFileSources] = useState<string[]>([]);
-  const [uploadedFiles, setUploadedFiles] = useState<{[key: string]: {title: string, description: string}}>({}); // Cache for file info
+  const [uploadedFiles, setUploadedFiles] = useState<{
+    [key: string]: { title: string; description: string };
+  }>({}); // Cache for file info
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [showCleanupConfirm, setShowCleanupConfirm] = useState(false);
 
-  // Fetch file info when files are selected  
-  const fetchFileInfo = useCallback(async (sources: string[]) => {
-    try {
-      const response = await fetch("/api/files/list");
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.files) {
-          const fileMap: {[key: string]: {title: string, description: string}} = {};
-          const availableSources = new Set<string>();
-          
-          data.files.forEach((file: any) => {
-            fileMap[file.pinecone_source] = {
-              title: file.title,
-              description: file.description
-            };
-            availableSources.add(file.pinecone_source);
-          });
-          
-          setUploadedFiles(fileMap);
-          
-          // Remove any selected file sources that are no longer available (deleted files)
-          const currentlySelected = selectedFileSources.filter(source => availableSources.has(source));
-          if (currentlySelected.length !== selectedFileSources.length) {
-            console.log(`🧹 Cleaning up ${selectedFileSources.length - currentlySelected.length} deleted files from selection`);
-            setSelectedFileSources(currentlySelected);
+  // Fetch file info when files are selected
+  const fetchFileInfo = useCallback(
+    async (sources: string[]) => {
+      try {
+        const response = await fetch("/api/files/list");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.files) {
+            const fileMap: {
+              [key: string]: { title: string; description: string };
+            } = {};
+            const availableSources = new Set<string>();
+
+            data.files.forEach((file: any) => {
+              fileMap[file.pinecone_source] = {
+                title: file.title,
+                description: file.description,
+              };
+              availableSources.add(file.pinecone_source);
+            });
+
+            setUploadedFiles(fileMap);
+
+            // Remove any selected file sources that are no longer available (deleted files)
+            const currentlySelected = selectedFileSources.filter((source) =>
+              availableSources.has(source)
+            );
+            if (currentlySelected.length !== selectedFileSources.length) {
+              console.log(
+                `🧹 Cleaning up ${
+                  selectedFileSources.length - currentlySelected.length
+                } deleted files from selection`
+              );
+              setSelectedFileSources(currentlySelected);
+            }
           }
         }
+      } catch (error) {
+        console.error("Error fetching file info:", error);
       }
-    } catch (error) {
-      console.error("Error fetching file info:", error);
-    }
-  }, [selectedFileSources]);
+    },
+    [selectedFileSources]
+  );
 
   // Fetch file info when selected files change
   useEffect(() => {
@@ -210,7 +223,11 @@ export default function DashboardChat() {
           ? {
               ...m,
               parts: [{ type: "text", text: editingValue }],
-              metadata: { ...(m.metadata || {}), selectedNoteSlugs, selectedFileSources },
+              metadata: {
+                ...(m.metadata || {}),
+                selectedNoteSlugs,
+                selectedFileSources,
+              },
             }
           : m
       )
@@ -320,20 +337,22 @@ export default function DashboardChat() {
   const handlePineconeCleanup = async () => {
     setIsCleaningUp(true);
     try {
-      const response = await fetch('/api/files/cleanup', {
-        method: 'DELETE',
+      const response = await fetch("/api/files/cleanup", {
+        method: "DELETE",
       });
 
       const result = await response.json();
 
       if (result.success) {
-        alert('Tutti i documenti sono stati eliminati da Pinecone con successo!');
+        alert(
+          "Tutti i documenti sono stati eliminati da Pinecone con successo!"
+        );
       } else {
         alert(`Errore durante la pulizia: ${result.error}`);
       }
     } catch (error) {
-      console.error('Cleanup error:', error);
-      alert('Errore durante la pulizia dell\'indice');
+      console.error("Cleanup error:", error);
+      alert("Errore durante la pulizia dell'indice");
     } finally {
       setIsCleaningUp(false);
       setShowCleanupConfirm(false);
@@ -356,7 +375,11 @@ export default function DashboardChat() {
       const before = [...prev];
       for (let i = idx - 1; i >= 0; i--) {
         if (before[i].role === "user") {
-          const meta = { ...(before[i].metadata || {}), selectedNoteSlugs, selectedFileSources };
+          const meta = {
+            ...(before[i].metadata || {}),
+            selectedNoteSlugs,
+            selectedFileSources,
+          };
           before[i] = { ...before[i], metadata: meta };
           break;
         }
@@ -430,7 +453,6 @@ export default function DashboardChat() {
         aria-live="polite"
         aria-busy={status !== "ready"}
       >
-
         {messages.length === 0 ? (
           <div className="mx-auto w-full px-6 h-full md:py-48 py-24 mb-24 md:mb-0 space-y-2">
             <div className="flex h-[98%] items-center justify-center">
@@ -510,7 +532,9 @@ export default function DashboardChat() {
           <div
             className={cn(
               "mx-auto w-full max-w-3xl px-6 h-full pt-24 pb-[260px] space-y-2",
-              (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) ? "pb-[260px]" : "pb-[160px]"
+              selectedNoteSlugs.length > 0 || selectedFileSources.length > 0
+                ? "pb-[260px]"
+                : "pb-[160px]"
             )}
           >
             {messages.map((message, idx) => {
@@ -521,7 +545,9 @@ export default function DashboardChat() {
                 <div key={message.id} className="flex justify-end w-full">
                   <div
                     className={`flex ${
-                      isUser ? "justify-end md:max-w-2/3" : "justify-start w-full"
+                      isUser
+                        ? "justify-end md:max-w-2/3"
+                        : "justify-start w-full"
                     }`}
                   >
                     <div
@@ -530,7 +556,13 @@ export default function DashboardChat() {
                       }`}
                     >
                       {/* Display selected documents for user messages */}
-                      {isUser && (((message as any)?.metadata?.selectedNoteSlugs && (message as any).metadata.selectedNoteSlugs.length > 0) || ((message as any)?.metadata?.selectedFileSources && (message as any).metadata.selectedFileSources.length > 0)) && (
+                      {isUser &&
+                        (((message as any)?.metadata?.selectedNoteSlugs &&
+                          (message as any).metadata.selectedNoteSlugs.length >
+                            0) ||
+                          ((message as any)?.metadata?.selectedFileSources &&
+                            (message as any).metadata.selectedFileSources
+                              .length > 0)) && (
                           <MessageDocumentsDisplay
                             message={message}
                             notes={notes}
@@ -545,15 +577,13 @@ export default function DashboardChat() {
                             ? "px-4 py-2 rounded-2xl bg-primary dark:text-foreground text-primary-foreground"
                             : "bg-none text-foreground w-full"
                         }`}
-                      > 
+                      >
                         {editingMessageId === message.id && isUser ? (
                           <div className="w-full">
                             <textarea
                               autoFocus
                               value={editingValue}
-                              onChange={(e) =>
-                                setEditingValue(e.target.value)
-                              }
+                              onChange={(e) => setEditingValue(e.target.value)}
                               onKeyDown={(e) => {
                                 if (
                                   (e.metaKey || e.ctrlKey) &&
@@ -589,10 +619,10 @@ export default function DashboardChat() {
                           </div>
                         ) : (
                           <div>
-                            {/* Assistant header with PIT */}
+                            {/* Assistant header with Pit */}
                             {!isUser && (
                               <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                                <Bot className="h-4 w-4" /> PIT
+                                <Bot className="h-4 w-4" /> Pit
                               </div>
                             )}
                             {!isUser &&
@@ -608,17 +638,25 @@ export default function DashboardChat() {
                                   ?.selectedNoteSlugs || []) as string[];
                                 const usedFiles = ((prevUser as any)?.metadata
                                   ?.selectedFileSources || []) as string[];
-                                
-                                const noteTitles = getTitlesFromSlugs(usedSlugs);
-                                const fileTitles = usedFiles.map(source => {
+
+                                const noteTitles =
+                                  getTitlesFromSlugs(usedSlugs);
+                                const fileTitles = usedFiles.map((source) => {
                                   const fileInfo = uploadedFiles[source];
-                                  const title = fileInfo?.title || source.replace(/\.[^/.]+$/, "");
+                                  const title =
+                                    fileInfo?.title ||
+                                    source.replace(/\.[^/.]+$/, "");
                                   const sep = title.indexOf(" - ");
-                                  return sep !== -1 ? title.slice(0, sep) : title;
+                                  return sep !== -1
+                                    ? title.slice(0, sep)
+                                    : title;
                                 });
-                                
-                                const allTitles = [...noteTitles, ...fileTitles];
-                                
+
+                                const allTitles = [
+                                  ...noteTitles,
+                                  ...fileTitles,
+                                ];
+
                                 return null;
                               })()}
                             {message.parts.map((part, index) =>
@@ -761,13 +799,14 @@ export default function DashboardChat() {
         {/* bottom anchor optional */}
       </div>
 
-
       {/* New messages indicator */}
       {hasNewItems && (
         <div
           className={cn(
             "fixed left-1/2 -translate-x-1/2 z-10",
-            (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) ? "bottom-62" : "bottom-36"
+            selectedNoteSlugs.length > 0 || selectedFileSources.length > 0
+              ? "bottom-62"
+              : "bottom-36"
           )}
         >
           <Button
@@ -788,14 +827,20 @@ export default function DashboardChat() {
           e.preventDefault();
           if (status !== "ready") return;
           if (input.trim()) {
-            if (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) {
+            if (
+              selectedNoteSlugs.length > 0 ||
+              selectedFileSources.length > 0
+            ) {
               setIsRetrieving(true);
               setIsThinking(false);
             } else {
               setIsThinking(true);
               setIsRetrieving(false);
             }
-            sendMessage({ text: input, metadata: { selectedNoteSlugs, selectedFileSources } });
+            sendMessage({
+              text: input,
+              metadata: { selectedNoteSlugs, selectedFileSources },
+            });
             setInput("");
           }
         }}
@@ -803,7 +848,8 @@ export default function DashboardChat() {
       >
         <div className="mx-auto w-full max-w-3xl">
           <div className="flex flex-col items-center rounded-2xl border bg-background/80 px-3 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-xl">
-            {(selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) && (
+            {(selectedNoteSlugs.length > 0 ||
+              selectedFileSources.length > 0) && (
               <div className="mb-2 w-full">
                 <div
                   ref={chipsRef}
@@ -870,25 +916,30 @@ export default function DashboardChat() {
                       </div>
                     );
                   })}
-                  
+
                   {/* File chips */}
                   {selectedFileSources.map((source) => {
                     // Get file info from cached data
                     const fileInfo = uploadedFiles[source];
-                    const title = fileInfo?.title || source.replace(/\.[^/.]+$/, "");
+                    const title =
+                      fileInfo?.title || source.replace(/\.[^/.]+$/, "");
                     const sep = title.indexOf(" - ");
                     const mainTitle = sep !== -1 ? title.slice(0, sep) : title;
-                    const subtitle = sep !== -1 ? title.slice(sep + 3) : (fileInfo?.description && fileInfo.description !== title ? fileInfo.description : null);
-                    
+                    const subtitle =
+                      sep !== -1
+                        ? title.slice(sep + 3)
+                        : fileInfo?.description &&
+                          fileInfo.description !== title
+                        ? fileInfo.description
+                        : null;
+
                     return (
                       <div
                         key={`file-${source}`}
                         className="relative h-[54px] flex items-center gap-1 rounded-2xl border bg-background p-2"
                       >
                         <div className="flex p-1 items-center justify-center">
-                          <FileUser
-                            className="h-4 w-4 text-primary"
-                          />
+                          <FileUser className="h-4 w-4 text-primary" />
                         </div>
                         <div className="leading-tight pr-2">
                           <div className="font-medium text-sm max-w-[220px] line-clamp-1">
@@ -904,7 +955,11 @@ export default function DashboardChat() {
                           type="button"
                           aria-label={`Rimuovi ${mainTitle}`}
                           className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-gray-700 dark:bg-gray-300 text-primary-foreground shadow"
-                          onClick={() => setSelectedFileSources(prev => prev.filter(s => s !== source))}
+                          onClick={() =>
+                            setSelectedFileSources((prev) =>
+                              prev.filter((s) => s !== source)
+                            )
+                          }
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -934,7 +989,10 @@ export default function DashboardChat() {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       if (status === "ready" && input.trim()) {
-                        if (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) {
+                        if (
+                          selectedNoteSlugs.length > 0 ||
+                          selectedFileSources.length > 0
+                        ) {
                           setIsRetrieving(true);
                           setIsThinking(false);
                         } else {
@@ -1021,12 +1079,15 @@ export default function DashboardChat() {
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">
-                    {(selectedNoteSlugs.length + selectedFileSources.length) > 0
-                      ? `Documenti selezionati - ${selectedNoteSlugs.length + selectedFileSources.length}`
+                    {selectedNoteSlugs.length + selectedFileSources.length > 0
+                      ? `Documenti selezionati - ${
+                          selectedNoteSlugs.length + selectedFileSources.length
+                        }`
                       : "Documenti selezionati"}
                   </span>
                   <div className="flex gap-2">
-                    {(selectedNoteSlugs.length + selectedFileSources.length) > 0 && (
+                    {selectedNoteSlugs.length + selectedFileSources.length >
+                      0 && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -1052,17 +1113,25 @@ export default function DashboardChat() {
                     </Button> */}
                   </div>
                 </div>
-                {(selectedNoteSlugs.length + selectedFileSources.length) > 0 ? (
+                {selectedNoteSlugs.length + selectedFileSources.length > 0 ? (
                   <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
                     {/* Selected Files */}
                     {selectedFileSources.map((source) => {
                       // Get file info from cached data
                       const fileInfo = uploadedFiles[source];
-                      const title = fileInfo?.title || source.replace(/\.[^/.]+$/, "");
+                      const title =
+                        fileInfo?.title || source.replace(/\.[^/.]+$/, "");
                       const sep = title.indexOf(" - ");
-                      const mainTitle = sep !== -1 ? title.slice(0, sep) : title;
-                      const subtitle = sep !== -1 ? title.slice(sep + 3) : (fileInfo?.description && fileInfo.description !== title ? fileInfo.description : null);
-                      
+                      const mainTitle =
+                        sep !== -1 ? title.slice(0, sep) : title;
+                      const subtitle =
+                        sep !== -1
+                          ? title.slice(sep + 3)
+                          : fileInfo?.description &&
+                            fileInfo.description !== title
+                          ? fileInfo.description
+                          : null;
+
                       return (
                         <div
                           key={`file-${source}`}
@@ -1091,7 +1160,11 @@ export default function DashboardChat() {
                           </div>
                           <button
                             type="button"
-                            onClick={() => setSelectedFileSources(prev => prev.filter(s => s !== source))}
+                            onClick={() =>
+                              setSelectedFileSources((prev) =>
+                                prev.filter((s) => s !== source)
+                              )
+                            }
                             className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-gray-700 dark:bg-gray-300 text-background shadow"
                           >
                             <X className="h-3 w-3" />
@@ -1166,13 +1239,19 @@ export default function DashboardChat() {
               </div>
 
               {/* Tabbed Interface */}
-              <Tabs defaultValue="appunti" className="w-full flex-1 flex flex-col overflow-hidden">
+              <Tabs
+                defaultValue="appunti"
+                className="w-full flex-1 flex flex-col overflow-hidden"
+              >
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="appunti">Appunti</TabsTrigger>
                   <TabsTrigger value="documenti">I tuoi documenti</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="appunti" className="space-y-4 flex-1 overflow-hidden flex flex-col">
+                <TabsContent
+                  value="appunti"
+                  className="space-y-4 flex-1 overflow-hidden flex flex-col"
+                >
                   {/* Enhanced Search Bar */}
                   <div className="relative">
                     <div className="flex gap-2">
@@ -1270,193 +1349,223 @@ export default function DashboardChat() {
                   </div>
 
                   {isLoadingNotes ? (
-                <div className="flex-1 overflow-auto space-y-2 pr-1">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-14 rounded-lg bg-muted/30 animate-pulse"
-                    />
-                  ))}
-                </div>
-              ) : (
-                (() => {
-                  const { subjectName, noteTitle } =
-                    parseSearchQuery(notesSearch);
+                    <div className="flex-1 overflow-auto space-y-2 pr-1">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-14 rounded-lg bg-muted/30 animate-pulse"
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    (() => {
+                      const { subjectName, noteTitle } =
+                        parseSearchQuery(notesSearch);
 
-                  let filtered = notes;
+                      let filtered = notes;
 
-                  // Filter by subject if specified in search query
-                  if (subjectName) {
-                    const subject = subjects.find((s) =>
-                      s.name.toLowerCase().includes(subjectName.toLowerCase())
-                    );
-                    if (subject) {
-                      filtered = filtered.filter(
-                        (n) => n.subject_id === subject.id
-                      );
-                    }
-                  }
-
-                  // Filter by note title
-                  if (noteTitle) {
-                    filtered = filtered.filter((n) =>
-                      n.title.toLowerCase().includes(noteTitle.toLowerCase())
-                    );
-                  }
-
-                  // Remove the favorites first sorting to fix recent notes logic
-                  filtered = filtered.slice();
-
-                  const subjectFiltered =
-                    selectedSubjectIds.length > 0
-                      ? filtered.filter((n) =>
-                          selectedSubjectIds.includes(n.subject_id || "")
-                        )
-                      : filtered;
-
-                  const recentSet = new Set(
-                    (recentStudiedNotes || []).map((r) => r.slug)
-                  );
-                  // Sort recent notes by their order in recentStudiedNotes (most recent first)
-                  const recentFiltered = (recentStudiedNotes || [])
-                    .map(recentNote => filtered.find(n => n.slug === recentNote.slug))
-                    .filter(Boolean); // Remove any notes that weren't found in filtered
-                  
-                  const favoriteFiltered = subjectFiltered
-                    .filter((n) => n.is_favorite && !recentSet.has(n.slug))
-                    .sort((a: any, b: any) => a.title?.localeCompare(b.title || "") || 0);
-                  
-                  const remaining = subjectFiltered
-                    .filter((n) => !recentSet.has(n.slug) && !n.is_favorite)
-                    .sort((a: any, b: any) => a.title?.localeCompare(b.title || "") || 0);
-
-                  // Group remaining notes by subject
-                  const groupedBySubject = remaining.reduce((acc: any, note: any) => {
-                    const subjectId = note.subject_id || 'unknown';
-                    if (!acc[subjectId]) {
-                      acc[subjectId] = [];
-                    }
-                    acc[subjectId].push(note);
-                    return acc;
-                  }, {});
-                  const renderRow = (n: any) => {
-                    const subject = subjects.find((s) => s.id === n.subject_id);
-                    return (
-                      <div
-                        key={n.id + "-row"}
-                        role="checkbox"
-                        aria-checked={selectedNoteSlugs.includes(n.slug)}
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            toggleNote(n.slug);
-                          }
-                        }}
-                        onClick={() => toggleNote(n.slug)}
-                        className="relative flex items-start gap-3 p-3 bg-[var(--subject-color)]/2 border border-[var(--subject-color)]/10 rounded-lg hover:shadow-sm/5 hover:border-[var(--subject-color)]/30 transition-all duration-200 cursor-pointer"
-                        style={
-                          {
-                            "--subject-color": subject?.color || "#000000",
-                          } as React.CSSProperties
+                      // Filter by subject if specified in search query
+                      if (subjectName) {
+                        const subject = subjects.find((s) =>
+                          s.name
+                            .toLowerCase()
+                            .includes(subjectName.toLowerCase())
+                        );
+                        if (subject) {
+                          filtered = filtered.filter(
+                            (n) => n.subject_id === subject.id
+                          );
                         }
-                      >
-                        <div className="flex-1 min-w-0">
-                          {(() => {
-                            const title: string = n.title || "";
-                            const sep = title.indexOf(" - ");
-                            const mainTitle =
-                              sep !== -1 ? title.slice(0, sep) : title;
-                            const subTitle =
-                              sep !== -1 ? title.slice(sep + 3) : "";
-                            const isSelected = selectedNoteSlugs.includes(
-                              n.slug
-                            );
-                            return (
-                              <>
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex items-center gap-4">
-                                    {isSelected ? (
-                                      <CircleCheck className="h-6 w-6 flex-shrink-0 text-[var(--subject-color)]" />
-                                    ) : (
-                                      <Circle className="h-6 w-6 flex-shrink-0 text-[var(--subject-color)]/70" />
-                                    )}
-                                    <div className="min-w-0">
-                                      <div className="font-medium line-clamp-1">
-                                        {mainTitle}
+                      }
+
+                      // Filter by note title
+                      if (noteTitle) {
+                        filtered = filtered.filter((n) =>
+                          n.title
+                            .toLowerCase()
+                            .includes(noteTitle.toLowerCase())
+                        );
+                      }
+
+                      // Remove the favorites first sorting to fix recent notes logic
+                      filtered = filtered.slice();
+
+                      const subjectFiltered =
+                        selectedSubjectIds.length > 0
+                          ? filtered.filter((n) =>
+                              selectedSubjectIds.includes(n.subject_id || "")
+                            )
+                          : filtered;
+
+                      const recentSet = new Set(
+                        (recentStudiedNotes || []).map((r) => r.slug)
+                      );
+                      // Sort recent notes by their order in recentStudiedNotes (most recent first)
+                      const recentFiltered = (recentStudiedNotes || [])
+                        .map((recentNote) =>
+                          filtered.find((n) => n.slug === recentNote.slug)
+                        )
+                        .filter(Boolean); // Remove any notes that weren't found in filtered
+
+                      const favoriteFiltered = subjectFiltered
+                        .filter((n) => n.is_favorite && !recentSet.has(n.slug))
+                        .sort(
+                          (a: any, b: any) =>
+                            a.title?.localeCompare(b.title || "") || 0
+                        );
+
+                      const remaining = subjectFiltered
+                        .filter((n) => !recentSet.has(n.slug) && !n.is_favorite)
+                        .sort(
+                          (a: any, b: any) =>
+                            a.title?.localeCompare(b.title || "") || 0
+                        );
+
+                      // Group remaining notes by subject
+                      const groupedBySubject = remaining.reduce(
+                        (acc: any, note: any) => {
+                          const subjectId = note.subject_id || "unknown";
+                          if (!acc[subjectId]) {
+                            acc[subjectId] = [];
+                          }
+                          acc[subjectId].push(note);
+                          return acc;
+                        },
+                        {}
+                      );
+                      const renderRow = (n: any) => {
+                        const subject = subjects.find(
+                          (s) => s.id === n.subject_id
+                        );
+                        return (
+                          <div
+                            key={n.id + "-row"}
+                            role="checkbox"
+                            aria-checked={selectedNoteSlugs.includes(n.slug)}
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                toggleNote(n.slug);
+                              }
+                            }}
+                            onClick={() => toggleNote(n.slug)}
+                            className="relative flex items-start gap-3 p-3 bg-[var(--subject-color)]/2 border border-[var(--subject-color)]/10 rounded-lg hover:shadow-sm/5 hover:border-[var(--subject-color)]/30 transition-all duration-200 cursor-pointer"
+                            style={
+                              {
+                                "--subject-color": subject?.color || "#000000",
+                              } as React.CSSProperties
+                            }
+                          >
+                            <div className="flex-1 min-w-0">
+                              {(() => {
+                                const title: string = n.title || "";
+                                const sep = title.indexOf(" - ");
+                                const mainTitle =
+                                  sep !== -1 ? title.slice(0, sep) : title;
+                                const subTitle =
+                                  sep !== -1 ? title.slice(sep + 3) : "";
+                                const isSelected = selectedNoteSlugs.includes(
+                                  n.slug
+                                );
+                                return (
+                                  <>
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex items-center gap-4">
+                                        {isSelected ? (
+                                          <CircleCheck className="h-6 w-6 flex-shrink-0 text-[var(--subject-color)]" />
+                                        ) : (
+                                          <Circle className="h-6 w-6 flex-shrink-0 text-[var(--subject-color)]/70" />
+                                        )}
+                                        <div className="min-w-0">
+                                          <div className="font-medium line-clamp-1">
+                                            {mainTitle}
+                                          </div>
+                                          {subTitle && (
+                                            <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                              {subTitle}
+                                            </div>
+                                          )}
+                                          {subject && (
+                                            <div className="text-xs text-muted-foreground">
+                                              {subject.name}
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
-                                      {subTitle && (
-                                        <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                                          {subTitle}
-                                        </div>
-                                      )}
-                                      {subject && (
-                                        <div className="text-xs text-muted-foreground">
-                                          {subject.name}
-                                        </div>
+                                      {n.is_favorite && (
+                                        <Star className="h-4 w-4 flex-shrink-0 fill-yellow-400 text-yellow-400" />
                                       )}
                                     </div>
-                                  </div>
-                                  {n.is_favorite && (
-                                    <Star className="h-4 w-4 flex-shrink-0 fill-yellow-400 text-yellow-400" />
-                                  )}
-                                </div>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    );
-                  };
-                  return (
-                    <div className="flex-1 overflow-auto space-y-2 pr-1">
-                      {recentFiltered.length > 0 && (
-                        <div className="flex flex-col gap-2">
-                          <div className="text-sm font-medium text-muted-foreground">
-                            STUDIATI DI RECENTE
-                          </div>
-                          {recentFiltered.slice(0, 3).map((n) => renderRow(n))}
-                          <div className="h-px w-full bg-border my-1" />
-                        </div>
-                      )}
-                      
-                      {favoriteFiltered.length > 0 && (
-                        <div className="flex flex-col gap-2">
-                          <div className="text-sm font-medium text-muted-foreground">
-                            APPUNTI PREFERITI
-                          </div>
-                          {favoriteFiltered.map((n) => renderRow(n))}
-                          <div className="h-px w-full bg-border my-1" />
-                        </div>
-                      )}
-                      
-                      {Object.entries(groupedBySubject).map(([subjectId, subjectNotes]: [string, any]) => {
-                        const subject = subjects.find(s => s.id === subjectId);
-                        const subjectName = subject?.name || 'Unknown Subject';
-                        
-                        return (
-                          <div key={subjectId} className="flex flex-col gap-2">
-                            <div className="text-sm font-medium text-muted-foreground uppercase">
-                              {subjectName}
+                                  </>
+                                );
+                              })()}
                             </div>
-                            {subjectNotes.map((n: any) => renderRow(n))}
-                            <div className="h-px w-full bg-border my-1" />
                           </div>
                         );
-                      })}
-                      
-                      {subjectFiltered.length === 0 && (
-                        <div className="text-sm text-muted-foreground">
-                          Nessun appunto trovato.
+                      };
+                      return (
+                        <div className="flex-1 overflow-auto space-y-2 pr-1">
+                          {recentFiltered.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                              <div className="text-sm font-medium text-muted-foreground">
+                                STUDIATI DI RECENTE
+                              </div>
+                              {recentFiltered
+                                .slice(0, 3)
+                                .map((n) => renderRow(n))}
+                              <div className="h-px w-full bg-border my-1" />
+                            </div>
+                          )}
+
+                          {favoriteFiltered.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                              <div className="text-sm font-medium text-muted-foreground">
+                                APPUNTI PREFERITI
+                              </div>
+                              {favoriteFiltered.map((n) => renderRow(n))}
+                              <div className="h-px w-full bg-border my-1" />
+                            </div>
+                          )}
+
+                          {Object.entries(groupedBySubject).map(
+                            ([subjectId, subjectNotes]: [string, any]) => {
+                              const subject = subjects.find(
+                                (s) => s.id === subjectId
+                              );
+                              const subjectName =
+                                subject?.name || "Unknown Subject";
+
+                              return (
+                                <div
+                                  key={subjectId}
+                                  className="flex flex-col gap-2"
+                                >
+                                  <div className="text-sm font-medium text-muted-foreground uppercase">
+                                    {subjectName}
+                                  </div>
+                                  {subjectNotes.map((n: any) => renderRow(n))}
+                                  <div className="h-px w-full bg-border my-1" />
+                                </div>
+                              );
+                            }
+                          )}
+
+                          {subjectFiltered.length === 0 && (
+                            <div className="text-sm text-muted-foreground">
+                              Nessun appunto trovato.
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })()
+                      );
+                    })()
                   )}
                 </TabsContent>
 
-                <TabsContent value="documenti" className="space-y-4 flex-1 overflow-hidden flex flex-col">
+                <TabsContent
+                  value="documenti"
+                  className="space-y-4 flex-1 overflow-hidden flex flex-col"
+                >
                   <FilesManagement
                     selectedFileSources={selectedFileSources}
                     onFileSelectionChange={setSelectedFileSources}
@@ -1487,13 +1596,17 @@ export default function DashboardChat() {
       )}
 
       {/* Confirmation Dialog for Pinecone Cleanup */}
-      <AlertDialog open={showCleanupConfirm} onOpenChange={setShowCleanupConfirm}>
+      <AlertDialog
+        open={showCleanupConfirm}
+        onOpenChange={setShowCleanupConfirm}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Conferma pulizia Pinecone</AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler eliminare tutti i documenti dal database Pinecone? 
-              Questa azione eliminerà definitivamente tutti i tuoi dati vettoriali e non può essere annullata.
+              Sei sicuro di voler eliminare tutti i documenti dal database
+              Pinecone? Questa azione eliminerà definitivamente tutti i tuoi
+              dati vettoriali e non può essere annullata.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
