@@ -3,7 +3,7 @@ import { subscriptions, relationSubjectsUserTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { calculateCustomPrice } from "@/utils/subscription/subscription-plans";
 import { calculateMonthlyAIBudget } from "@/utils/ai-budget/budget-management";
-import { unstable_cache } from "next/cache";
+import { unstable_cache, revalidateTag } from "next/cache";
 import type {
   SubscriptionStatus,
   UserSubjectAccess,
@@ -141,8 +141,8 @@ export async function updateSubscriptionAIBudget(subscriptionId: string, newPric
 
   if (subscription.length && subscription[0].user_id) {
     // Clear related caches
-    unstable_cache.revalidateTag(`user-${subscription[0].user_id}`);
-    unstable_cache.revalidateTag("subscription");
+    revalidateTag(`user-${subscription[0].user_id}`);
+    revalidateTag("subscription");
   }
 }
 
