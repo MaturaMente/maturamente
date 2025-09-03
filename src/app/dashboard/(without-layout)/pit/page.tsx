@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import DashboardChat from "@/app/components/chat/dashboard-chat";
 
 export const metadata: Metadata = {
-  title: "Pit - Tutor AI Universale",
+  title: "Pit - Tutor AI",
   description:
     "Chatta con Pit, il tutor AI di MaturaMente. Ricevi aiuto personalizzato per tutte le materie scolastiche, dai compiti quotidiani alla preparazione per verifiche e interrogazioni.",
   keywords: [
