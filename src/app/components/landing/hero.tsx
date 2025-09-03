@@ -109,7 +109,7 @@ export default function Hero({
             {description}
           </p>
           <div className="animate-appear relative z-10 flex justify-center gap-4 opacity-0 delay-300">
-            {isLoggedIn ? (
+            {!isLoggedIn ? (
               <Button
                 onClick={() => {
                   router.push("/dashboard");
@@ -124,19 +124,16 @@ export default function Hero({
                 <ArrowRightIcon className="size-3 text-white" />
               </Button>
             ) : (
-              <Button
-                onClick={() => {
-                  signIn("google", { callbackUrl: "/dashboard" });
-                }}
-                variant={"default"}
-                size="lg"
-                className="flex items-center justify-center gap-2"
-              >
-                <Link href="/dashboard" className="text-white">
-                  Vai alla dashboard
-                </Link>
-                <ArrowRightIcon className="size-3 text-white" />
-              </Button>
+              <Link href="/dashboard">
+                <Button
+                  variant={"default"}
+                  size="lg"
+                  className="flex text-white items-center justify-center gap-2"
+                >
+                    Vai alla dashboard
+                  <ArrowRightIcon className="size-3 text-white" />
+                </Button>
+              </Link>
             )}
           </div>
 

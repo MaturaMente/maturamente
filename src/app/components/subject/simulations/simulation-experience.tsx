@@ -368,7 +368,7 @@ function ActiveSimulation({
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="md:flex hidden bg-background sticky top-0 py-3 px-4 border-b z-10 flex flex-row justify-between items-center">
+      <div className="md:flex hidden sticky top-0 py-3 px-4 border-b z-10 flex flex-row justify-between items-center">
         <Link href={`/${subjectSlug}/simulazioni`} className="block mr-3">
           <div className="text-muted-foreground items-center w-fit gap-1 flex flex-row hover:text-foreground transition-all">
             <ArrowLeft className="h-4 w-4" />

@@ -3,6 +3,7 @@ import { completedSimulationsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
 
 // Ensure route is properly detected during build
 export const dynamic = "force-dynamic";
@@ -67,6 +68,10 @@ export async function POST(req: NextRequest) {
       started_at: startTime,
     });
     console.log("Insert result:", result);
+
+    // Invalidate cache to ensure immediate consistency
+    revalidateTag(`user-${userId}`);
+    revalidateTag("simulations");
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TopicExercisesPage } from "@/app/components/subject/esercizi/exercises-page";
 import { Suspense } from "react";
@@ -14,6 +15,9 @@ import {
   getExerciseCardsWithCompletion,
   getFavoriteExerciseCardsForTopic,
 } from "@/utils/exercise-data";
+import { db } from "@/db/drizzle";
+import { topicsTable, subjectsTable } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 interface ExercisesTopicPageProps {
   params: Promise<{
@@ -28,6 +32,85 @@ interface ExercisesTopicPageProps {
 
 // Force dynamic rendering for authentication
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: ExercisesTopicPageProps): Promise<Metadata> {
+  const { topic: topicSlug, "subject-slug": subjectSlug } = await params;
+
+  try {
+    // Fetch topic and subject data for metadata
+    const topicData = await db
+      .select({
+        topic_name: topicsTable.name,
+        topic_description: topicsTable.description,
+        subject_name: subjectsTable.name,
+        subject_description: subjectsTable.description,
+      })
+      .from(topicsTable)
+      .innerJoin(subjectsTable, eq(topicsTable.subject_id, subjectsTable.id))
+      .where(eq(topicsTable.slug, topicSlug))
+      .limit(1);
+
+    const data = topicData[0];
+    if (!data) {
+      return {
+        title: "Esercizi per Argomento",
+        description: "Esercizi organizzati per argomento per il consolidamento delle competenze scolastiche.",
+      };
+    }
+
+    const title = `Esercizi: ${data.topic_name} - ${data.subject_name}`;
+    const description = `Esercizi di ${data.topic_name} per ${data.subject_name}. ${data.topic_description} Allenati con problemi graduali e feedback immediato per consolidare le tue competenze.`;
+
+    return {
+      title: title.length > 60 ? title.substring(0, 57) + "..." : title,
+      description: description.length > 160 ? description.substring(0, 157) + "..." : description,
+      keywords: [
+        `esercizi ${data.topic_name.toLowerCase()}`,
+        `${data.subject_name.toLowerCase()} ${data.topic_name.toLowerCase()}`,
+        "esercizi per argomento",
+        "allenamento specifico",
+        "practice questions",
+        "consolidamento competenze",
+        "MaturaMente",
+      ],
+      openGraph: {
+        title,
+        description: description.length > 160 ? description.substring(0, 157) + "..." : description,
+        url: `/${subjectSlug}/esercizi/${topicSlug}`,
+        type: "website",
+        images: [
+          {
+            url: "/opengraph-image.png",
+            width: 1200,
+            height: 630,
+            alt: `Esercizi: ${data.topic_name} - ${data.subject_name} | MaturaMente`,
+          },
+        ],
+      },
+      twitter: {
+        title: title.length > 60 ? title.substring(0, 57) + "..." : title,
+        description: description.length > 160 ? description.substring(0, 157) + "..." : description,
+        images: ["/opengraph-image.png"],
+      },
+      alternates: {
+        canonical: `/${subjectSlug}/esercizi/${topicSlug}`,
+      },
+      other: {
+        "exercise:subject": data.subject_name,
+        "exercise:topic": data.topic_name,
+        "exercise:type": "topic_specific",
+      },
+    };
+  } catch (error) {
+    console.error("Error generating metadata for topic exercises page:", error);
+    return {
+      title: "Esercizi per Argomento",
+      description: "Esercizi organizzati per argomento per il consolidamento delle competenze scolastiche.",
+    };
+  }
+}
 
 // Generate static params for all topics - this enables static generation
 export async function generateStaticParams() {

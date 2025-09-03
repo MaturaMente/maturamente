@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db/drizzle";
 import { completedSimulationsTable } from "@/db/schema";
 import { eq, and, count } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +43,10 @@ export async function POST(request: NextRequest) {
       attempt: attempt,
       started_at: new Date(),
     });
+
+    // Invalidate cache to ensure immediate consistency
+    revalidateTag(`user-${user.id}`);
+    revalidateTag("simulations");
 
     return NextResponse.json({
       success: true,

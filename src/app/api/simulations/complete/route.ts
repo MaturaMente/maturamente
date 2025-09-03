@@ -3,6 +3,7 @@ import { completedSimulationsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { eq, and, isNull, desc } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
 
 export async function POST(req: NextRequest) {
   try {
@@ -118,6 +119,10 @@ export async function POST(req: NextRequest) {
         await db.insert(completedSimulationsTable).values(insertValues);
       }
     }
+
+    // Invalidate cache to ensure immediate consistency
+    revalidateTag(`user-${userId}`);
+    revalidateTag("simulations");
 
     return NextResponse.json({ success: true });
   } catch (error) {
