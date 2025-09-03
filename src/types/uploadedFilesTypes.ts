@@ -34,6 +34,7 @@ export interface FileProcessingResult {
   fileId?: string;
   error?: string;
   file?: UploadedFile;
+  requiresSubscription?: boolean;
 }
 
 // UI-specific types
@@ -72,6 +73,7 @@ export interface FileUploadResponse {
   success: boolean;
   file?: UploadedFile;
   error?: string;
+  requiresSubscription?: boolean;
 }
 
 export interface FilesListResponse {

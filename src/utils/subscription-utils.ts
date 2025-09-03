@@ -2,6 +2,7 @@ import { db } from "@/db/drizzle";
 import { subscriptions, relationSubjectsUserTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { calculateCustomPrice } from "@/utils/subscription/subscription-plans";
+import { calculateMonthlyAIBudget } from "@/utils/ai-budget/budget-management";
 import { unstable_cache } from "next/cache";
 import type {
   SubscriptionStatus,
@@ -117,4 +118,65 @@ export function hasSubjectAccess(
     ["hasSubjectAccess", userId, subjectId],
     { revalidate: 60, tags: ["subjects", "subscription", `user-${userId}`] }
   )();
+}
+
+// Update AI budget when subscription price changes
+export async function updateSubscriptionAIBudget(subscriptionId: string, newPriceEur: number) {
+  const newBudget = calculateMonthlyAIBudget(newPriceEur);
+  
+  await db
+    .update(subscriptions)
+    .set({
+      monthly_ai_budget: newBudget.toFixed(4),
+      updated_at: new Date(),
+    })
+    .where(eq(subscriptions.id, subscriptionId));
+
+  // Invalidate cache for this subscription
+  const subscription = await db
+    .select({ user_id: subscriptions.user_id })
+    .from(subscriptions)
+    .where(eq(subscriptions.id, subscriptionId))
+    .limit(1);
+
+  if (subscription.length && subscription[0].user_id) {
+    // Clear related caches
+    unstable_cache.revalidateTag(`user-${subscription[0].user_id}`);
+    unstable_cache.revalidateTag("subscription");
+  }
+}
+
+// Create AI budget when a new subscription is created
+export async function createInitialAIBudget(subscriptionId: string, customPriceEur: number) {
+  const aiBudget = calculateMonthlyAIBudget(customPriceEur);
+  
+  await db
+    .update(subscriptions)
+    .set({
+      monthly_ai_budget: aiBudget.toFixed(4),
+    })
+    .where(eq(subscriptions.id, subscriptionId));
+}
+
+// Initialize AI budgets for existing active subscriptions (run once)
+export async function initializeExistingSubscriptionBudgets() {
+  const activeSubscriptions = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.status, "active"));
+
+  for (const subscription of activeSubscriptions) {
+    const customPrice = parseFloat(subscription.custom_price.toString());
+    const aiBudget = calculateMonthlyAIBudget(customPrice);
+    
+    await db
+      .update(subscriptions)
+      .set({
+        monthly_ai_budget: aiBudget.toFixed(4),
+        updated_at: new Date(),
+      })
+      .where(eq(subscriptions.id, subscription.id));
+  }
+  
+  console.log(`Updated AI budgets for ${activeSubscriptions.length} active subscriptions`);
 }

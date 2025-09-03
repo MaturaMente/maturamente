@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, SUBSCRIPTION_PLANS, calculateCustomPrice } from "@/lib/stripe";
+import { calculateMonthlyAIBudget } from "@/utils/ai-budget/budget-management";
 import { db } from "@/db/drizzle";
 import {
   subscriptions,
@@ -111,6 +112,9 @@ async function handleCheckoutSessionCompleted(
     ? parseFloat(customPrice)
     : calculateCustomPrice(actualSubjectCount);
 
+  // Calculate AI budget (25% of subscription price)
+  const aiBudget = calculateMonthlyAIBudget(actualCustomPrice);
+
   // Create or update subscription record
   await db
     .insert(subscriptions)
@@ -122,6 +126,7 @@ async function handleCheckoutSessionCompleted(
       status: subscription.status,
       subject_count: actualSubjectCount,
       custom_price: actualCustomPrice.toString(),
+      monthly_ai_budget: aiBudget.toFixed(4),
       current_period_start: new Date(
         (subscription as any).current_period_start * 1000
       ),
@@ -139,6 +144,7 @@ async function handleCheckoutSessionCompleted(
         status: subscription.status,
         subject_count: actualSubjectCount,
         custom_price: actualCustomPrice.toString(),
+        monthly_ai_budget: aiBudget.toFixed(4),
         current_period_start: new Date(
           (subscription as any).current_period_start * 1000
         ),
@@ -264,11 +270,15 @@ async function handleImmediateUpgradeCheckout(
     try {
       console.log("Updating local database for user:", userId);
 
+      // Calculate new AI budget
+      const newAiBudget = calculateMonthlyAIBudget(newPrice);
+
       const dbResult = await db
         .update(subscriptions)
         .set({
           subject_count: newSubjectCountNum,
           custom_price: newPrice.toString(),
+          monthly_ai_budget: newAiBudget.toFixed(4),
           updated_at: new Date(),
         })
         .where(eq(subscriptions.user_id, userId));
@@ -450,6 +460,26 @@ async function processPendingSubscriptionChanges(stripeSubscriptionId: string) {
             subject_id: subjectId,
           });
         }
+
+        // Update AI budget for the new period (downgrade)
+        const newPrice = parseFloat(change.new_price!);
+        const newAiBudget = calculateMonthlyAIBudget(newPrice);
+        
+        console.log("Updating AI budget for downgrade:", {
+          userId: userSubscription.user_id,
+          newPrice,
+          newAiBudget,
+          message: "Reducing budget for new billing period"
+        });
+
+        // Update subscription with new AI budget for next period
+        await db
+          .update(subscriptions)
+          .set({
+            monthly_ai_budget: newAiBudget.toFixed(4),
+            updated_at: new Date(),
+          })
+          .where(eq(subscriptions.user_id, userSubscription.user_id!));
 
         // Mark the change as applied
         await db

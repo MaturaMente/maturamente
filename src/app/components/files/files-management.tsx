@@ -174,6 +174,10 @@ export default function FilesManagement({
           onUploadStart={handleUploadStart}
           onUploadSuccess={handleUploadSuccess}
           onUploadError={handleUploadError}
+          onSubscriptionRequired={() => {
+            // Subscription popup is handled internally by FileUploadButton
+            console.log("Subscription required for file upload");
+          }}
         />
       </div>
     </div>

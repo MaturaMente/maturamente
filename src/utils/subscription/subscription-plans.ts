@@ -47,9 +47,9 @@ export function getCustomPricingLineItems(subjectCount: number) {
       quantity: 1,
     });
   } else {
-    // Multiple subjects: first subject (5.99) + additional subjects (2.49 each)
+    // Multiple subjects: first subject (5,99) + additional subjects (2.49 each)
     lineItems.push({
-      priceId: "ONE_MATERIA", // First subject at 5.99
+      priceId: "ONE_MATERIA", // First subject at 5,99
       quantity: 1,
     });
     lineItems.push({

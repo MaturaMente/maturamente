@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { processUploadedFile, isValidFileType, getFileTypeFromName, validateFileSize } from "@/utils/files/file-orchestrator";
+import { getSubscriptionStatus } from "@/utils/subscription-utils";
 import { FileType } from "@/types/uploadedFilesTypes";
 
 export const maxDuration = 300; // 5 minutes for file processing
@@ -13,6 +14,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: "Non autorizzato" },
         { status: 401 }
+      );
+    }
+
+    // Check subscription status
+    const subscriptionStatus = await getSubscriptionStatus(session.user.id);
+    if (!subscriptionStatus?.isActive) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: "Abbonamento premium richiesto",
+          requiresSubscription: true
+        },
+        { status: 403 }
       );
     }
 

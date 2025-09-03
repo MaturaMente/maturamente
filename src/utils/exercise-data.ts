@@ -215,64 +215,70 @@ export const calculateCardCompletionInfo = (
  * Get exercise cards with all their exercises and completion information
  * Optimized function to fetch exercise data with completion information in a single call
  */
-export const getExerciseCardsWithCompletion = async (
+export function getExerciseCardsWithCompletion(
   subtopicIds: string[],
   userId: string
-): Promise<ExerciseCardCompletionType[]> => {
-  // Exit early if no subtopics
-  if (!subtopicIds.length) return [];
+): Promise<ExerciseCardCompletionType[]> {
+  return unstable_cache(
+    async (): Promise<ExerciseCardCompletionType[]> => {
+      // Exit early if no subtopics
+      if (!subtopicIds.length) return [];
 
-  // 1. Fetch exercise cards for all subtopics in a single query
-  const exerciseCards = await getExerciseCardsForSubtopics(subtopicIds);
-  if (!exerciseCards.length) return [];
+      // 1. Fetch exercise cards for all subtopics in a single query
+      const exerciseCards = await getExerciseCardsForSubtopics(subtopicIds);
+      if (!exerciseCards.length) return [];
 
-  // 2. Get card IDs for fetching exercises
-  const cardIds = exerciseCards.map((card) => card.id);
+      // 2. Get card IDs for fetching exercises
+      const cardIds = exerciseCards.map((card) => card.id);
 
-  // 3. Fetch all exercises for these cards in a single query
-  const allExercises = await getExercisesForCards(cardIds);
+      // 3. Fetch all exercises for these cards in a single query
+      const allExercises = await getExercisesForCards(cardIds);
 
-  // 4. Group exercises by card ID for easier processing
-  const exercisesByCard = groupExercisesByCard(allExercises);
+      // 4. Group exercises by card ID for easier processing
+      const exercisesByCard = groupExercisesByCard(allExercises);
 
-  // 5. Get user's completed exercises
-  const completedExercises = await getCompletedExercises(userId);
+      // 5. Get user's completed exercises
+      const completedExercises = await getCompletedExercises(userId);
 
-  // 6. Get flagged cards for the user
-  const flaggedCards = await db
-    .select({
-      exercise_card_id: flaggedExercisesCardsTable.exercise_card_id,
-    })
-    .from(flaggedExercisesCardsTable)
-    .where(eq(flaggedExercisesCardsTable.user_id, userId));
+      // 6. Get flagged cards for the user
+      const flaggedCards = await db
+        .select({
+          exercise_card_id: flaggedExercisesCardsTable.exercise_card_id,
+        })
+        .from(flaggedExercisesCardsTable)
+        .where(eq(flaggedExercisesCardsTable.user_id, userId));
 
-  // Create a Set of flagged card IDs for O(1) lookups
-  const flaggedCardIds = new Set(flaggedCards.map((f) => f.exercise_card_id));
+      // Create a Set of flagged card IDs for O(1) lookups
+      const flaggedCardIds = new Set(flaggedCards.map((f) => f.exercise_card_id));
 
-  // 7. Create a Set of correctly completed exercise IDs for O(1) lookups
-  const correctExerciseIds = new Set(
-    completedExercises
-      .filter((ex) => ex.isCorrect && ex.exercise_id !== null)
-      .map((ex) => ex.exercise_id as string)
-  );
+      // 7. Create a Set of correctly completed exercise IDs for O(1) lookups
+      const correctExerciseIds = new Set(
+        completedExercises
+          .filter((ex) => ex.isCorrect && ex.exercise_id !== null)
+          .map((ex) => ex.exercise_id as string)
+      );
 
-  // 8. Calculate completion info and merge with exercise cards
-  return exerciseCards.map((card) => {
-    const exercisesForCard = exercisesByCard[card.id] || [];
-    const totalExercises = exercisesForCard.length;
-    const completedCount = exercisesForCard.filter((id) =>
-      correctExerciseIds.has(id)
-    ).length;
+      // 8. Calculate completion info and merge with exercise cards
+      return exerciseCards.map((card) => {
+        const exercisesForCard = exercisesByCard[card.id] || [];
+        const totalExercises = exercisesForCard.length;
+        const completedCount = exercisesForCard.filter((id) =>
+          correctExerciseIds.has(id)
+        ).length;
 
-    return {
-      ...card,
-      total_exercises: totalExercises,
-      completed_exercises: completedCount,
-      is_completed: totalExercises > 0 && completedCount === totalExercises,
-      is_flagged: flaggedCardIds.has(card.id),
-    };
-  });
-};
+        return {
+          ...card,
+          total_exercises: totalExercises,
+          completed_exercises: completedCount,
+          is_completed: totalExercises > 0 && completedCount === totalExercises,
+          is_flagged: flaggedCardIds.has(card.id),
+        };
+      });
+    },
+    ["getExerciseCardsWithCompletion", userId, ...subtopicIds],
+    { revalidate: 60, tags: ["exercises", "completion", `user-${userId}`] }
+  )();
+}
 
 /**
  * Group exercise cards by subtopic for easy access
@@ -604,160 +610,166 @@ export const getExerciseCardDataBySlug = async (
 };
 
 // Get exercise cards that contain at least one flagged exercise or are flagged themselves for a specific topic
-export async function getFavoriteExerciseCardsForTopic(
+export function getFavoriteExerciseCardsForTopic(
   userId: string,
   topicId: string
 ): Promise<ExerciseCardCompletionType[]> {
-  if (!userId || !topicId) {
-    return [];
-  }
-
-  // Get all subtopics for this topic
-  const subtopics = await db
-    .select({
-      id: subtopicsTable.id,
-    })
-    .from(subtopicsTable)
-    .where(eq(subtopicsTable.topic_id, topicId));
-
-  if (subtopics.length === 0) {
-    return [];
-  }
-
-  const subtopicIds = subtopics.map((s) => s.id);
-
-  // Get all exercise cards for this topic
-  const exerciseCards = await db
-    .select({
-      id: exercisesCardsTable.id,
-      subtopic_id: exercisesCardsTable.subtopic_id,
-      description: exercisesCardsTable.description,
-      difficulty: exercisesCardsTable.difficulty,
-      slug: exercisesCardsTable.slug,
-      order_index: exercisesCardsTable.order_index,
-    })
-    .from(exercisesCardsTable)
-    .where(inArray(exercisesCardsTable.subtopic_id, subtopicIds))
-    .orderBy(exercisesCardsTable.order_index);
-
-  if (exerciseCards.length === 0) {
-    return [];
-  }
-
-  const cardIds = exerciseCards.map((card) => card.id);
-
-  // Get flagged cards
-  const flaggedCards = await db
-    .select({
-      exercise_card_id: flaggedExercisesCardsTable.exercise_card_id,
-    })
-    .from(flaggedExercisesCardsTable)
-    .where(
-      and(
-        eq(flaggedExercisesCardsTable.user_id, userId),
-        inArray(flaggedExercisesCardsTable.exercise_card_id, cardIds)
-      )
-    );
-
-  const flaggedCardIds = new Set(
-    flaggedCards
-      .map((f) => f.exercise_card_id)
-      .filter((id): id is string => id !== null)
-  );
-
-  // Get all exercises for these cards
-  const allExercises = await db
-    .select({
-      id: exercisesTable.id,
-      exercise_card_id: exercisesTable.exercise_card_id,
-    })
-    .from(exercisesTable)
-    .where(inArray(exercisesTable.exercise_card_id, cardIds));
-
-  const exerciseIds = allExercises.map((ex) => ex.id);
-
-  // Get flagged exercises
-  const flaggedExercises = await db
-    .select({
-      exercise_id: flaggedExercisesTable.exercise_id,
-    })
-    .from(flaggedExercisesTable)
-    .where(
-      and(
-        eq(flaggedExercisesTable.user_id, userId),
-        inArray(flaggedExercisesTable.exercise_id, exerciseIds)
-      )
-    );
-
-  const flaggedExerciseIds = new Set(
-    flaggedExercises
-      .map((f) => f.exercise_id)
-      .filter((id): id is string => id !== null)
-  );
-
-  // Group exercises by card
-  const exercisesByCard = allExercises.reduce((acc, exercise) => {
-    if (exercise.exercise_card_id) {
-      if (!acc[exercise.exercise_card_id]) {
-        acc[exercise.exercise_card_id] = [];
+  return unstable_cache(
+    async (): Promise<ExerciseCardCompletionType[]> => {
+      if (!userId || !topicId) {
+        return [];
       }
-      acc[exercise.exercise_card_id].push(exercise.id);
-    }
-    return acc;
-  }, {} as Record<string, string[]>);
 
-  // Filter cards that are either flagged themselves or contain flagged exercises
-  const favoriteCardIds = new Set<string>();
+      // Get all subtopics for this topic
+      const subtopics = await db
+        .select({
+          id: subtopicsTable.id,
+        })
+        .from(subtopicsTable)
+        .where(eq(subtopicsTable.topic_id, topicId));
 
-  // Add flagged cards
-  flaggedCardIds.forEach((cardId) => favoriteCardIds.add(cardId));
+      if (subtopics.length === 0) {
+        return [];
+      }
 
-  // Add cards that contain flagged exercises
-  Object.entries(exercisesByCard).forEach(([cardId, cardExercises]) => {
-    const hasAnyFlaggedExercise = cardExercises.some((exerciseId) =>
-      flaggedExerciseIds.has(exerciseId)
-    );
-    if (hasAnyFlaggedExercise) {
-      favoriteCardIds.add(cardId);
-    }
-  });
+      const subtopicIds = subtopics.map((s) => s.id);
 
-  // Filter exercise cards to only include favorites
-  const favoriteCards = exerciseCards.filter((card) =>
-    favoriteCardIds.has(card.id)
-  );
+      // Get all exercise cards for this topic
+      const exerciseCards = await db
+        .select({
+          id: exercisesCardsTable.id,
+          subtopic_id: exercisesCardsTable.subtopic_id,
+          description: exercisesCardsTable.description,
+          difficulty: exercisesCardsTable.difficulty,
+          slug: exercisesCardsTable.slug,
+          order_index: exercisesCardsTable.order_index,
+        })
+        .from(exercisesCardsTable)
+        .where(inArray(exercisesCardsTable.subtopic_id, subtopicIds))
+        .orderBy(exercisesCardsTable.order_index);
 
-  if (favoriteCards.length === 0) {
-    return [];
-  }
+      if (exerciseCards.length === 0) {
+        return [];
+      }
 
-  // Get completion information for favorite cards
-  const favoriteCardIds_array = Array.from(favoriteCardIds);
-  const completedExercises = await getCompletedExercises(userId);
-  const correctExerciseIds = new Set(
-    completedExercises
-      .filter((ex) => ex.isCorrect && ex.exercise_id !== null)
-      .map((ex) => ex.exercise_id as string)
-  );
+      const cardIds = exerciseCards.map((card) => card.id);
 
-  // Calculate completion info and return with flagged status
-  return favoriteCards.map((card) => {
-    const exercisesForCard = exercisesByCard[card.id] || [];
-    const totalExercises = exercisesForCard.length;
-    const completedCount = exercisesForCard.filter((id) =>
-      correctExerciseIds.has(id)
-    ).length;
+      // Get flagged cards
+      const flaggedCards = await db
+        .select({
+          exercise_card_id: flaggedExercisesCardsTable.exercise_card_id,
+        })
+        .from(flaggedExercisesCardsTable)
+        .where(
+          and(
+            eq(flaggedExercisesCardsTable.user_id, userId),
+            inArray(flaggedExercisesCardsTable.exercise_card_id, cardIds)
+          )
+        );
 
-    return {
-      ...card,
-      total_exercises: totalExercises,
-      completed_exercises: completedCount,
-      is_completed: totalExercises > 0 && completedCount === totalExercises,
-      is_flagged:
-        flaggedCardIds.has(card.id) ||
-        exercisesForCard.some((exerciseId) =>
+      const flaggedCardIds = new Set(
+        flaggedCards
+          .map((f) => f.exercise_card_id)
+          .filter((id): id is string => id !== null)
+      );
+
+      // Get all exercises for these cards
+      const allExercises = await db
+        .select({
+          id: exercisesTable.id,
+          exercise_card_id: exercisesTable.exercise_card_id,
+        })
+        .from(exercisesTable)
+        .where(inArray(exercisesTable.exercise_card_id, cardIds));
+
+      const exerciseIds = allExercises.map((ex) => ex.id);
+
+      // Get flagged exercises
+      const flaggedExercises = await db
+        .select({
+          exercise_id: flaggedExercisesTable.exercise_id,
+        })
+        .from(flaggedExercisesTable)
+        .where(
+          and(
+            eq(flaggedExercisesTable.user_id, userId),
+            inArray(flaggedExercisesTable.exercise_id, exerciseIds)
+          )
+        );
+
+      const flaggedExerciseIds = new Set(
+        flaggedExercises
+          .map((f) => f.exercise_id)
+          .filter((id): id is string => id !== null)
+      );
+
+      // Group exercises by card
+      const exercisesByCard = allExercises.reduce((acc, exercise) => {
+        if (exercise.exercise_card_id) {
+          if (!acc[exercise.exercise_card_id]) {
+            acc[exercise.exercise_card_id] = [];
+          }
+          acc[exercise.exercise_card_id].push(exercise.id);
+        }
+        return acc;
+      }, {} as Record<string, string[]>);
+
+      // Filter cards that are either flagged themselves or contain flagged exercises
+      const favoriteCardIds = new Set<string>();
+
+      // Add flagged cards
+      flaggedCardIds.forEach((cardId) => favoriteCardIds.add(cardId));
+
+      // Add cards that contain flagged exercises
+      Object.entries(exercisesByCard).forEach(([cardId, cardExercises]) => {
+        const hasAnyFlaggedExercise = cardExercises.some((exerciseId) =>
           flaggedExerciseIds.has(exerciseId)
-        ),
-    };
-  });
+        );
+        if (hasAnyFlaggedExercise) {
+          favoriteCardIds.add(cardId);
+        }
+      });
+
+      // Filter exercise cards to only include favorites
+      const favoriteCards = exerciseCards.filter((card) =>
+        favoriteCardIds.has(card.id)
+      );
+
+      if (favoriteCards.length === 0) {
+        return [];
+      }
+
+      // Get completion information for favorite cards
+      const favoriteCardIds_array = Array.from(favoriteCardIds);
+      const completedExercises = await getCompletedExercises(userId);
+      const correctExerciseIds = new Set(
+        completedExercises
+          .filter((ex) => ex.isCorrect && ex.exercise_id !== null)
+          .map((ex) => ex.exercise_id as string)
+      );
+
+      // Calculate completion info and return with flagged status
+      return favoriteCards.map((card) => {
+        const exercisesForCard = exercisesByCard[card.id] || [];
+        const totalExercises = exercisesForCard.length;
+        const completedCount = exercisesForCard.filter((id) =>
+          correctExerciseIds.has(id)
+        ).length;
+
+        return {
+          ...card,
+          total_exercises: totalExercises,
+          completed_exercises: completedCount,
+          is_completed: totalExercises > 0 && completedCount === totalExercises,
+          is_flagged:
+            flaggedCardIds.has(card.id) ||
+            exercisesForCard.some((exerciseId) =>
+              flaggedExerciseIds.has(exerciseId)
+            ),
+        };
+      });
+    },
+    ["getFavoriteExerciseCardsForTopic", userId, topicId],
+    { revalidate: 60, tags: ["exercises", "favorites", `user-${userId}`, `topic-${topicId}`] }
+  )();
 }

@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { signOut } from "next-auth/react";
 import SubscriptionManagement from "./settings-subscription-management";
+import AIBudgetCard from "../ai-budget-card";
 
 // Create a standalone LogoutButton component
 export function LogoutButton() {
@@ -288,6 +289,9 @@ export default function SettingsClient({
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Budget Section */}
+      <AIBudgetCard />
 
       {/* Subscription Management Section */}
       <SubscriptionManagement userId={id} />

@@ -1,4 +1,5 @@
 import { eq, and, desc } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
 import { db } from "@/db/drizzle";
 import { uploadedFilesTable } from "@/db/schema";
 import { FileType, ProcessingStatus, UploadedFile } from "@/types/uploadedFilesTypes";
@@ -60,14 +61,20 @@ export async function updateFileMetadata(
 /**
  * Get all files for a user
  */
-export async function getUserFiles(userId: string): Promise<UploadedFile[]> {
-  const files = await db
-    .select()
-    .from(uploadedFilesTable)
-    .where(eq(uploadedFilesTable.user_id, userId))
-    .orderBy(desc(uploadedFilesTable.upload_timestamp));
-    
-  return files as UploadedFile[];
+export function getUserFiles(userId: string): Promise<UploadedFile[]> {
+  return unstable_cache(
+    async (): Promise<UploadedFile[]> => {
+      const files = await db
+        .select()
+        .from(uploadedFilesTable)
+        .where(eq(uploadedFilesTable.user_id, userId))
+        .orderBy(desc(uploadedFilesTable.upload_timestamp));
+        
+      return files as UploadedFile[];
+    },
+    ["getUserFiles", userId],
+    { revalidate: 60, tags: ["uploaded-files", `user-${userId}`] }
+  )();
 }
 
 /**
@@ -149,7 +156,7 @@ export async function searchUserFilesByText(
 /**
  * Get files count by status
  */
-export async function getFileStatusCounts(userId: string): Promise<{
+export function getFileStatusCounts(userId: string): Promise<{
   pending: number;
   parsing: number;
   chunking: number;
@@ -159,46 +166,58 @@ export async function getFileStatusCounts(userId: string): Promise<{
   failed: number;
   total: number;
 }> {
-  const files = await getUserFiles(userId);
-  
-  const counts = {
-    pending: 0,
-    parsing: 0,
-    chunking: 0,
-    embedding: 0,
-    metadata: 0,
-    completed: 0,
-    failed: 0,
-    total: files.length,
-  };
-  
-  files.forEach(file => {
-    if (file.processing_status in counts) {
-      (counts as any)[file.processing_status]++;
-    }
-  });
-  
-  return counts;
+  return unstable_cache(
+    async () => {
+      const files = await getUserFiles(userId);
+      
+      const counts = {
+        pending: 0,
+        parsing: 0,
+        chunking: 0,
+        embedding: 0,
+        metadata: 0,
+        completed: 0,
+        failed: 0,
+        total: files.length,
+      };
+      
+      files.forEach(file => {
+        if (file.processing_status in counts) {
+          (counts as any)[file.processing_status]++;
+        }
+      });
+      
+      return counts;
+    },
+    ["getFileStatusCounts", userId],
+    { revalidate: 60, tags: ["file-status", `user-${userId}`] }
+  )();
 }
 
 /**
  * Get recently uploaded files (last 7 days)
  */
-export async function getRecentFiles(userId: string, days: number = 7): Promise<UploadedFile[]> {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - days);
-  
-  const files = await db
-    .select()
-    .from(uploadedFilesTable)
-    .where(and(
-      eq(uploadedFilesTable.user_id, userId),
-      // Note: You might need to adjust the date comparison based on your database setup
-    ))
-    .orderBy(desc(uploadedFilesTable.upload_timestamp));
-    
-  // Filter by date in application (consider moving to SQL for performance)
-  return files.filter(file => 
-    new Date(file.upload_timestamp) >= cutoffDate
-  ) as UploadedFile[];
+export function getRecentFiles(userId: string, days: number = 7): Promise<UploadedFile[]> {
+  return unstable_cache(
+    async (): Promise<UploadedFile[]> => {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      
+      const files = await db
+        .select()
+        .from(uploadedFilesTable)
+        .where(and(
+          eq(uploadedFilesTable.user_id, userId),
+          // Note: You might need to adjust the date comparison based on your database setup
+        ))
+        .orderBy(desc(uploadedFilesTable.upload_timestamp));
+        
+      // Filter by date in application (consider moving to SQL for performance)
+      return files.filter(file => 
+        new Date(file.upload_timestamp) >= cutoffDate
+      ) as UploadedFile[];
+    },
+    ["getRecentFiles", userId, String(days)],
+    { revalidate: 30, tags: ["recent-files", `user-${userId}`] }
+  )();
 }

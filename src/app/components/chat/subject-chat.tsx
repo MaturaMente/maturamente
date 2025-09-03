@@ -421,35 +421,35 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                           isUser ? "flex-row-reverse" : ""
                         }`}
                       >
+                                              <div
+                        className={`group relative flex flex-col ${
+                          isUser ? "items-end" : "items-start"
+                        }`}
+                      >
+                        {/* Display selected documents for user messages */}
+                        {isUser &&
+                          (message as any)?.metadata?.selectedNoteSlugs &&
+                          (message as any).metadata.selectedNoteSlugs
+                            .length > 0 && (
+                            <MessageDocumentsDisplay
+                              message={message}
+                              notes={notes}
+                              subjects={
+                                currentSubjectData
+                                  ? [currentSubjectData]
+                                  : []
+                              }
+                              uploadedFiles={{}}
+                              maxInitialDisplay={1}
+                            />
+                          )}
                         <div
-                          className={`group relative flex flex-col ${
-                            isUser ? "items-end" : "items-start"
+                          className={`${
+                            isUser
+                              ? "p-4 rounded-2xl bg-[var(--subject-color)]/95 dark:text-foreground text-primary-foreground"
+                              : "px-4 bg-none text-foreground w-full"
                           }`}
                         >
-                          <div
-                            className={`${
-                              isUser
-                                ? "p-4 rounded-2xl bg-[var(--subject-color)]/95 dark:text-foreground text-primary-foreground"
-                                : "px-4 bg-none text-foreground w-full"
-                            }`}
-                          >
-                            {/* Display selected documents for user messages */}
-                            {isUser &&
-                              (message as any)?.metadata?.selectedNoteSlugs &&
-                              (message as any).metadata.selectedNoteSlugs
-                                .length > 0 && (
-                                <MessageDocumentsDisplay
-                                  message={message}
-                                  notes={notes}
-                                  subjects={
-                                    currentSubjectData
-                                      ? [currentSubjectData]
-                                      : []
-                                  }
-                                  uploadedFiles={{}}
-                                  maxInitialDisplay={1}
-                                />
-                              )}
 
                             {editingMessageId === message.id && isUser ? (
                               <div className="w-full">

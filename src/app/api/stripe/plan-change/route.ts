@@ -4,6 +4,7 @@ import {
   calculateCustomPrice,
   getStripeLineItemsForCustom,
 } from "@/lib/stripe";
+import { calculateMonthlyAIBudget, addBudgetToCurrentPeriod } from "@/utils/ai-budget/budget-management";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/drizzle";
 import {
@@ -163,12 +164,13 @@ export async function POST(request: NextRequest) {
 
       // Update our local database
       if (changeType === "upgrade") {
-        // For upgrades, update immediately
+        // For upgrades, update immediately and add additional budget to current period
         await updateLocalSubscription(
           session.user.id,
           immediateTargetSubjectIds,
           newSubjectCount,
-          newPrice
+          newPrice,
+          currentPrice // Pass current price to calculate additional budget
         );
 
         // If there is a pending downgrade, ensure it is UPDATED to keep newly added subjects
@@ -263,17 +265,34 @@ async function updateLocalSubscription(
   userId: string,
   newSubjectIds: string[],
   newSubjectCount: number,
-  newPrice: number
+  newPrice: number,
+  currentPrice?: number // Optional current price for calculating additional budget
 ) {
+  // Calculate new AI budget
+  const newAiBudget = calculateMonthlyAIBudget(newPrice);
+
   // Update our local database
   await db
     .update(subscriptions)
     .set({
       subject_count: newSubjectCount,
       custom_price: newPrice.toString(),
+      monthly_ai_budget: newAiBudget.toFixed(4),
       updated_at: new Date(),
     })
     .where(eq(subscriptions.user_id, userId));
+
+  // For upgrades, add additional budget to current period
+  if (currentPrice && newPrice > currentPrice) {
+    const additionalBudgetEur = (newPrice - currentPrice) * 0.25;
+    console.log("Adding additional budget for upgrade:", {
+      currentPrice,
+      newPrice,
+      additionalBudgetEur
+    });
+    
+    await addBudgetToCurrentPeriod(userId, additionalBudgetEur);
+  }
 
   // Update user's subject access
   await db
@@ -360,13 +379,23 @@ async function storePendingDowngrade(
     console.log("Created new pending subscription change for downgrade");
   }
 
-  // Update subscription record with new pricing info for Stripe
+  // For downgrades, DON'T change current period budget
+  // Update subscription record with new pricing info for Stripe (but keep current monthly_ai_budget for this period)
   await db
     .update(subscriptions)
     .set({
       subject_count: newSubjectCount,
       custom_price: newPrice.toString(),
+      // Note: monthly_ai_budget stays the same for current period
+      // It will be updated when the pending change is processed at period end
       updated_at: new Date(),
     })
     .where(eq(subscriptions.user_id, userId));
+
+  console.log("Downgrade scheduled - current period budget unchanged:", {
+    userId,
+    newSubjectCount,
+    newPrice,
+    message: "AI budget will be reduced starting next billing period"
+  });
 }

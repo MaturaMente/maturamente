@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, SUBSCRIPTION_PLANS, calculateCustomPrice } from "@/lib/stripe";
+import { calculateMonthlyAIBudget } from "@/utils/ai-budget/budget-management";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/drizzle";
 import { subscriptions, relationSubjectsUserTable } from "@/db/schema";
@@ -134,6 +135,9 @@ export async function POST(request: NextRequest) {
       .where(eq(subscriptions.user_id, session.user.id))
       .limit(1);
 
+    // Calculate AI budget (25% of subscription price)
+    const aiBudget = calculateMonthlyAIBudget(actualCustomPrice || 0);
+
     if (existingSubscription.length > 0) {
       // Update existing subscription
       await db
@@ -145,6 +149,7 @@ export async function POST(request: NextRequest) {
           status: stripeSubscription.status,
           subject_count: actualMateriaLimit,
           custom_price: actualCustomPrice?.toString(),
+          monthly_ai_budget: aiBudget.toFixed(4),
           current_period_start: safeTimestamp(timestamps.start),
           current_period_end: safeTimestamp(timestamps.end),
           cancel_at_period_end:
@@ -162,6 +167,7 @@ export async function POST(request: NextRequest) {
         status: stripeSubscription.status,
         subject_count: actualMateriaLimit,
         custom_price: actualCustomPrice?.toString(),
+        monthly_ai_budget: aiBudget.toFixed(4),
         current_period_start: safeTimestamp(timestamps.start),
         current_period_end: safeTimestamp(timestamps.end),
         cancel_at_period_end:

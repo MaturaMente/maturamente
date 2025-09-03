@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
 import { FileUploadProgress, FileProcessingResult, UploadedFile } from "@/types/uploadedFilesTypes";
 import { toast } from "sonner";
+import { SubscriptionPopup, useSubscriptionPopup } from "@/app/components/subscription/subscription-popup";
 
 interface FileUploadButtonProps {
   onUploadStart?: (file: UploadedFile) => void;
@@ -15,6 +16,7 @@ interface FileUploadButtonProps {
   onUploadError?: (error: string) => void;
   disabled?: boolean;
   className?: string;
+  onSubscriptionRequired?: () => void;
 }
 
 const SUPPORTED_TYPES = {
@@ -30,6 +32,7 @@ export default function FileUploadButton({
   onUploadStart,
   onUploadSuccess,
   onUploadError,
+  onSubscriptionRequired,
   disabled = false,
   className = ""
 }: FileUploadButtonProps) {
@@ -37,6 +40,7 @@ export default function FileUploadButton({
   const [uploadProgress, setUploadProgress] = useState<FileUploadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isSubscriptionPopupOpen, showSubscriptionPopup, hideSubscriptionPopup } = useSubscriptionPopup();
 
   const resetState = useCallback(() => {
     setIsUploading(false);
@@ -176,15 +180,25 @@ export default function FileUploadButton({
       formData.append("file", file);
 
       // Start the actual upload request
-      const uploadPromise = fetch("/api/files/upload", {
+      const response = await fetch("/api/files/upload", {
         method: "POST",
         body: formData,
       });
 
-      const response = await uploadPromise;
-
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
+        
+        // Check if subscription is required
+        if (response.status === 403 && errorData.requiresSubscription) {
+          console.log("🔒 Subscription required for file upload - showing popup");
+          setIsUploading(false);
+          setUploadProgress(null);
+          setError(null);
+          showSubscriptionPopup();
+          onSubscriptionRequired?.();
+          return;
+        }
+        
         throw new Error(errorData.error || "Errore durante il caricamento");
       }
 
@@ -325,37 +339,45 @@ export default function FileUploadButton({
   }
 
   return (
-    <div className={`space-y-3 ${className}`}>
-      <Input
-        ref={fileInputRef}
-        type="file"
-        accept={Object.values(SUPPORTED_TYPES).join(",")}
-        onChange={handleFileSelect}
-        className="hidden"
-        disabled={disabled}
-      />
-      
-      <Button
-        onClick={handleClick}
-        disabled={disabled || isUploading}
-        className="w-full"
-        variant="outline"
-      >
-        <Upload className="h-4 w-4 mr-2" />
-        Carica Documento
-      </Button>
-      
-      <div className="text-xs text-muted-foreground text-center space-y-1">
-        <div>Formati supportati: PDF, DOCX, TXT, MD</div>
-        <div>Dimensione massima: 50MB</div>
+    <>
+      <div className={`space-y-3 ${className}`}>
+        <Input
+          ref={fileInputRef}
+          type="file"
+          accept={Object.values(SUPPORTED_TYPES).join(",")}
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={disabled}
+        />
+        
+        <Button
+          onClick={handleClick}
+          disabled={disabled || isUploading}
+          className="w-full"
+          variant="outline"
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          Carica Documento
+        </Button>
+        
+        <div className="text-xs text-muted-foreground text-center space-y-1">
+          <div>Formati supportati: PDF, DOCX, TXT, MD</div>
+          <div>Dimensione massima: 50MB</div>
+        </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
       </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-    </div>
+      {/* Subscription popup */}
+      <SubscriptionPopup 
+        isOpen={isSubscriptionPopupOpen} 
+        onClose={hideSubscriptionPopup}
+      />
+    </>
   );
 }

@@ -1,5 +1,5 @@
 import { deepseek } from "@ai-sdk/deepseek";
-import { convertToModelMessages, streamText, UIMessage } from "ai";
+import { convertToModelMessages, streamText, UIMessage, consumeStream } from "ai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { PineconeStore } from "@langchain/pinecone";
 import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf";
@@ -7,11 +7,29 @@ import {
   balancedSimilaritySearch,
   formatDistributionLog,
 } from "@/utils/chat/balanced-rag-retrieval";
+import { auth } from "@/lib/auth";
+import { checkBudgetAvailability, recordAIUsage } from "@/utils/ai-budget/budget-management";
 
 // Allow longer streaming; remove 30s cap
 export const maxDuration = 300;
 
 export async function POST(req: Request) {
+  // Get user session
+  const session = await auth();
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check AI budget availability before processing
+  const hasBudget = await checkBudgetAvailability(userId);
+  if (!hasBudget) {
+    return Response.json({ 
+      error: "Budget AI esaurito per questo mese. Il tuo budget si rinnoverà con il prossimo periodo di fatturazione." 
+    }, { status: 429 });
+  }
+
   const body = (await req.json()) as {
     messages: UIMessage[];
     data?: any;
@@ -176,7 +194,27 @@ export async function POST(req: Request) {
     model: deepseek("deepseek-chat"),
     system: systemPrompt,
     messages: convertToModelMessages(recentMessages),
+    onFinish: async (finishResult) => {
+      // Record AI usage after completion
+      if (finishResult.usage && userId) {
+        // DeepSeek uses inputTokens/outputTokens instead of promptTokens/completionTokens
+        const inputTokens = finishResult.usage.inputTokens || 0;
+        const outputTokens = finishResult.usage.outputTokens || 0;
+        const cachedTokens = finishResult.usage.cachedInputTokens || 0;
+        
+        await recordAIUsage(
+          userId,
+          inputTokens,
+          outputTokens,
+          'subject',
+          'deepseek-chat',
+          cachedTokens
+        );
+      }
+    },
   });
 
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({
+    consumeSseStream: consumeStream,
+  });
 }

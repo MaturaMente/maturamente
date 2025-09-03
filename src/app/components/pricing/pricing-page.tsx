@@ -278,7 +278,7 @@ export function PricingPage({ subjects }: PricingPageProps) {
           <div className="flex flex-wrap justify-center gap-8 text-sm">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary"></div>
-              <span className="text-foreground font-medium">€4.99</span>
+              <span className="text-foreground font-medium">€5,99</span>
               <span className="text-muted-foreground">prima materia</span>
             </div>
             <div className="flex items-center gap-2">
@@ -339,7 +339,7 @@ export function PricingPage({ subjects }: PricingPageProps) {
                             <span className="text-sm text-muted-foreground">
                               Prima materia
                             </span>
-                            <span className="font-medium">€4.99</span>
+                            <span className="font-medium">€5,99</span>
                           </div>
 
                           {selectedSubjects.length > 1 && (

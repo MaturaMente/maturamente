@@ -18,6 +18,8 @@ import {
   flaggedSimulationsTable,
   flaggedNotesTable,
   uploadedFilesTable,
+  aiUsageTable,
+  aiBudgetBalanceTable,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -98,6 +100,18 @@ export async function DELETE(request: NextRequest) {
         .delete(pendingSubscriptionChanges)
         .where(eq(pendingSubscriptionChanges.user_id, user.id));
       console.log("Deleted pending subscription changes");
+
+      // Delete AI usage records (must be before subscription records)
+      await db
+        .delete(aiUsageTable)
+        .where(eq(aiUsageTable.user_id, user.id));
+      console.log("Deleted AI usage records");
+
+      // Delete AI budget balance records (must be before subscription records)
+      await db
+        .delete(aiBudgetBalanceTable)
+        .where(eq(aiBudgetBalanceTable.user_id, user.id));
+      console.log("Deleted AI budget balance records");
 
       // Delete subscription records
       await db.delete(subscriptions).where(eq(subscriptions.user_id, user.id));

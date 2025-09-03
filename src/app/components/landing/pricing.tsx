@@ -48,9 +48,9 @@ export default function Pricing({
       name: "Premium personalizzato",
       icon: <User className="size-4" />,
       description: "Per chi vuole appunti e materie complete",
-      price: 4.99,
+      price: 5.99,
       priceNote:
-        "4,99€ per la prima materia, 2,49€ per ogni materia aggiuntiva",
+        "5,99€ per la prima materia, 2,49€ per ogni materia aggiuntiva",
       cta: {
         variant: "default",
         label: "Passa al Premium",

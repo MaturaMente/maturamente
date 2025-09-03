@@ -7,6 +7,7 @@ export interface SubscriptionData {
   status: string;
   subject_count: number; // Number of subjects in the subscription (required)
   custom_price: string; // Decimal stored as string (required)
+  monthly_ai_budget: string; // Monthly AI budget in EUR (25% of custom_price)
   current_period_start: Date | null;
   current_period_end: Date | null;
   cancel_at_period_end: boolean | null;

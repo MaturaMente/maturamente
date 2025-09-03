@@ -12,7 +12,7 @@ export function SubscriptionCard({ subscriptionData }: SubscriptionCardProps) {
   if (!subscriptionData.hasActiveSubscription) {
     return (
       <Link href="/pricing">
-        <Button className="ml-0 md:ml-2 font-bold flex items-center gap-2 cursor-pointer">
+        <Button className="ml-0 md:ml-2 font-bold text-white flex items-center gap-2 cursor-pointer">
           Attiva un piano
           <Crown className="h-4 w-4 text-white" />
         </Button>

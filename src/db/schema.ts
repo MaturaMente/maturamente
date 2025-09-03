@@ -27,6 +27,7 @@ export const subscriptions = pgTable("subscriptions", {
   status: text("status").notNull(), // active, canceled, past_due, etc.
   subject_count: integer("subject_count").notNull(), // Number of subjects in the subscription
   custom_price: decimal("custom_price", { precision: 10, scale: 2 }).notNull(), // Total price for the subscription
+  monthly_ai_budget: decimal("monthly_ai_budget", { precision: 10, scale: 4 }).notNull().default("0"), // Monthly AI budget in EUR (custom_price * 0.25)
   current_period_start: timestamp("current_period_start"),
   current_period_end: timestamp("current_period_end"),
   cancel_at_period_end: boolean("cancel_at_period_end").default(false),
@@ -373,4 +374,33 @@ export const uploadedFilesTable = pgTable("uploaded_files", {
   upload_timestamp: timestamp("upload_timestamp").notNull().defaultNow(),
   processing_status: text("processing_status").notNull().default("pending"), // pending, processing, completed, failed
   created_at: timestamp("created_at").notNull().defaultNow(),
+});
+
+// AI Budget and Usage Tracking Tables
+export const aiUsageTable = pgTable("ai_usage", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subscription_id: uuid("subscription_id").notNull().references(() => subscriptions.id, { onDelete: "cascade" }),
+  input_tokens: integer("input_tokens").notNull().default(0),
+  output_tokens: integer("output_tokens").notNull().default(0),
+  total_tokens: integer("total_tokens").notNull().default(0),
+  input_cost_usd: decimal("input_cost_usd", { precision: 10, scale: 8 }).notNull().default("0"), // Cost in USD for input tokens
+  output_cost_usd: decimal("output_cost_usd", { precision: 10, scale: 8 }).notNull().default("0"), // Cost in USD for output tokens
+  total_cost_usd: decimal("total_cost_usd", { precision: 10, scale: 8 }).notNull().default("0"), // Total cost in USD
+  chat_type: text("chat_type").notNull(), // 'pdf', 'subject', 'dashboard'
+  model_used: text("model_used").notNull().default("deepseek-chat"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const aiBudgetBalanceTable = pgTable("ai_budget_balance", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subscription_id: uuid("subscription_id").notNull().references(() => subscriptions.id, { onDelete: "cascade" }),
+  period_start: timestamp("period_start").notNull(),
+  period_end: timestamp("period_end").notNull(),
+  allocated_budget_eur: decimal("allocated_budget_eur", { precision: 10, scale: 4 }).notNull(), // Monthly budget in EUR
+  used_budget_usd: decimal("used_budget_usd", { precision: 10, scale: 8 }).notNull().default("0"), // Used budget in USD
+  remaining_budget_eur: decimal("remaining_budget_eur", { precision: 10, scale: 4 }).notNull(), // Remaining budget in EUR
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
 });

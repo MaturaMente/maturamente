@@ -55,7 +55,7 @@ export function SubjectsGrid({ subjects, error }: SubjectsGridProps) {
             Non hai ancora aggiunto nessuna materia al tuo profilo. Inizia
             aggiungendo le tue prime materie di studio.
           </p>
-          <Button className="gap-2">
+          <Button className="gap-2 text-white">
             <Plus className="h-4 w-4" />
             Aggiungi materia
           </Button>
