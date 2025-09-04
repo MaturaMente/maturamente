@@ -9,6 +9,7 @@ import {
 } from "@/utils/chat/balanced-rag-retrieval";
 import { auth } from "@/lib/auth";
 import { checkBudgetAvailability, recordAIUsage } from "@/utils/ai-budget/budget-management";
+import { getSubscriptionStatus } from "@/utils/subscription-utils";
 
 // Allow longer streaming; remove 30s cap
 export const maxDuration = 300;
@@ -25,8 +26,15 @@ export async function POST(req: Request) {
   // Check AI budget availability before processing
   const hasBudget = await checkBudgetAvailability(userId);
   if (!hasBudget) {
+    const sub = await getSubscriptionStatus(userId);
+    const cta = sub?.isFreeTrial ? {
+      title: "Prova gratuita terminata",
+      message: "Hai esaurito il credito AI della prova gratuita. Passa al piano premium per continuare.",
+      upgradeUrl: "/pricing"
+    } : undefined;
     return Response.json({ 
-      error: "Budget AI esaurito per questo mese. Il tuo budget si rinnoverà con il prossimo periodo di fatturazione." 
+      error: "Budget AI esaurito per questo mese. Il tuo budget si rinnoverà con il prossimo periodo di fatturazione.",
+      cta
     }, { status: 429 });
   }
 

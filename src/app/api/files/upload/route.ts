@@ -19,11 +19,13 @@ export async function POST(req: NextRequest) {
 
     // Check subscription status
     const subscriptionStatus = await getSubscriptionStatus(session.user.id);
-    if (!subscriptionStatus?.isActive) {
+    if (!subscriptionStatus?.isActive || subscriptionStatus?.isFreeTrial) {
       return NextResponse.json(
         { 
           success: false, 
-          error: "Abbonamento premium richiesto",
+          error: subscriptionStatus?.isFreeTrial
+            ? "Il caricamento dei file non è disponibile nella prova gratuita"
+            : "Abbonamento premium richiesto",
           requiresSubscription: true
         },
         { status: 403 }

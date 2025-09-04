@@ -1,6 +1,6 @@
 "use client";
 
-import { Star, FileText } from "lucide-react";
+import { Star, FileText, Lock } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,8 @@ interface NoteCardProps {
   onToggleFavorite?: (noteId: string, isFavorite: boolean) => void;
   isLoading?: boolean;
   previewUrl?: string;
+  isPremium?: boolean;
+  isFreeTrial?: boolean;
 }
 
 export function NoteCard({
@@ -19,6 +21,8 @@ export function NoteCard({
   onToggleFavorite,
   isLoading,
   previewUrl,
+  isPremium = false,
+  isFreeTrial = false,
 }: NoteCardProps) {
   const params = useParams();
   const subjectSlug = (params?.["subject-slug"] as string) || "";
@@ -26,10 +30,19 @@ export function NoteCard({
   const handleToggleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Don't allow favoriting premium notes for free trial users
+    if (isFreeTrial && isPremium) {
+      return;
+    }
+    
     if (onToggleFavorite && !isLoading) {
       onToggleFavorite(note.id, !note.is_favorite);
     }
   };
+
+  // Determine if the favorite button should be disabled
+  const isFavoriteDisabled = isFreeTrial && isPremium;
 
   return (
     <Link href={`/${subjectSlug}/${note.slug}`}>
@@ -38,9 +51,17 @@ export function NoteCard({
         <div className="px-5 py-3 flex-1">
           <div className="flex items-start justify-between gap-2 mb-2">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base text-gray-900 dark:text-white line-clamp-1 group-hover:text-[var(--subject-color)] transition-colors">
-                {note.title}
-              </h3>
+              <div className="flex items-start gap-2 mb-1">
+                <h3 className="font-semibold text-base text-gray-900 dark:text-white line-clamp-1 group-hover:text-[var(--subject-color)] transition-colors flex-1">
+                  {note.title}
+                </h3>
+                {isPremium && (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs font-medium flex-shrink-0">
+                    <Lock className="h-3 w-3" />
+                    Premium
+                  </div>
+                )}
+              </div>
               {note.description && (
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
                   {note.description}
@@ -57,10 +78,17 @@ export function NoteCard({
             {/* Favorite Star */}
             <button
               onClick={handleToggleFavorite}
-              disabled={isLoading}
-              className="flex-shrink-0 p-1 rounded-full dark:hover:bg-gray-800 transition-colors"
+              disabled={isLoading || isFavoriteDisabled}
+              className={cn(
+                "flex-shrink-0 p-1 rounded-full transition-colors",
+                isFavoriteDisabled 
+                  ? "cursor-not-allowed opacity-30" 
+                  : "dark:hover:bg-gray-800"
+              )}
               aria-label={
-                note.is_favorite
+                isFavoriteDisabled
+                  ? "Non disponibile per gli appunti Premium"
+                  : note.is_favorite
                   ? "Rimuovi dai preferiti"
                   : "Aggiungi ai preferiti"
               }
@@ -68,7 +96,9 @@ export function NoteCard({
               <Star
                 className={cn(
                   "h-5 w-5 transition-all",
-                  note.is_favorite
+                  isFavoriteDisabled
+                    ? "text-gray-300 dark:text-gray-600"
+                    : note.is_favorite
                     ? "fill-yellow-400 text-yellow-400"
                     : "text-gray-400 hover:text-yellow-400 hover:scale-110"
                 )}

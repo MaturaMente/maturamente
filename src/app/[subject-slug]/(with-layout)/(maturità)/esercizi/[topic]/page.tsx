@@ -18,6 +18,8 @@ import {
 import { db } from "@/db/drizzle";
 import { topicsTable, subjectsTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { isUserOnFreeTrial } from "@/utils/free-trial-check";
+import { FreeTrialCTA } from "@/app/components/shared/free-trial-cta";
 
 interface ExercisesTopicPageProps {
   params: Promise<{
@@ -156,6 +158,18 @@ async function ExercisesTopicContent({
         <h2 className="text-2xl font-bold mb-4">Accesso negato</h2>
         <p>Devi effettuare il login per accedere a questa pagina.</p>
       </div>
+    );
+  }
+
+  // Check if user is on free trial
+  const isFreeTrial = await isUserOnFreeTrial(userId);
+
+  if (isFreeTrial) {
+    return (
+      <FreeTrialCTA 
+        title="Esercizi Maturità - Premium"
+        description="Gli esercizi per la Maturità sono disponibili solo con il piano Premium. Passa al piano completo per accedere a tutti gli esercizi di preparazione."
+      />
     );
   }
 

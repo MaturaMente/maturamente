@@ -50,6 +50,7 @@ export interface ClientSimulationsPageProps {
   subjectColor: string;
   userId: string | null;
   isAuthenticated?: boolean;
+  isFreeTrial?: boolean;
 }
 
 export interface SimulationClientProps {

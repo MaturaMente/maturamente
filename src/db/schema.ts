@@ -28,6 +28,7 @@ export const subscriptions = pgTable("subscriptions", {
   subject_count: integer("subject_count").notNull(), // Number of subjects in the subscription
   custom_price: decimal("custom_price", { precision: 10, scale: 2 }).notNull(), // Total price for the subscription
   monthly_ai_budget: decimal("monthly_ai_budget", { precision: 10, scale: 4 }).notNull().default("0"), // Monthly AI budget in EUR (custom_price * 0.25)
+  is_free_trial: boolean("is_free_trial").notNull().default(false),
   current_period_start: timestamp("current_period_start"),
   current_period_end: timestamp("current_period_end"),
   cancel_at_period_end: boolean("cancel_at_period_end").default(false),
@@ -67,6 +68,7 @@ export const users = pgTable("user", {
   email: text("email").unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
+  active: boolean("active").notNull().default(true),
   created_at: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -337,6 +339,7 @@ export const notesTable = pgTable("notes", {
   subject_id: uuid("subject_id").references(() => subjectsTable.id),
   n_pages: integer("n_pages").notNull().default(1),
   slug: text("slug").notNull(),
+  free_trial: boolean("free_trial").notNull().default(false),
   created_at: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -42,9 +42,11 @@ export async function POST(request: NextRequest) {
       .where(eq(subscriptions.user_id, session.user.id))
       .limit(1);
 
+    // Block only if user has an active premium subscription (not free trial)
     if (
       existingSubscription.length > 0 &&
-      existingSubscription[0].status === "active"
+      existingSubscription[0].status === "active" &&
+      !existingSubscription[0].is_free_trial
     ) {
       return NextResponse.json(
         {

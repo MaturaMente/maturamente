@@ -4,6 +4,7 @@ import { NotesGridClient } from "./notes-grid";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { connection } from "next/server";
+import { isUserOnFreeTrial } from "@/utils/free-trial-check";
 
 interface NotesDataServerProps {
   subjectSlug: string;
@@ -30,12 +31,14 @@ export async function NotesDataServer({ subjectSlug }: NotesDataServerProps) {
     }
 
     const notesData = await getSubjectNotes(subjectSlug, session.user.id);
+    const isFreeTrial = await isUserOnFreeTrial(session.user.id);
 
     return (
       <NotesGridClient
         allNotes={notesData.allNotes}
         favoriteNotes={notesData.favoriteNotes}
         subject={notesData.subject}
+        isFreeTrial={isFreeTrial}
       />
     );
   } catch (error) {

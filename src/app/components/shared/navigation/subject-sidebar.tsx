@@ -34,7 +34,7 @@ import {
 import { useSession, signOut } from "next-auth/react";
 import type { UserSubject } from "@/types/subjectsTypes";
 import { getSubjectIcon } from "@/utils/subject-icons";
-import { getUserSubjects } from "@/utils/subjects-data";
+// import { getUserSubjects } from "@/utils/subjects-data";
 
 // Define the navigation link type
 type NavLink =
@@ -78,6 +78,13 @@ export default function SubjectSidebar({
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userSubjects, setUserSubjects] = useState<UserSubject[]>([]);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    isActive: boolean;
+    isFreeTrial: boolean;
+    subjectCount: number;
+    price: number;
+    daysLeft: number | null;
+  } | null>(null);
 
   // Check subscription status and fetch user subjects on component mount
   useEffect(() => {
@@ -92,6 +99,7 @@ export default function SubjectSidebar({
         if (response.ok) {
           const data = await response.json();
           setHasSubscription(data?.isActive || false);
+          setSubscriptionStatus(data ?? null);
         } else {
           setHasSubscription(false);
         }
@@ -107,8 +115,11 @@ export default function SubjectSidebar({
       if (!user?.id) return;
 
       try {
-        const subjects = await getUserSubjects(user.id);
-        setUserSubjects(subjects);
+        const res = await fetch("/api/user/subjects", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setUserSubjects(Array.isArray(data.subjects) ? data.subjects : []);
+        }
       } catch (error) {
         console.error("Error fetching user subjects:", error);
       }
@@ -141,12 +152,17 @@ export default function SubjectSidebar({
     return pathname === href || pathname.startsWith(href + "/");
   };
 
-  // Mock user subscription data
-  const subscriptionData = {
-    plan: "Free",
-    simulationsLeft: 3,
-    aiCredits: 20,
-  };
+  // Derive a readable plan label from subscription status
+  const planLabel = (() => {
+    if (!subscriptionStatus) return "Ospite";
+    if (subscriptionStatus.isFreeTrial && subscriptionStatus.isActive) {
+      return "Prova gratuita";
+    }
+    if (subscriptionStatus.isActive) {
+      return "Piano Premium"
+    }
+    return "Nessun piano attivo";
+  })();
 
   // Handle navigation with mobile menu closing
   const handleMobileItemClick = (href: string, name: string) => {
@@ -347,7 +363,7 @@ export default function SubjectSidebar({
                 variant="outline"
                 className="px-2 py-1 text-xs bg-foreground/5 border-foreground/10 text-foreground"
               >
-                {subscriptionData.plan}
+                {planLabel}
               </Badge>
 
               {isMobile ? (
@@ -420,7 +436,7 @@ export default function SubjectSidebar({
                     {getUserDisplayName()}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {subscriptionData.plan}
+                    {planLabel}
                   </div>
                 </TooltipContent>
               </Tooltip>

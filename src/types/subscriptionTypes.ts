@@ -8,6 +8,7 @@ export interface SubscriptionData {
   subject_count: number; // Number of subjects in the subscription (required)
   custom_price: string; // Decimal stored as string (required)
   monthly_ai_budget: string; // Monthly AI budget in EUR (25% of custom_price)
+  is_free_trial: boolean; // Whether this subscription is a free trial
   current_period_start: Date | null;
   current_period_end: Date | null;
   cancel_at_period_end: boolean | null;
@@ -23,6 +24,8 @@ export interface SubscriptionStatus {
   currentPeriodEnd: Date | string | null;
   subjectCount: number; // Number of subjects included in the plan
   price: number; // Monthly price for the subscription
+  isFreeTrial: boolean; // If the current plan is the free trial
+  daysLeft: number | null; // Days left in current period (for free trial display)
 }
 
 export interface UserSubjectAccess {

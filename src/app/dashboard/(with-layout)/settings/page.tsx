@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import SettingsClient from "@/app/components/dashboard/settings/settings-layout";
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { getSubscriptionStatus } from "@/utils/subscription-utils";
 
 // Force dynamic rendering for authentication
 export const dynamic = "force-dynamic";
@@ -52,6 +53,10 @@ export default async function SettingsPage() {
     picture: user.image || "",
   };
 
+  // Check if user is on free trial
+  const subscriptionStatus = await getSubscriptionStatus(userData.id);
+  const isFreeTrial = subscriptionStatus?.isFreeTrial === true;
+
   return (
     <div className="container max-w-5xl mx-auto px-4">
       <SettingsClient
@@ -60,6 +65,7 @@ export default async function SettingsPage() {
         givenName={userData.givenName}
         familyName={userData.familyName}
         picture={userData.picture}
+        isFreeTrial={isFreeTrial}
       />
     </div>
   );

@@ -6,6 +6,7 @@ import {
   subjectsTable,
   relationSubjectsUserTable,
   noteStudySessionsTable,
+  subscriptions,
 } from "@/db/schema";
 import { eq, and, desc, countDistinct, sql } from "drizzle-orm";
 import type { Note, SubjectNotesData } from "@/types/notesTypes";
@@ -41,7 +42,16 @@ export const getSubjectNotes = cache(
 
       const subjectData = subject[0];
 
-      // Get all notes for the subject with favorite information
+      // Check if user is on free trial
+      const sub = await db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.user_id, userId))
+        .limit(1);
+      const isFreeTrial =
+        sub.length > 0 && sub[0].is_free_trial === true && sub[0].status === "active";
+
+      // Always include all notes; for free trial users, order free ones first
       const notesWithFavorites = await db
         .select({
           id: notesTable.id,
@@ -52,6 +62,7 @@ export const getSubjectNotes = cache(
           n_pages: notesTable.n_pages,
           slug: notesTable.slug,
           created_at: notesTable.created_at,
+          free_trial: notesTable.free_trial,
           is_favorite: flaggedNotesTable.id,
         })
         .from(notesTable)
@@ -63,7 +74,11 @@ export const getSubjectNotes = cache(
           )
         )
         .where(eq(notesTable.subject_id, subjectData.id))
-        .orderBy(desc(notesTable.created_at));
+        .orderBy(
+          ...(isFreeTrial
+            ? [desc(notesTable.free_trial), desc(notesTable.created_at)]
+            : [desc(notesTable.created_at)])
+        );
 
       // Transform to Note objects
       const allNotes: Note[] = notesWithFavorites.map((row) => ({
@@ -76,6 +91,7 @@ export const getSubjectNotes = cache(
         slug: row.slug || "",
         created_at: row.created_at,
         is_favorite: !!row.is_favorite,
+        free_trial: !!row.free_trial,
       }));
 
       // Filter favorite notes
@@ -362,6 +378,7 @@ export const getAllUserNotes = cache(
           n_pages: notesTable.n_pages,
           slug: notesTable.slug,
           created_at: notesTable.created_at,
+          free_trial: notesTable.free_trial,
           is_favorite: flaggedNotesTable.id,
           subject_name: subjectsTable.name,
           subject_color: subjectsTable.color,
@@ -410,6 +427,7 @@ export const getAllUserNotes = cache(
         slug: row.slug || "",
         created_at: row.created_at,
         is_favorite: !!row.is_favorite,
+        free_trial: !!row.free_trial,
       }));
 
       // Filter favorite notes

@@ -100,7 +100,7 @@ export default function GeneralLayout({ children }: { children: ReactNode }) {
   // Generate navigation links based on current subject slug and maturita field
   // Provide fallback empty array if subjectSlug is not available yet
   const navLinks = subjectSlug
-    ? getNavLinks(subjectSlug, currentSubject?.maturita)
+    ? getNavLinks(subjectSlug, true)
     : [];
 
   // Fetch current subject data when slug changes

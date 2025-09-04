@@ -56,6 +56,7 @@ interface SubscriptionData {
   currentPeriodEnd: Date | string | null;
   subjectCount: number; // Updated field name
   price: number; // Direct price instead of plan object
+  isFreeTrial?: boolean;
 }
 
 interface PendingSubscriptionChange {
@@ -205,6 +206,9 @@ export default function SubscriptionManagement({
   const getStatusBadge = () => {
     if (!subscription) return null;
 
+    if (subscription.isFreeTrial) {
+      return <Badge className="bg-blue-500 text-white">Prova Gratuita</Badge>;
+    }
     if (subscription.isActive && !subscription.willCancelAtPeriodEnd) {
       return (
         <Badge className="bg-green-500 text-white">
@@ -333,7 +337,11 @@ export default function SubscriptionManagement({
             <div>
               <p className="text-sm text-muted-foreground">Prezzo</p>
               <p className="font-medium text-lg">
-                €{subscription.price.toFixed(2)}/mese
+                {subscription.isFreeTrial ? (
+                  <>Prova Gratuita</>
+                ) : (
+                  <>€{subscription.price.toFixed(2)}/mese</>
+                )}
               </p>
             </div>
             <div>
@@ -358,20 +366,22 @@ export default function SubscriptionManagement({
               </p>
             </div>
           </div>
-          <div className="border-t pt-4">
-            <Button
-              onClick={openBillingPortal}
-              disabled={actionLoading}
-              className="w-full gap-2 cursor-pointer"
-              variant="outline"
-            >
-              <ExternalLink className="w-4 h-4" />
-              {actionLoading ? "Apertura..." : "Apri Portale Fatturazione"}
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Gestisci metodi di pagamento, fatture e cronologia
-            </p>
-          </div>
+          {!subscription.isFreeTrial && (
+            <div className="border-t pt-4">
+              <Button
+                onClick={openBillingPortal}
+                disabled={actionLoading}
+                className="w-full gap-2 cursor-pointer"
+                variant="outline"
+              >
+                <ExternalLink className="w-4 h-4" />
+                {actionLoading ? "Apertura..." : "Apri Portale Fatturazione"}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Gestisci metodi di pagamento, fatture e cronologia
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -379,10 +389,7 @@ export default function SubscriptionManagement({
       {/* Pending changes are now managed inline within subject cards (Annulla Rimozione) */}
 
       {/* Subscription Change Section */}
-      {subscription.isActive &&
-        !subscription.willCancelAtPeriodEnd &&
-        userAccess &&
-        subjects.length > 0 && (
+      {subscription.isActive && !subscription.isFreeTrial && !subscription.willCancelAtPeriodEnd && userAccess && subjects.length > 0 && (
           <SubscriptionChange
             currentSubjects={getActiveSubjects()}
             allSubjects={subjects}
@@ -403,6 +410,14 @@ export default function SubscriptionManagement({
         isVisible={!!loadingOverlayMessage}
         message={loadingOverlayMessage}
       />
+      {/* Upgrade CTA for trial */}
+      {subscription.isFreeTrial && (
+        <div className="pt-2">
+          <Button onClick={() => router.push("/pricing")} className="w-full text-white">
+            Passa al piano Premium
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

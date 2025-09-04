@@ -8,6 +8,7 @@ export interface Note {
   created_at: Date;
   slug: string;
   is_favorite?: boolean;
+  free_trial?: boolean; // Whether the note is available in free trial
 }
 
 export interface FavoriteNote {

@@ -177,9 +177,9 @@ export async function DELETE(request: NextRequest) {
         .where(eq(uploadedFilesTable.user_id, user.id));
       console.log("Deleted uploaded files");
 
-      // Finally, delete the user
-      await db.delete(users).where(eq(users.id, user.id));
-      console.log("Deleted user account");
+      // Finally, deactivate the user instead of deleting to prevent free trial abuse
+      await db.update(users).set({ active: false }).where(eq(users.id, user.id));
+      console.log("Deactivated user account");
 
       console.log("Account deletion completed successfully");
     } catch (dbError: any) {
@@ -193,7 +193,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json(
       {
         message:
-          "Account deleted successfully. Your subscription has been canceled and you will not be charged again.",
+          "Account deactivated successfully. Your subscription has been canceled and you will not be charged again.",
         shouldLogout: true,
       },
       { status: 200 }

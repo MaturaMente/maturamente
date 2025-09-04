@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     const aiBudget = calculateMonthlyAIBudget(actualCustomPrice || 0);
 
     if (existingSubscription.length > 0) {
-      // Update existing subscription
+      // Update existing subscription (handles free trial to premium upgrade)
       await db
         .update(subscriptions)
         .set({
@@ -150,6 +150,7 @@ export async function POST(request: NextRequest) {
           subject_count: actualMateriaLimit,
           custom_price: actualCustomPrice?.toString(),
           monthly_ai_budget: aiBudget.toFixed(4),
+          is_free_trial: false, // Upgrade from free trial to premium
           current_period_start: safeTimestamp(timestamps.start),
           current_period_end: safeTimestamp(timestamps.end),
           cancel_at_period_end:
@@ -168,6 +169,7 @@ export async function POST(request: NextRequest) {
         subject_count: actualMateriaLimit,
         custom_price: actualCustomPrice?.toString(),
         monthly_ai_budget: aiBudget.toFixed(4),
+        is_free_trial: false, // This is a premium subscription
         current_period_start: safeTimestamp(timestamps.start),
         current_period_end: safeTimestamp(timestamps.end),
         cancel_at_period_end:

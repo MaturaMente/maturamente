@@ -13,6 +13,8 @@ import {
 import { getAllSimulations } from "@/utils/statistics-data";
 import { Simulation } from "@/types/simulationsTypes";
 import SimulationExperience from "@/app/components/subject/simulations/simulation-experience";
+import { isUserOnFreeTrial } from "@/utils/free-trial-check";
+import { FreeTrialCTA } from "@/app/components/shared/free-trial-cta";
 
 // Force dynamic rendering since we use headers() through getCurrentUserId()
 export const dynamic = "force-dynamic";
@@ -111,6 +113,18 @@ export default async function SimulationPage({ params }: PageProps) {
     // Check authentication and get user ID if available
     const authenticated = await isAuthenticated();
     const userId = authenticated ? await getCurrentUserIdOptional() : null;
+
+    // Check if user is on free trial
+    const isFreeTrial = userId ? await isUserOnFreeTrial(userId) : false;
+    
+    if (isFreeTrial) {
+      return (
+        <FreeTrialCTA 
+          title="Simulazione Maturità - Premium"
+          description="Le simulazioni complete sono disponibili solo con il piano Premium. Passa al piano completo per accedere a tutte le tracce di maturità."
+        />
+      );
+    }
 
     const simulationData = await getSimulation(slug);
 

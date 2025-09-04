@@ -16,6 +16,7 @@ export default function SimulationsLayout({
   favoriteSimulationCards,
   subjectColor,
   isAuthenticated = false,
+  isFreeTrial = false,
 }: ClientSimulationsPageProps) {
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [localSimulationCards, setLocalSimulationCards] = useState(
@@ -213,6 +214,7 @@ export default function SimulationsLayout({
               simulationCards={searchResults}
               onToggleFavorite={toggleFavorite}
               hideYearHeading={true}
+              isFreeTrial={isFreeTrial}
             />
           ) : (
             <div className="text-center p-8 bg-muted/30 rounded-lg">
@@ -240,6 +242,7 @@ export default function SimulationsLayout({
             )}
             onToggleFavorite={toggleFavorite}
             hideYearHeading={true}
+            isFreeTrial={isFreeTrial}
           />
         </div>
       )}
@@ -257,6 +260,7 @@ export default function SimulationsLayout({
                 year={year}
                 simulationCards={filteredCards}
                 onToggleFavorite={toggleFavorite}
+                isFreeTrial={isFreeTrial}
               />
             );
           })
@@ -284,6 +288,7 @@ interface YearSectionProps {
     e: React.MouseEvent
   ) => Promise<void>;
   hideYearHeading?: boolean;
+  isFreeTrial?: boolean;
 }
 
 function YearSection({
@@ -291,6 +296,7 @@ function YearSection({
   simulationCards,
   onToggleFavorite,
   hideYearHeading = false,
+  isFreeTrial = false,
 }: YearSectionProps) {
   if (simulationCards.length === 0) return null;
 
@@ -308,6 +314,7 @@ function YearSection({
             key={card.id}
             card={card}
             onToggleFavorite={onToggleFavorite}
+            isFreeTrial={isFreeTrial}
           />
         ))}
       </div>

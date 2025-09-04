@@ -49,6 +49,7 @@ interface SettingsClientProps {
   givenName: string;
   familyName: string;
   picture: string;
+  isFreeTrial?: boolean;
 }
 
 export default function SettingsClient({
@@ -57,6 +58,7 @@ export default function SettingsClient({
   givenName,
   familyName,
   picture,
+  isFreeTrial = false,
 }: SettingsClientProps) {
   const router = useRouter();
   const [fullName, setFullName] = useState(`${givenName} ${familyName}`.trim());
@@ -293,10 +295,9 @@ export default function SettingsClient({
       {/* AI Budget Section */}
       <AIBudgetCard />
 
-      {/* Subscription Management Section */}
-      <SubscriptionManagement userId={id} />
+      {/* Subscription Management Section - hidden for free trial users */}
+      <SubscriptionManagement userId={id} />  
 
-      {/* Account Danger Section */}
       <Card className="border-destructive/20 bg-destructive/5">
         <CardHeader className="pb-4 sm:pb-6">
           <CardTitle className="text-destructive">Zona Pericolosa</CardTitle>
@@ -306,6 +307,7 @@ export default function SettingsClient({
         </CardHeader>
         <CardContent className="space-y-6 px-4 sm:px-6 md:pb-6">
           {/* Cancel / Reactivate Subscription */}
+          {!isFreeTrial && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <p className="font-medium">Gestione Abbonamento</p>
@@ -361,6 +363,7 @@ export default function SettingsClient({
               </Button>
             ) : null}
           </div>
+          )}
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">

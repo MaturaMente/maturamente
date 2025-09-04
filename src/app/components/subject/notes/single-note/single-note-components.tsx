@@ -6,6 +6,8 @@ import { MessageCircle, AlertCircle } from "lucide-react";
 import type { Note } from "@/types/notesTypes";
 import { LoadingSpinner } from "@/app/components/shared/loading/skeletons/loading-spinner";
 import PdfChat from "@/app/components/chat/pdf-chat";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 interface PDFComponentProps {
   note: Note;
@@ -51,8 +53,13 @@ export function PDFComponent({
 
       setSignedUrl(data.signedUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      console.error("Error fetching signed URL:", err);
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      setError(errorMessage);
+      
+      // Only log unexpected errors to console, not free trial restrictions
+      if (!/non è disponibile|non.*disponibile|Questa risorsa/.test(errorMessage)) {
+        console.error("Error fetching signed URL:", err);
+      }
     } finally {
       setLoading(false);
     }
@@ -83,19 +90,25 @@ export function PDFComponent({
   }
 
   if (error) {
+    const isTrialRestriction = /non è disponibile|non.*disponibile|Questa risorsa/.test(error);
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="text-center p-8">
           <AlertCircle className="h-8 w-8 mx-auto mb-4 text-destructive" />
           <p className="text-sm text-muted-foreground mb-4">
-            Errore nel caricamento del PDF: {error}
+            {isTrialRestriction
+              ? "Questo contenuto non è disponibile nella prova gratuita."
+              : `Errore nel caricamento del PDF: ${error}`}
           </p>
-          <button
-            onClick={fetchSignedUrl}
-            className="text-sm text-primary hover:underline"
-          >
-            Riprova
-          </button>
+          {isTrialRestriction ? (
+            <Link href="/pricing">
+              <Button className="text-white">Passa al Premium</Button>
+            </Link>
+          ) : (
+            <button onClick={fetchSignedUrl} className="text-sm text-primary hover:underline">
+              Riprova
+            </button>
+          )}
         </div>
       </div>
     );

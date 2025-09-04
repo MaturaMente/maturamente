@@ -34,7 +34,7 @@ export default function Pricing({
       cta: {
         variant: "glow",
         label: "Inizia Gratis",
-        href: "#", // fallback href, not used when ctaOnClick is provided
+        href: "/pricing",
       },
       features: [
         "Accesso a due materie a tua scelta",
@@ -96,13 +96,6 @@ export default function Pricing({
             price={plans[0].price}
             priceNote={plans[0].priceNote}
             cta={plans[0].cta}
-            ctaOnClick={() => {
-              if (session?.user?.id) {
-                router.push("/dashboard");
-                return;
-              }
-              signIn("google", { callbackUrl: "/dashboard" });
-            }}
             features={plans[0].features}
             variant={plans[0].variant}
             className={plans[0].className}
@@ -146,13 +139,6 @@ export default function Pricing({
             price={plans[0].price}
             priceNote={plans[0].priceNote}
             cta={plans[0].cta}
-            ctaOnClick={() => {
-              if (session?.user?.id) {
-                router.push("/dashboard");
-                return;
-              }
-              signIn("google", { callbackUrl: "/dashboard" });
-            }}
             features={plans[0].features}
             variant={plans[0].variant}
             className={plans[0].className}

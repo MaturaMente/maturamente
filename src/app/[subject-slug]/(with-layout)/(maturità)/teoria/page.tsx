@@ -16,6 +16,8 @@ import { getUserCompletionData } from "@/utils/theory";
 import { getUserSubjectBySlug } from "@/utils/subjects-data";
 import { unstable_cache } from "next/cache";
 import type { Metadata } from "next";
+import { isUserOnFreeTrial } from "@/utils/free-trial-check";
+import { FreeTrialCTA } from "@/app/components/shared/free-trial-cta";
 
 // Generate dynamic metadata based on the subject
 export async function generateMetadata({
@@ -145,6 +147,18 @@ async function TheoryPage({
   if (!authenticated) {
     // For unauthenticated users, redirect to the first topic
     redirect(`/${subjectSlug}/teoria/${allTopics[0].slug}`);
+  }
+
+  // Check if user is on free trial first
+  const isFreeTrial = await isUserOnFreeTrial();
+  
+  if (isFreeTrial) {
+    return (
+      <FreeTrialCTA 
+        title="Teoria Maturità - Premium"
+        description="La sezione Teoria per la Maturità è disponibile solo con il piano Premium. Passa al piano completo per accedere a tutti gli argomenti di teoria."
+      />
+    );
   }
 
   // Get user from headers (set by middleware) - only for authenticated users

@@ -18,12 +18,14 @@ interface NotesGridClientProps {
   allNotes: Note[];
   favoriteNotes: Note[];
   subject: SubjectInfo;
+  isFreeTrial?: boolean;
 }
 
 export function NotesGridClient({
   allNotes: initialAllNotes,
   favoriteNotes: initialFavoriteNotes,
   subject,
+  isFreeTrial = false,
 }: NotesGridClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [allNotes, setAllNotes] = useState(initialAllNotes);
@@ -135,6 +137,18 @@ export function NotesGridClient({
     );
   }, [favoriteNotes, deferredSearchQuery]);
 
+  // Separate notes by free trial availability if user is on free trial
+  const { freeTrialNotes, premiumNotes } = useMemo(() => {
+    if (!isFreeTrial || deferredSearchQuery.trim()) {
+      return { freeTrialNotes: [], premiumNotes: filteredAllNotes };
+    }
+
+    const freeTrialNotes = filteredAllNotes.filter((note) => note.free_trial);
+    const premiumNotes = filteredAllNotes.filter((note) => !note.free_trial);
+
+    return { freeTrialNotes, premiumNotes };
+  }, [filteredAllNotes, isFreeTrial, deferredSearchQuery]);
+
   const hasSearchResults = filteredAllNotes.length > 0;
   const hasFavoriteResults = filteredFavoriteNotes.length > 0;
   const isSearching = deferredSearchQuery.trim().length > 0;
@@ -184,51 +198,126 @@ export function NotesGridClient({
                   onToggleFavorite={handleToggleFavorite}
                   isLoading={isTogglingFavorite}
                   previewUrl={previewUrls[note.id]}
+                  isFreeTrial={isFreeTrial}
+                  isPremium={isFreeTrial && !note.free_trial}
                 />
               ))}
             </div>
           </section>
         )}
 
-      {/* All Notes Section */}
-      <section className="space-y-4 w-full">
-        <div className="flex items-center gap-2 w-full border-b border-muted">
-          <h2 className="md:text-3xl text-2xl font-semibold pb-2 text-foreground">
-            Tutti gli appunti{" "}
-            <span className="text-xl text-muted-foreground">
-              ({filteredAllNotes.length})
-            </span>
-          </h2>
-        </div>
+      {/* Notes Sections - separated for free trial users */}
+      {isFreeTrial && !isSearching ? (
+        <>
+          {/* Free Trial Notes Section */}
+          {freeTrialNotes.length > 0 && (
+            <section className="space-y-4 w-full">
+              <div className="flex items-center gap-2 w-full border-b border-muted">
+                <h2 className="md:text-3xl text-2xl font-semibold pb-2 text-foreground">
+                  I tuoi appunti{" "}
+                  <span className="text-xl text-muted-foreground">
+                    ({freeTrialNotes.length})
+                  </span>
+                </h2>
+              </div>
 
-        {hasSearchResults ? (
-          <div className="flex flex-col gap-2">
-            {filteredAllNotes.map((note) => (
-              <NoteRow
-                key={note.id}
-                note={note}
-                onToggleFavorite={handleToggleFavorite}
-                isLoading={isTogglingFavorite}
-                previewUrl={previewUrls[note.id]}
-              />
-            ))}
+              <div className="flex flex-col gap-2">
+                {freeTrialNotes.map((note) => (
+                  <NoteRow
+                    key={note.id}
+                    note={note}
+                    onToggleFavorite={handleToggleFavorite}
+                    isLoading={isTogglingFavorite}
+                    previewUrl={previewUrls[note.id]}
+                    isFreeTrial={isFreeTrial}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Premium Notes Section */}
+          {premiumNotes.length > 0 && (
+            <section className="space-y-4 w-full">
+              <div className="flex items-center gap-2 w-full border-b border-muted">
+                <h2 className="md:text-3xl text-2xl font-semibold pb-2 text-foreground">
+                  Appunti Premium{" "}
+                  <span className="text-xl text-muted-foreground">
+                    ({premiumNotes.length})
+                  </span>
+                </h2>
+              </div>
+
+              <div className="flex flex-col gap-2 opacity-50">
+                {premiumNotes.map((note) => (
+                  <NoteRow
+                    key={note.id}
+                    note={note}
+                    onToggleFavorite={handleToggleFavorite}
+                    isLoading={isTogglingFavorite}
+                    previewUrl={previewUrls[note.id]}
+                    isPremium={true}
+                    isFreeTrial={isFreeTrial}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* No notes available message */}
+          {freeTrialNotes.length === 0 && premiumNotes.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-base font-medium mb-1">Nessun appunto disponibile</p>
+              <p className="text-sm">
+                Gli appunti appariranno qui quando saranno disponibili
+              </p>
+            </div>
+          )}
+        </>
+      ) : (
+        /* Regular All Notes Section for non-free trial users or when searching */
+        <section className="space-y-4 w-full">
+          <div className="flex items-center gap-2 w-full border-b border-muted">
+            <h2 className="md:text-3xl text-2xl font-semibold pb-2 text-foreground">
+              Tutti gli appunti{" "}
+              <span className="text-xl text-muted-foreground">
+                ({filteredAllNotes.length})
+              </span>
+            </h2>
           </div>
-        ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-base font-medium mb-1">
-              {isSearching
-                ? "Nessun appunto trovato"
-                : "Nessun appunto disponibile"}
-            </p>
-            <p className="text-sm">
-              {isSearching
-                ? "Prova con termini di ricerca diversi"
-                : "Gli appunti appariranno qui quando saranno disponibili"}
-            </p>
-          </div>
-        )}
-      </section>
+
+          {hasSearchResults ? (
+            <div className="flex flex-col gap-2">
+              {filteredAllNotes.map((note) => (
+                <NoteRow
+                  key={note.id}
+                  note={note}
+                  onToggleFavorite={handleToggleFavorite}
+                  isLoading={isTogglingFavorite}
+                  previewUrl={previewUrls[note.id]}
+                  isFreeTrial={isFreeTrial}
+                  isPremium={isFreeTrial && !note.free_trial}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-base font-medium mb-1">
+                {isSearching
+                  ? "Nessun appunto trovato"
+                  : "Nessun appunto disponibile"}
+              </p>
+              <p className="text-sm">
+                {isSearching
+                  ? "Prova con termini di ricerca diversi"
+                  : "Gli appunti appariranno qui quando saranno disponibili"}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Search state indicator */}
       {searchQuery !== deferredSearchQuery && (

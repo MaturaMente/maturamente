@@ -6,6 +6,8 @@ import {
   relationSubjectsUserTable,
   notesTable,
 } from "@/db/schema";
+import { subscriptions } from "@/db/schema";
+import { eq as equals } from "drizzle-orm";
 import { eq, count, and } from "drizzle-orm";
 import type { UserSubject } from "@/types/subjectsTypes";
 
@@ -109,8 +111,30 @@ export function getUserSubjectBySlug(
             relationSubjectsUserTable.created_at
           )
           .limit(1);
+        let result = userSubject.length > 0 ? (userSubject[0] as UserSubject) : null;
 
-        return userSubject.length > 0 ? (userSubject[0] as UserSubject) : null;
+        // If free trial is active, ensure maturità is disabled at source to gate pages too
+        if (result) {
+          const sub = await db
+            .select()
+            .from(subscriptions)
+            .where(equals(subscriptions.user_id, userId))
+            .limit(1);
+          const isFreeTrial = (() => {
+            if (!(sub.length > 0)) return false;
+            const s = sub[0] as any;
+            if (!s.is_free_trial || s.status !== "active") return false;
+            const now = new Date();
+            const periodEnd = s.current_period_end as Date | null;
+            if (periodEnd && now > periodEnd) return false;
+            return true;
+          })();
+          if (isFreeTrial) {
+            result = { ...result, maturita: false } as UserSubject;
+          }
+        }
+
+        return result;
       } catch (error) {
         console.error("Error fetching user subject by slug:", error);
         return null;

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, BookOpen } from "lucide-react";
 import type { UserSubject } from "@/types/subjectsTypes";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 
 interface SubjectsGridProps {
   subjects: UserSubject[];
@@ -14,11 +15,26 @@ interface SubjectsGridProps {
 
 export function SubjectsGrid({ subjects, error }: SubjectsGridProps) {
   const [mounted, setMounted] = useState(false);
+  const { data: session } = useSession();
+  const [isFreeTrial, setIsFreeTrial] = useState<boolean>(false);
 
   // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const loadStatus = async () => {
+      try {
+        const res = await fetch("/api/user/subscription-status", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setIsFreeTrial(!!data?.isFreeTrial);
+        }
+      } catch {}
+    };
+    loadStatus();
+  }, [session?.user?.id]);
 
   if (!mounted) {
     return (
@@ -78,7 +94,7 @@ export function SubjectsGrid({ subjects, error }: SubjectsGridProps) {
           <Link href="/dashboard/settings" className="hidden md:block">
             <Button className="gap-2 cursor-pointer text-white" size="lg">
               <Plus className="h-4 w-4" />
-              <span>Acquista nuove materie</span>
+              <span>{isFreeTrial ? "Passa al piano premium" : "Acquista nuove materie"}</span>
             </Button>
           </Link>
         )}
@@ -87,7 +103,7 @@ export function SubjectsGrid({ subjects, error }: SubjectsGridProps) {
         <Link href="/dashboard/settings" className="block md:hidden">
           <Button className="gap-2 cursor-pointer text-white w-full" size="lg">
             <Plus className="h-4 w-4" />
-            <span>Acquista nuove materie</span>
+            <span>{isFreeTrial ? "Passa al piano premium" : "Acquista nuove materie"}</span>
           </Button>
         </Link>
       )}

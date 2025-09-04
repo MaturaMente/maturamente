@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/drizzle";
-import { notesTable, relationSubjectsUserTable } from "@/db/schema";
+import { notesTable, relationSubjectsUserTable, subscriptions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getCachedSignedUrl, setCachedSignedUrl } from "@/utils/signed-url-cache";
 
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
         .select({
           storage_path: notesTable.storage_path,
           subject_id: notesTable.subject_id,
+          free_trial: notesTable.free_trial,
         })
         .from(notesTable)
         .where(eq(notesTable.id, noteId))
@@ -59,6 +60,28 @@ export async function POST(request: NextRequest) {
       if (!userSubjectAccess[0]) {
         return NextResponse.json(
           { error: "Access denied to this note" },
+          { status: 403 }
+        );
+      }
+
+      // If user is on free trial, restrict to free_trial notes only
+      const sub = await db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.user_id, session.user.id))
+        .limit(1);
+      const isFreeTrial = (() => {
+        if (!(sub.length > 0)) return false;
+        const s = sub[0];
+        if (!s.is_free_trial || s.status !== "active") return false;
+        const now = new Date();
+        const periodEnd = s.current_period_end as Date | null;
+        if (periodEnd && now > periodEnd) return false;
+        return true;
+      })();
+      if (isFreeTrial && !noteResult[0].free_trial) {
+        return NextResponse.json(
+          { error: "Questa risorsa non è disponibile nella prova gratuita" },
           { status: 403 }
         );
       }

@@ -13,8 +13,10 @@ import { getSubjectBySlug } from "@/utils/topics-subtopics-data";
 import { getUserSubjectBySlug } from "@/utils/subjects-data";
 import { UserSimulation, SimulationCard } from "@/types/simulationsTypes";
 import SimulationsLayout from "@/app/components/subject/simulations/simulations-layout";
+import { FreeTrialCTA } from "@/app/components/shared/free-trial-cta";
 import { unstable_cache } from "next/cache";
 import type { Metadata } from "next";
+import { isUserOnFreeTrial } from "@/utils/free-trial-check";
 
 // Generate dynamic metadata based on the subject
 export async function generateMetadata({
@@ -25,30 +27,30 @@ export async function generateMetadata({
   const { "subject-slug": subjectSlug } = await params;
 
   return {
-    title: "Simulazioni Maturità",
+    title: "Simulazioni Maturitàà",
     description:
-      "Simulazioni complete degli esami di maturità scientifica dal 2001 al 2024. Esercitati con tracce ufficiali, problemi e quesiti con soluzioni dettagliate per prepararti al meglio.",
+      "Simulazioni complete degli esami di maturitàà scientifica dal 2001 al 2024. Esercitati con tracce ufficiali, problemi e quesiti con soluzioni dettagliate per prepararti al meglio.",
     keywords: [
-      "simulazioni maturità",
-      "tracce maturità scientifica",
+      "simulazioni maturitàà",
+      "tracce maturitàà scientifica",
       "esami matematica",
-      "problemi maturità",
+      "problemi maturitàà",
       "quesiti matematica",
-      "soluzioni maturità",
+      "soluzioni maturitàà",
       "tracce svolte",
       "preparazione esame",
       "simulazioni online",
     ],
     openGraph: {
-      title: "Simulazioni Maturità | MaturaMente",
+      title: "Simulazioni Maturitàà | MaturaMente",
       description:
-        "Simulazioni complete degli esami di maturità scientifica dal 2001 al 2024. Esercitati con tracce ufficiali e soluzioni dettagliate.",
+        "Simulazioni complete degli esami di maturitàà scientifica dal 2001 al 2024. Esercitati con tracce ufficiali e soluzioni dettagliate.",
       url: `/${subjectSlug}/simulazioni`,
     },
     twitter: {
-      title: "Simulazioni Maturità | MaturaMente",
+      title: "Simulazioni Maturitàà | MaturaMente",
       description:
-        "Simulazioni complete degli esami di maturità scientifica dal 2001 al 2024. Esercitati con tracce ufficiali.",
+        "Simulazioni complete degli esami di maturitàà scientifica dal 2001 al 2024. Esercitati con tracce ufficiali.",
     },
     alternates: {
       canonical: `/${subjectSlug}/simulazioni`,
@@ -268,6 +270,18 @@ async function Simulations({
     favoriteSimulationCards = await getFavoriteSimulationCards(
       userId,
       subject.id
+    );
+  }
+
+  // Check if user is on free trial
+  const isFreeTrial = userId ? await isUserOnFreeTrial() : false;
+
+  if (isFreeTrial) {
+    return (
+      <FreeTrialCTA 
+        title="Simulazioni Maturità - Premium"
+        description="Le simulazioni complete sono disponibili solo con il piano Premium. Passa al piano completo per accedere a tutte le tracce di maturità ."
+      />
     );
   }
 

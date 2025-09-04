@@ -12,6 +12,8 @@ import {
   getAllSimulationCards,
 } from "@/utils/simulations-data";
 import SimulationCardDetailPage from "@/app/components/subject/simulations/simulation-card-detail";
+import { isUserOnFreeTrial } from "@/utils/free-trial-check";
+import { FreeTrialCTA } from "@/app/components/shared/free-trial-cta";
 import { SimulationCardPageProps } from "@/types/simulationsTypes";
 
 // Force dynamic rendering since we use headers() through getCurrentUserId()
@@ -115,6 +117,17 @@ async function SimulationCardContent({ slug }: { slug: string }) {
   // Check authentication and get user ID if available
   const authenticated = await isAuthenticated();
   const userId = authenticated ? await getCurrentUserIdOptional() : null;
+
+  // Gate free-trial users with CTA card
+  const isFreeTrial = userId ? await isUserOnFreeTrial(userId) : false;
+  if (isFreeTrial) {
+    return (
+      <FreeTrialCTA
+        title="Simulazioni Maturità - Premium"
+        description="Le carte delle simulazioni sono disponibili solo con il piano Premium. Passa al piano completo per accedere a tutte le simulazioni."
+      />
+    );
+  }
 
   // Get card data with user-specific information (dynamic)
   const cardData = await getSimulationCardDataBySlug(slug, userId);

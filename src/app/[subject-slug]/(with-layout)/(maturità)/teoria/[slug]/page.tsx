@@ -15,6 +15,8 @@ import { getTheoryContent } from "@/utils/theory";
 import { SubtopicWithTheoryType } from "@/types/theoryTypes";
 import { TopicType, TopicWithSubtopicsType } from "@/types/topicsTypes";
 import { unstable_cache } from "next/cache";
+import { isUserOnFreeTrial } from "@/utils/free-trial-check";
+import { redirect } from "next/navigation";
 
 // Generate dynamic metadata based on the theory topic
 export async function generateMetadata({
@@ -162,7 +164,14 @@ interface PageProps {
 
 export default async function TopicPage({ params }: PageProps) {
   // Extract the slug from params
-  const { slug } = await params;
+  const { slug, "subject-slug": subjectSlug } = await params;
+
+  // Check if user is on free trial and redirect to root teoria page
+  const isFreeTrial = await isUserOnFreeTrial();
+  
+  if (isFreeTrial) {
+    redirect(`/${subjectSlug}/teoria`);
+  }
 
   // Check authentication and get user ID if available
   const authenticated = await isAuthenticated();

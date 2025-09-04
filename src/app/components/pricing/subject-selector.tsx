@@ -18,12 +18,14 @@ interface SubjectSelectorProps {
   subjects: Subject[];
   selectedSubjects: string[];
   onSelectionChange: (subjects: string[]) => void;
+  maxSelectable?: number;
 }
 
 export function SubjectSelector({
   subjects,
   selectedSubjects,
   onSelectionChange,
+  maxSelectable,
 }: SubjectSelectorProps) {
   const handleToggleSubject = (subjectId: string) => {
     const isSelected = selectedSubjects.includes(subjectId);
@@ -31,7 +33,12 @@ export function SubjectSelector({
     if (isSelected) {
       onSelectionChange(selectedSubjects.filter((id) => id !== subjectId));
     } else {
-      onSelectionChange([...selectedSubjects, subjectId]);
+      if (typeof maxSelectable === "number") {
+        const next = [...selectedSubjects, subjectId];
+        onSelectionChange(next.slice(0, maxSelectable));
+      } else {
+        onSelectionChange([...selectedSubjects, subjectId]);
+      }
     }
   };
 

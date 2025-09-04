@@ -127,6 +127,7 @@ async function handleCheckoutSessionCompleted(
       subject_count: actualSubjectCount,
       custom_price: actualCustomPrice.toString(),
       monthly_ai_budget: aiBudget.toFixed(4),
+      is_free_trial: false, // This is a premium subscription
       current_period_start: new Date(
         (subscription as any).current_period_start * 1000
       ),
@@ -145,6 +146,7 @@ async function handleCheckoutSessionCompleted(
         subject_count: actualSubjectCount,
         custom_price: actualCustomPrice.toString(),
         monthly_ai_budget: aiBudget.toFixed(4),
+        is_free_trial: false, // Upgrade from free trial to premium
         current_period_start: new Date(
           (subscription as any).current_period_start * 1000
         ),
