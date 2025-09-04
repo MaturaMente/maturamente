@@ -269,7 +269,7 @@ export function PricingPage({ subjects }: PricingPageProps) {
             <Button
               variant="ghost"
               onClick={handleReturnToDashboard}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
               Torna alla Dashboard
@@ -350,11 +350,22 @@ export function PricingPage({ subjects }: PricingPageProps) {
                 </div>
               </div>
               )}
+              <div className="space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold text-foreground">
+                  Scegli le Tue Materie
+                </h2>
+                <p className="text-muted-foreground">
+                  Seleziona le materie che vuoi studiare. Puoi modificare la tua
+                  selezione in qualsiasi momento.
+                </p>
+              </div>
               <SubjectSelector
                 subjects={subjects}
                 selectedSubjects={selectedSubjects}
                 onSelectionChange={setSelectedSubjects}
-              />
+                />
+              </div>
             </div>
 
             {/* Pricing Summary - Takes 1 column, sticky */}
@@ -497,7 +508,7 @@ export function PricingPage({ subjects }: PricingPageProps) {
                     €{totalPrice.toFixed(2)}/mese
                   </div>
                 </div>
-                <Button onClick={handleScrollToCheckout} className="flex items-center gap-2 min-w-[120px]" disabled={!canProceedToCheckout}>
+                <Button onClick={handleScrollToCheckout} className="flex text-white items-center gap-2 min-w-[120px]" disabled={!canProceedToCheckout}>
                   Continua
                   <ChevronDown className="w-4 h-4" />
                 </Button>

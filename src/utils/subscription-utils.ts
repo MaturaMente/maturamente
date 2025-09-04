@@ -40,12 +40,18 @@ export function getSubscriptionStatus(
         return null;
       }
 
+      // If the most recent subscription is a canceled free trial, treat as no subscription
+      if (subscription.status === "canceled" && subscription.is_free_trial === true) {
+        return null;
+      }
+
       // Auto-expire free trial if past 14 days from created_at or current_period_end
-      // Consider trial subscriptions active while within the trial period, even if status is not strictly "active"
+      // Consider trial subscriptions active while within the trial period, but never if status is "canceled"
       let isActive = subscription.status === "active";
       let currentPeriodEnd = subscription.current_period_end;
       let daysLeft: number | null = null;
       let isFreeTrial = !!subscription.is_free_trial;
+      const isSubscriptionCanceled = subscription.status === "canceled";
 
       if (isFreeTrial) {
         // Determine trial end: use current_period_end if set, else created_at + 14 days
@@ -57,8 +63,8 @@ export function getSubscriptionStatus(
         if (now > trialEnd) {
           isActive = false;
         } else {
-          // Mark trial as active while within trial window
-          isActive = true;
+          // Mark trial as active while within trial window, unless subscription was explicitly canceled
+          isActive = !isSubscriptionCanceled;
           daysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
         }
       }
@@ -75,7 +81,8 @@ export function getSubscriptionStatus(
         currentPeriodEnd,
         subjectCount: subscription.subject_count || 0,
         price: actualPrice,
-        isFreeTrial,
+        // Only report free trial when it's actually active
+        isFreeTrial: isFreeTrial && isActive,
         daysLeft,
       };
     },

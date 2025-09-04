@@ -24,6 +24,7 @@ import {
   X,
   CheckCircle,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { SubjectSelector } from "./subject-selector";
 import type { SubscriptionStatus } from "@/types/subscriptionTypes";
@@ -56,6 +57,8 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
   const [message, setMessage] = useState("");
   const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
+  const [showMobileBar, setShowMobileBar] = useState(false);
+  const [hasScrolledToCheckout, setHasScrolledToCheckout] = useState(false);
 
   const maxTrialSubjects = 3;
 
@@ -87,6 +90,58 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
     }
   }, [session?.user?.id, sessionStatus]);
 
+  // Show mobile bar when user selects subjects on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024;
+      setShowMobileBar(
+        isMobile && selectedSubjects.length > 0 && !hasScrolledToCheckout
+      );
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [selectedSubjects.length, hasScrolledToCheckout]);
+
+  // Reset scroll state when subjects change
+  useEffect(() => {
+    setHasScrolledToCheckout(false);
+  }, [selectedSubjects.length]);
+
+  // Hide mobile bar when trial card is in viewport
+  useEffect(() => {
+    const trialCard = document.getElementById("trial-card");
+    if (!trialCard) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+          setHasScrolledToCheckout(true);
+        }
+      },
+      {
+        threshold: 0.5,
+        rootMargin: "-50px 0px",
+      }
+    );
+
+    observer.observe(trialCard);
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handleScrollToTrial = () => {
+    const trialCard = document.getElementById("trial-card");
+    if (trialCard) {
+      trialCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => {
+        setHasScrolledToCheckout(true);
+      }, 800);
+    }
+  };
+
   const handleStartFreeTrial = async () => {
     if (selectedSubjects.length === 0 || selectedSubjects.length > maxTrialSubjects || !session?.user?.id) {
       return;
@@ -106,8 +161,15 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
         }),
       });
 
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
+        if (response.status === 403) {
+          setStatus("error");
+          setMessage(
+            "Hai già utilizzato la prova gratuita su questo account. Attiva il piano Premium per continuare."
+          );
+          return;
+        }
         throw new Error(data.error || "Impossibile avviare la prova gratuita");
       }
 
@@ -213,7 +275,7 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                 )}
 
                 <div className="flex gap-2">
-                  {status === "error" && (
+                  {status === "error" && !(message || "").toLowerCase().includes("prova gratuita") && (
                     <Button
                       onClick={handleRetry}
                       variant="outline"
@@ -222,13 +284,31 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                       Riprova
                     </Button>
                   )}
-                  <Button
-                    onClick={status === "success" ? () => router.push("/dashboard") : handleDismiss}
-                    className="flex-1"
-                    variant={status === "error" ? "default" : "outline"}
-                  >
-                    {status === "success" ? "Continua alla Dashboard" : "Chiudi"}
-                  </Button>
+                  {status === "error" && (message || "").toLowerCase().includes("prova gratuita") ? (
+                    <>
+                      <Button
+                        onClick={() => router.push("/pricing")}
+                        className="flex-1 text-white"
+                      >
+                        Vai ai prezzi
+                      </Button>
+                      <Button
+                        onClick={handleDismiss}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Chiudi
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      onClick={status === "success" ? () => router.push("/dashboard") : handleDismiss}
+                      className="flex-1"
+                      variant={status === "error" ? "default" : "outline"}
+                    >
+                      {status === "success" ? "Continua alla Dashboard" : "Chiudi"}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -239,7 +319,7 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
           <Button
             variant="ghost"
             onClick={() => router.push("/pricing")}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
             Torna ai prezzi
@@ -248,10 +328,10 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
             <Button
               variant="ghost"
               onClick={handleReturnToDashboard}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground flex items-center gap-2"
             >
               Dashboard
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <ArrowRight className="w-4 h-4" />
             </Button>
           )}
         </div>
@@ -276,17 +356,17 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
             <div className="flex flex-col items-center p-4 rounded-lg bg-green-50/50 dark:bg-green-950/20">
               <Clock className="w-8 h-8 text-green-600 mb-2" />
               <h3 className="font-semibold text-green-800 dark:text-green-400">2 Settimane Gratis</h3>
-              <p className="text-sm text-green-600 dark:text-green-500 text-center">Nessuna carta richiesta</p>
+              <p className="text-sm text-green-600 dark:text-green-500 text-center">Nessuna carta richiesta, provalo subito</p>
             </div>
             <div className="flex flex-col items-center p-4 rounded-lg bg-green-50/50 dark:bg-green-950/20">
               <BookOpen className="w-8 h-8 text-green-600 mb-2" />
               <h3 className="font-semibold text-green-800 dark:text-green-400">3 Materie</h3>
-              <p className="text-sm text-green-600 dark:text-green-500 text-center">Accesso agli appunti selezionati</p>
+              <p className="text-sm text-green-600 dark:text-green-500 text-center">Accesso limitato agli appunti selezionati</p>
             </div>
             <div className="flex flex-col items-center p-4 rounded-lg bg-green-50/50 dark:bg-green-950/20">
               <Bot className="w-8 h-8 text-green-600 mb-2" />
               <h3 className="font-semibold text-green-800 dark:text-green-400">AI Limitata</h3>
-              <p className="text-sm text-green-600 dark:text-green-500 text-center">€0,05 di crediti AI</p>
+              <p className="text-sm text-green-600 dark:text-green-500 text-center">Crediti AI limitati a poche conversazioni</p>
             </div>
           </div>
         </div>
@@ -315,7 +395,7 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
             {/* Trial Summary - Takes 1 column, sticky */}
             <div className="lg:col-span-1">
               <div className="sticky top-8">
-                <Card className="shadow-xl bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-green-200 dark:border-green-800">
+                <Card id="trial-card" className="shadow-xl bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-green-200 dark:border-green-800">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-xl font-semibold flex items-center gap-2 text-green-800 dark:text-green-400">
                       <Star className="w-5 h-5" />
@@ -324,10 +404,10 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                     <CardDescription className="text-green-600 dark:text-green-500">
                       {selectedSubjects.length === 0
                         ? "Seleziona le materie per iniziare"
-                        : `${selectedSubjects.length} di ${maxTrialSubjects} materia${
-                            selectedSubjects.length === 1 ? "" : "e"
-                          } selezionata${
-                            selectedSubjects.length === 1 ? "" : "e"
+                        : `${selectedSubjects.length} di ${maxTrialSubjects} materi${
+                            selectedSubjects.length === 1 ? "a" : "e"
+                          } selezionat${
+                            selectedSubjects.length === 1 ? "a" : "e"
                           }`}
                     </CardDescription>
                   </CardHeader>
@@ -348,7 +428,7 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                         </div>
 
                         {/* What's Included */}
-                        <div className="space-y-3">
+                        {/* <div className="space-y-3">
                           <h4 className="font-semibold text-sm text-green-800 dark:text-green-400">
                             Cosa è incluso:
                           </h4>
@@ -370,10 +450,10 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                               </div>
                             ))}
                           </div>
-                        </div>
+                        </div> */}
 
                         {/* What's NOT Included */}
-                        <div className="space-y-3">
+                        {/* <div className="space-y-3">
                           <h4 className="font-semibold text-sm text-red-700 dark:text-red-400">
                             Non incluso:
                           </h4>
@@ -394,7 +474,7 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                               </div>
                             ))}
                           </div>
-                        </div>
+                        </div> */}
                       </>
                     ) : (
                       <div className="text-center py-8">
@@ -463,6 +543,27 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
             Scopri il piano Premium
           </Button>
         </div>
+
+        {/* Mobile Bottom Bar */}
+        {showMobileBar && (
+          <div className="fixed bottom-0 left-0 right-0 bg-green-50/95 dark:bg-green-950/60 backdrop-blur-sm border-t border-green-200 dark:border-green-800 z-50 lg:hidden animate-in slide-in-from-bottom duration-300">
+            <div className="container mx-auto p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-green-800 dark:text-green-200">
+                    {selectedSubjects.length} di {maxTrialSubjects} materi
+                    {selectedSubjects.length === 1 ? "a" : "e"} selezionat
+                    {selectedSubjects.length === 1 ? "a" : "e"}
+                  </div>
+                </div>
+                <Button onClick={handleScrollToTrial} variant="secondary" className="flex items-center gap-2 min-w-[140px] bg-green-600 hover:bg-green-700 text-white border-0">
+                  Continua
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

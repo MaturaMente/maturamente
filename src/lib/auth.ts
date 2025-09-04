@@ -23,9 +23,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // User exists, check if active
           const dbUser = existingUser[0];
           if (!dbUser.active) {
-            // User account is deactivated, prevent signin
-            console.log(`Signin blocked for deactivated account: ${user.email}`);
-            return false;
+            // Reactivate soft-deleted accounts on successful sign-in
+            await db
+              .update(users)
+              .set({ active: true })
+              .where(eq(users.id, dbUser.id));
+            console.log(`Reactivated account on signin: ${user.email}`);
           }
         }
       }

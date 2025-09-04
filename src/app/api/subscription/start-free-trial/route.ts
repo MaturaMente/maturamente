@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/drizzle";
 import { subscriptions, relationSubjectsUserTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
 export async function POST(request: NextRequest) {
@@ -29,6 +29,18 @@ export async function POST(request: NextRequest) {
 
     if (existing.length && existing[0].status === "active") {
       return NextResponse.json({ error: "Hai già un piano attivo" }, { status: 400 });
+    }
+
+    // Enforce one-time free trial: deny if the user has ever had a free trial row
+    // We rely on preserved subscription records to detect past trials
+    const priorFreeTrial = await db
+      .select({ id: subscriptions.id })
+      .from(subscriptions)
+      .where(and(eq(subscriptions.user_id, session.user.id), eq(subscriptions.is_free_trial, true)))
+      .limit(1);
+
+    if (priorFreeTrial.length > 0) {
+      return NextResponse.json({ error: "Hai già utilizzato la prova gratuita su questo account." }, { status: 403 });
     }
 
     // Create or update a free trial subscription (no Stripe)

@@ -22,6 +22,7 @@ import {
   aiBudgetBalanceTable,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -113,9 +114,9 @@ export async function DELETE(request: NextRequest) {
         .where(eq(aiBudgetBalanceTable.user_id, user.id));
       console.log("Deleted AI budget balance records");
 
-      // Delete subscription records
-      await db.delete(subscriptions).where(eq(subscriptions.user_id, user.id));
-      console.log("Deleted subscription records");
+      // Preserve subscription records for historical tracking (including free trial usage)
+      // We already canceled the Stripe subscription and marked local status as canceled above.
+      console.log("Preserved subscription records for auditing and free trial checks");
 
       // Delete all user's completed topics
       await db
@@ -182,6 +183,15 @@ export async function DELETE(request: NextRequest) {
       console.log("Deactivated user account");
 
       console.log("Account deletion completed successfully");
+
+      // Revalidate user-related caches so UI updates immediately post-deletion
+      try {
+        revalidateTag(`user-${user.id}`);
+        revalidateTag("subscription");
+        revalidateTag("subjects");
+      } catch (e) {
+        console.warn("Failed to revalidate tags after account deletion", e);
+      }
     } catch (dbError: any) {
       console.error("Database error:", dbError);
       throw new Error(

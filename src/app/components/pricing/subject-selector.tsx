@@ -44,16 +44,6 @@ export function SubjectSelector({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold text-foreground">
-          Scegli le Tue Materie
-        </h2>
-        <p className="text-muted-foreground">
-          Seleziona le materie che vuoi studiare. Puoi modificare la tua
-          selezione in qualsiasi momento.
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {subjects.map((subject) => {
           const isSelected = selectedSubjects.includes(subject.id);
@@ -167,16 +157,6 @@ export function SubjectSelector({
           );
         })}
       </div>
-
-      {selectedSubjects.length > 0 && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-lg p-3">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <span>
-            {selectedSubjects.length} materi
-            {selectedSubjects.length === 1 ? "a selezionata" : "e selezionate"}
-          </span>
-        </div>
-      )}
     </div>
   );
 }
