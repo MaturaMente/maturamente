@@ -43,12 +43,14 @@ import {
   Wand2,
   ListChecks,
   Bot,
+  Lock,
 } from "lucide-react";
 import { getSubjectIcon } from "@/utils/subject-icons";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FilesManagement from "@/app/components/files/files-management";
 import { toast } from "sonner";
+import { SubscriptionPopup, useSubscriptionPopup } from "@/app/components/subscription/subscription-popup";
 
 type UINote = {
   id: string;
@@ -58,6 +60,7 @@ type UINote = {
   n_pages?: number | null;
   is_favorite?: boolean;
   subject_id?: string;
+  free_trial?: boolean;
 };
 
 type UISubject = {
@@ -175,6 +178,9 @@ export default function DashboardChat() {
   const [isMultiline, setIsMultiline] = useState(false);
   const { data: session } = useSession();
   const firstName = (session?.user?.name || "").split(" ")[0] || null;
+  const [isFreeTrial, setIsFreeTrial] = useState(false);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
+  const { isSubscriptionPopupOpen, showSubscriptionPopup, hideSubscriptionPopup } = useSubscriptionPopup();
 
   useEffect(() => {
     setIsStreaming(status === "streaming");
@@ -183,6 +189,27 @@ export default function DashboardChat() {
   useEffect(() => {
     onItemsChange();
   }, [messages, onItemsChange]);
+
+  // Determine if user is on an active free trial
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchSubscription() {
+      try {
+        setCheckingSubscription(true);
+        const res = await fetch("/api/user/subscription-status", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setIsFreeTrial(!!(data?.isFreeTrial && data?.isActive));
+      } catch {}
+      finally {
+        if (!cancelled) setCheckingSubscription(false);
+      }
+    }
+    fetchSubscription();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
 
   // scrollToBottom provided by useAutoScroll
 
@@ -1070,6 +1097,18 @@ export default function DashboardChat() {
           </div>
         </div>
       </form>
+      {/* Premium gating popup */}
+      <SubscriptionPopup
+        isOpen={isSubscriptionPopupOpen}
+        onClose={hideSubscriptionPopup}
+        title="Appunto Premium"
+        description="Questo contenuto è disponibile con il piano Premium."
+        features={[
+          "Chat con tutti gli appunti",
+          "Quiz e riassunti illimitati",
+          "Accesso completo a MaturaMente",
+        ]}
+      />
 
       {showNotesOverlay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4">
@@ -1446,11 +1485,21 @@ export default function DashboardChat() {
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
+                                if (isFreeTrial && !n.free_trial) {
+                                  showSubscriptionPopup();
+                                  return;
+                                }
                                 toggleNote(n.slug);
                               }
                             }}
-                            onClick={() => toggleNote(n.slug)}
-                            className="relative flex items-start gap-3 p-3 bg-[var(--subject-color)]/2 border border-[var(--subject-color)]/10 rounded-lg hover:shadow-sm/5 hover:border-[var(--subject-color)]/30 transition-all duration-200 cursor-pointer"
+                            onClick={() => {
+                              if (isFreeTrial && !n.free_trial) {
+                                showSubscriptionPopup();
+                                return;
+                              }
+                              toggleNote(n.slug);
+                            }}
+                            className={`relative flex items-start gap-3 p-3 bg-[var(--subject-color)]/2 border border-[var(--subject-color)]/10 rounded-lg hover:shadow-sm/5 hover:border-[var(--subject-color)]/30 transition-all duration-200 cursor-pointer ${isFreeTrial && !n.free_trial ? "opacity-50" : ""}`}
                             style={
                               {
                                 "--subject-color": subject?.color || "#000000",
@@ -1493,6 +1542,11 @@ export default function DashboardChat() {
                                           )}
                                         </div>
                                       </div>
+                                      {isFreeTrial && !n.free_trial && (
+                                        <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs font-medium">
+                                          <Lock className="h-3 w-3" /> Premium
+                                        </div>
+                                      )}
                                       {n.is_favorite && (
                                         <Star className="h-4 w-4 flex-shrink-0 fill-yellow-400 text-yellow-400" />
                                       )}
@@ -1504,6 +1558,31 @@ export default function DashboardChat() {
                           </div>
                         );
                       };
+                      // Separate sections for free-trial users when not searching
+                      const isSearching = notesSearch.trim().length > 0 || !!noteTitle;
+                      if (isFreeTrial && !isSearching) {
+                        const freeTrialList = subjectFiltered.filter((n) => n.free_trial);
+                        const premiumList = subjectFiltered.filter((n) => !n.free_trial);
+                        return (
+                          <div className="flex-1 overflow-auto space-y-4 pr-1">
+                            <div className="flex flex-col gap-2">
+                              <div className="text-sm font-medium text-muted-foreground">APPUNTI DISPONIBILI</div>
+                              {freeTrialList.map((n) => renderRow(n))}
+                              {freeTrialList.length === 0 && (
+                                <div className="text-sm text-muted-foreground">Nessun appunto disponibile</div>
+                              )}
+                            </div>
+                            {premiumList.length > 0 && (
+                              <div className="flex flex-col gap-2">
+                                <div className="text-sm font-medium text-muted-foreground">APPUNTI PREMIUM</div>
+                                <div className="opacity-50 flex flex-col gap-2">
+                                  {premiumList.map((n) => renderRow(n))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
                       return (
                         <div className="flex-1 overflow-auto space-y-2 pr-1">
                           {recentFiltered.length > 0 && (

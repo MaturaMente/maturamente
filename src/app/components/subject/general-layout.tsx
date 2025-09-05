@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState, useEffect, lazy, Suspense } from "react";
+import { ReactNode, useState, useEffect, lazy, Suspense, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -97,11 +97,12 @@ export default function GeneralLayout({ children }: { children: ReactNode }) {
   // Get the current subject slug from params
   const subjectSlug = (params?.["subject-slug"] as string) || "";
 
-  // Generate navigation links based on current subject slug and maturita field
-  // Provide fallback empty array if subjectSlug is not available yet
-  const navLinks = subjectSlug
-    ? getNavLinks(subjectSlug, true)
-    : [];
+  // Generate navigation links based on current subject slug and the subject's maturita field
+  // Recompute when either the slug or the maturita flag changes
+  const navLinks = useMemo(() => {
+    if (!subjectSlug) return [];
+    return getNavLinks(subjectSlug, Boolean(currentSubject?.maturita));
+  }, [subjectSlug, currentSubject?.maturita]);
 
   // Fetch current subject data when slug changes
   useEffect(() => {

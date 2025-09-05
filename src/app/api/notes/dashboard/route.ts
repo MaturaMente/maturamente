@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
       slug: n.slug,
       is_favorite: n.is_favorite,
       subject_id: n.subject_id,
+      free_trial: n.free_trial,
       created_at: n.created_at,
     }));
 

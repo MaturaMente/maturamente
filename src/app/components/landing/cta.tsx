@@ -69,7 +69,7 @@ export default function Cta({
               <Button
                 variant={"default"}
                 size="lg"
-                className="flex text-whiteg items-center justify-center gap-2"
+                className="flex text-white items-center justify-center gap-2"
               >
                   Vai alla dashboard
                 <ArrowRightIcon className="size-3 text-white" />

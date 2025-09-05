@@ -11,6 +11,9 @@ import { auth } from "@/lib/auth";
 import { searchUserFiles } from "@/utils/files/pinecone-storage";
 import { checkBudgetAvailability, recordAIUsage } from "@/utils/ai-budget/budget-management";
 import { getSubscriptionStatus } from "@/utils/subscription-utils";
+import { db } from "@/db/drizzle";
+import { notesTable } from "@/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 
 // Allow longer streaming; remove 30s cap
 export const maxDuration = 300;
@@ -60,6 +63,24 @@ export async function POST(req: Request) {
     }
     if (meta && Array.isArray(meta.selectedFileSources)) {
       selectedFileSources = meta.selectedFileSources as string[];
+    }
+  } catch {}
+
+  // If user is on active free trial, restrict selected note slugs to free_trial only
+  try {
+    const sub = await getSubscriptionStatus(userId);
+    const isTrial = !!(sub?.isFreeTrial && sub?.isActive);
+    if (isTrial && selectedNoteSlugs && selectedNoteSlugs.length > 0) {
+      const allowed = await db
+        .select({ slug: notesTable.slug })
+        .from(notesTable)
+        .where(
+          and(
+            inArray(notesTable.slug, selectedNoteSlugs),
+            eq(notesTable.free_trial, true)
+          )
+        );
+      selectedNoteSlugs = allowed.map((r) => r.slug);
     }
   } catch {}
 

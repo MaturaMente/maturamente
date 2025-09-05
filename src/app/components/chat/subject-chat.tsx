@@ -30,11 +30,13 @@ import {
   ListChecks,
   Bot,
   ArrowRight,
+  Lock,
 } from "lucide-react";
 import DownloadMenuButton from "./components/download-menu-button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import MessageDocumentsDisplay from "./components/message-documents-display";
+import { SubscriptionPopup, useSubscriptionPopup } from "@/app/components/subscription/subscription-popup";
 
 type UINote = {
   id: string;
@@ -43,6 +45,7 @@ type UINote = {
   description?: string | null;
   n_pages?: number | null;
   is_favorite?: boolean;
+  free_trial?: boolean;
 };
 
 export default function SubjectChat({ subject }: { subject?: string }) {
@@ -94,6 +97,9 @@ export default function SubjectChat({ subject }: { subject?: string }) {
   const [currentSubjectData, setCurrentSubjectData] = useState<any>(null);
   const { data: session } = useSession();
   const firstName = (session?.user?.name || "").split(" ")[0] || null;
+  const [isFreeTrial, setIsFreeTrial] = useState(false);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
+  const { isSubscriptionPopupOpen, showSubscriptionPopup, hideSubscriptionPopup } = useSubscriptionPopup();
 
   // Autoscroll: mark streaming state and notify on message updates
   useEffect(() => {
@@ -133,6 +139,29 @@ export default function SubjectChat({ subject }: { subject?: string }) {
       cancelled = true;
     };
   }, [subject]);
+
+  // Determine if user is on an active free trial for gating
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchSubscription() {
+      try {
+        setCheckingSubscription(true);
+        const res = await fetch("/api/user/subscription-status", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setIsFreeTrial(!!(data?.isFreeTrial && data?.isActive));
+        }
+      } catch {}
+      finally {
+        if (!cancelled) setCheckingSubscription(false);
+      }
+    }
+    fetchSubscription();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
 
   // scrollToBottom provided by hook
 
@@ -873,6 +902,14 @@ export default function SubjectChat({ subject }: { subject?: string }) {
           </div>
         </div>
       </form>
+      {/* Premium gating popup */}
+      <SubscriptionPopup
+        isOpen={isSubscriptionPopupOpen}
+        onClose={hideSubscriptionPopup}
+        title="Appunto Premium"
+        description="Questo contenuto è disponibile con il piano Premium."
+        features={["Chat con tutti gli appunti", "Quiz e riassunti illimitati", "Accesso completo a MaturaMente"]}
+      />
       {showNotesOverlay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-2xl max-h-[90vh] rounded-xl border bg-background shadow-xl flex flex-col">
@@ -984,6 +1021,84 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                         )
                       : notes
                   ).slice();
+                  const isSearching = notesSearch.trim().length > 0;
+                  if (isFreeTrial && !isSearching) {
+                    const freeList = filtered.filter((n) => n.free_trial);
+                    const premiumList = filtered.filter((n) => !n.free_trial);
+                    const row = (n: any) => (
+                      <div
+                        key={n.id + "-row"}
+                        role="checkbox"
+                        aria-checked={selectedNoteSlugs.includes(n.slug)}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            if (!n.free_trial) { showSubscriptionPopup(); return; }
+                            toggleNote(n.slug);
+                          }
+                        }}
+                        onClick={() => {
+                          if (!n.free_trial) { showSubscriptionPopup(); return; }
+                          toggleNote(n.slug);
+                        }}
+                        className={`relative flex items-start gap-3 p-3  bg-[var(--subject-color)]/2 border border-[var(--subject-color)]/10 rounded-lg hover:shadow-sm/5 hover:border-[var(--subject-color)]/30 transition-all duration-200 cursor-pointer ${!n.free_trial ? "opacity-50" : ""}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          {(() => {
+                            const title: string = n.title || "";
+                            const sep = title.indexOf(" - ");
+                            const mainTitle = sep !== -1 ? title.slice(0, sep) : title;
+                            const subTitle = sep !== -1 ? title.slice(sep + 3) : "";
+                            const isSelected = selectedNoteSlugs.includes(n.slug);
+                            return (
+                              <>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-center gap-4">
+                                    {isSelected ? (
+                                      <CircleCheck className="h-6 w-6 flex-shrink-0 text-[var(--subject-color)]" />
+                                    ) : (
+                                      <Circle className="h-6 w-6 flex-shrink-0 text-[var(--subject-color)]/70" />
+                                    )}
+                                    <div className="min-w-0">
+                                      <div className="font-medium line-clamp-1">{mainTitle}</div>
+                                      {subTitle && (
+                                        <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{subTitle}</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {!n.free_trial && (
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs font-medium">
+                                      <Lock className="h-3 w-3" /> Premium
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    );
+                    return (
+                      <div className="flex-1 overflow-auto space-y-4 pr-1">
+                        <div className="flex flex-col gap-2">
+                          <div className="text-sm font-medium text-muted-foreground">APPUNTI DISPONIBILI</div>
+                          {freeList.map((n) => row(n))}
+                          {freeList.length === 0 && (
+                            <div className="text-sm text-muted-foreground">Nessun appunto disponibile</div>
+                          )}
+                        </div>
+                        {premiumList.length > 0 && (
+                          <div className="flex flex-col gap-2">
+                            <div className="text-sm font-medium text-muted-foreground">APPUNTI PREMIUM</div>
+                            <div className="opacity-50 flex flex-col gap-2">
+                              {premiumList.map((n) => row(n))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
 
                   const recentSet = new Set(
                     (recentStudiedNotes || []).map((r) => r.slug)

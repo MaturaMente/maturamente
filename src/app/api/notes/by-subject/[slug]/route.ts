@@ -22,6 +22,7 @@ export async function GET(
       n_pages: n.n_pages,
       slug: n.slug,
       is_favorite: n.is_favorite,
+      free_trial: n.free_trial,
       created_at: n.created_at,
     }));
     // recent studied notes (limit to a few for UI)
