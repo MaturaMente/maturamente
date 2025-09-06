@@ -2,7 +2,7 @@
 
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, ArrowRightIcon } from "lucide-react";
+import { ArrowRightIcon } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Mockup } from "@/components/ui/mockup";
 import Glow from "@/components/ui/glow";
@@ -10,7 +10,6 @@ import { ReactNode } from "react";
 import Screenshot from "@/components/ui/screenshot";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -62,7 +61,10 @@ export default function Hero({
     />
   ),
   badge = (
-    <Link href="/dashboard/pit" className="flex items-center gap-1">
+    <Link
+      href="/dashboard/pit"
+      className="flex items-center gap-1 cursor-pointer"
+    >
       <Badge variant="outline" className="animate-appear">
         <span className="text-muted-foreground">
           Prova Pit, il tuo Personal Intelligent Tutor
@@ -80,18 +82,18 @@ export default function Hero({
   return (
     <Section
       className={cn(
-        "fade-bottom overflow-hidden min-h-screen h-screen flex items-center lg:min-h-screen lg:h-auto lg:pt-24",
+        "fade-bottom overflow-hidden flex items-center lg:min-h-screen lg:h-auto lg:pt-24",
         className
       )}
     >
-      <div className="max-w-container mx-auto flex flex-col gap-12 pt-16 md:pt-16 sm:gap-24">
+      <div className="max-w-container mx-auto flex flex-col gap-12 pt-24 md:pt-16 sm:gap-24">
         <div className="flex flex-col items-center justify-center gap-6 text-center sm:gap-12">
           {badge !== false && badge}
           <h1 className="animate-appear relative z-10 inline-block text-5xl leading-tight font-semibold text-balance sm:text-6xl sm:leading-tight md:text-7xl lg:text-8xl md:leading-tight">
             <span className="dark:text-white text-blue-900 drop-shadow-2xl">
               Preparati al meglio con
             </span>
-            <div className="relative inline-block ml-2">
+            <div className="relative inline-block md:ml-2">
               <span className="dark:text-primary text-blue-900">Matura</span>
               <span className="dark:text-blue-400 text-primary">Mente</span>
               <span
@@ -130,7 +132,7 @@ export default function Hero({
                   size="lg"
                   className="flex text-white items-center justify-center gap-2"
                 >
-                    Vai alla dashboard
+                  Vai alla dashboard
                   <ArrowRightIcon className="size-3 text-white" />
                 </Button>
               </Link>
