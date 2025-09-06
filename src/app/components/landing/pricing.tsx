@@ -38,7 +38,7 @@ export default function Pricing({
       },
       features: [
         "Accesso a due materie a tua scelta",
-        "Accesso agli appunti delle materie selzionate",
+        "Accesso agli appunti delle materie selezionate",
         "Piano base generato dall'AI (interazioni limitate)",
         "Possibilità di passare al Premium in ogni momento",
       ],

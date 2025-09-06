@@ -200,14 +200,14 @@ export default function GeneralLayout({ children }: { children: ReactNode }) {
                   <SheetTrigger asChild className="md:hidden block">
                     <Button
                       variant="ghost"
-                      className="align-end items-end flex p-0 h-auto"
+                      className="align-end items-end flex px-0 py-8 pl-5 h-auto"
                     >
                       <Menu style={{ width: "20px", height: "20px" }} />
                       <span className="sr-only">Menu</span>
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="right" className="p-0 w-[300px] border-l">
-                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle>{" "}
                     <SheetDescription className="sr-only">
                       Application navigation links
                     </SheetDescription>

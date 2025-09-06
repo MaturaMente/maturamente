@@ -6,6 +6,9 @@ import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/
 import { auth } from "@/lib/auth";
 import { checkBudgetAvailability, recordAIUsage } from "@/utils/ai-budget/budget-management";
 import { getSubscriptionStatus } from "@/utils/subscription-utils";
+import { db } from "@/db/drizzle";
+import { notesTable } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 // Allow longer streaming; remove 30s cap
 export const maxDuration = 300;
@@ -66,6 +69,35 @@ export async function POST(req: Request) {
         meta.selectedNoteSlugs.length > 0
       ) {
         noteSlug = meta.selectedNoteSlugs[0];
+      }
+    }
+  } catch {}
+
+  // If user is on free trial and the note is not marked for free trial, block chat
+  try {
+    const sub = await getSubscriptionStatus(userId);
+    const isTrial = !!(sub?.isFreeTrial && sub?.isActive);
+    if (isTrial && noteSlug) {
+      const noteRows = await db
+        .select({ free_trial: notesTable.free_trial })
+        .from(notesTable)
+        .where(eq(notesTable.slug, noteSlug))
+        .limit(1);
+      const isNoteFree = noteRows[0]?.free_trial === true;
+      if (!isNoteFree) {
+        return Response.json(
+          {
+            error:
+              "Questa chat AI non è disponibile nella prova gratuita per questo appunto.",
+            cta: {
+              title: "Sblocca la chat AI",
+              message:
+                "Attiva il piano Premium per usare la chat AI su tutti gli appunti.",
+              upgradeUrl: "/pricing",
+            },
+          },
+          { status: 403 }
+        );
       }
     }
   } catch {}

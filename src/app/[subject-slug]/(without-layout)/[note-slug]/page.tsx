@@ -10,6 +10,7 @@ import { db } from "@/db/drizzle";
 import { subjectsTable, notesTable } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { ArticleStructuredData, LearningResourceStructuredData } from "@/app/components/shared/seo/structured-data";
+import { isUserOnFreeTrial } from "@/utils/free-trial-check";
 
 // Force dynamic rendering for authentication
 export const dynamic = "force-dynamic";
@@ -137,6 +138,9 @@ async function NotePageServer({
       notFound();
     }
 
+    // Determine if user is on free trial to conditionally restrict chat on non-trial notes
+    const isFreeTrialUser = await isUserOnFreeTrial(session.user.id);
+
     // Fetch additional data for structured data
     let noteStructuredData = null;
     try {
@@ -211,7 +215,7 @@ async function NotePageServer({
             />
           </>
         )}
-        <SingleNoteLayout note={note} />
+        <SingleNoteLayout note={note} isFreeTrialUser={isFreeTrialUser} />
       </>
     );
   } catch (error) {

@@ -143,7 +143,11 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
   };
 
   const handleStartFreeTrial = async () => {
-    if (selectedSubjects.length === 0 || selectedSubjects.length > maxTrialSubjects || !session?.user?.id) {
+    if (
+      selectedSubjects.length === 0 ||
+      selectedSubjects.length > maxTrialSubjects ||
+      !session?.user?.id
+    ) {
       return;
     }
 
@@ -197,7 +201,10 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
     }
   };
 
-  const canProceedToTrial = selectedSubjects.length > 0 && selectedSubjects.length <= maxTrialSubjects && session?.user?.id;
+  const canProceedToTrial =
+    selectedSubjects.length > 0 &&
+    selectedSubjects.length <= maxTrialSubjects &&
+    session?.user?.id;
 
   const handleReturnToDashboard = () => {
     if (typeof window !== "undefined") {
@@ -218,13 +225,22 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
 
   // If user has active paid subscription, redirect them
   useEffect(() => {
-    if (subscriptionStatus?.isActive && !subscriptionStatus?.isFreeTrial && !checkingSubscription) {
+    if (
+      subscriptionStatus?.isActive &&
+      !subscriptionStatus?.isFreeTrial &&
+      !checkingSubscription
+    ) {
       router.push("/dashboard");
     }
-  }, [subscriptionStatus?.isActive, subscriptionStatus?.isFreeTrial, checkingSubscription, router]);
+  }, [
+    subscriptionStatus?.isActive,
+    subscriptionStatus?.isFreeTrial,
+    checkingSubscription,
+    router,
+  ]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-background to-green-50/30 dark:from-green-950/20 dark:via-background dark:to-green-950/10">
+    <div className="min-h-screen bg-gradient-to-b from-green-50/07 to-white dark:from-green-950/20 dark:to-green-950/10">
       <div className="container mx-auto px-4 py-8">
         {status !== "idle" && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -275,16 +291,20 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                 )}
 
                 <div className="flex gap-2">
-                  {status === "error" && !(message || "").toLowerCase().includes("prova gratuita") && (
-                    <Button
-                      onClick={handleRetry}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Riprova
-                    </Button>
-                  )}
-                  {status === "error" && (message || "").toLowerCase().includes("prova gratuita") ? (
+                  {status === "error" &&
+                    !(message || "")
+                      .toLowerCase()
+                      .includes("prova gratuita") && (
+                      <Button
+                        onClick={handleRetry}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Riprova
+                      </Button>
+                    )}
+                  {status === "error" &&
+                  (message || "").toLowerCase().includes("prova gratuita") ? (
                     <>
                       <Button
                         onClick={() => router.push("/pricing")}
@@ -302,11 +322,17 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                     </>
                   ) : (
                     <Button
-                      onClick={status === "success" ? () => router.push("/dashboard") : handleDismiss}
+                      onClick={
+                        status === "success"
+                          ? () => router.push("/dashboard")
+                          : handleDismiss
+                      }
                       className="flex-1"
                       variant={status === "error" ? "default" : "outline"}
                     >
-                      {status === "success" ? "Continua alla Dashboard" : "Chiudi"}
+                      {status === "success"
+                        ? "Continua alla Dashboard"
+                        : "Chiudi"}
                     </Button>
                   )}
                 </div>
@@ -348,25 +374,38 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
           </h1>
 
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
-            Scopri MaturaMente senza impegno. Scegli fino a 3 materie e accedi agli appunti selezionati per 2 settimane complete.
+            Scopri MaturaMente senza impegno. Scegli fino a 3 materie e accedi
+            agli appunti selezionati per 2 settimane complete.
           </p>
 
           {/* Free Trial Features */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
             <div className="flex flex-col items-center p-4 rounded-lg bg-green-50/50 dark:bg-green-950/20">
               <Clock className="w-8 h-8 text-green-600 mb-2" />
-              <h3 className="font-semibold text-green-800 dark:text-green-400">2 Settimane Gratis</h3>
-              <p className="text-sm text-green-600 dark:text-green-500 text-center">Nessuna carta richiesta, provalo subito</p>
+              <h3 className="font-semibold text-green-800 dark:text-green-400">
+                2 Settimane Gratis
+              </h3>
+              <p className="text-sm text-green-600 dark:text-green-500 text-center">
+                Nessuna carta richiesta, provalo subito
+              </p>
             </div>
             <div className="flex flex-col items-center p-4 rounded-lg bg-green-50/50 dark:bg-green-950/20">
               <BookOpen className="w-8 h-8 text-green-600 mb-2" />
-              <h3 className="font-semibold text-green-800 dark:text-green-400">3 Materie</h3>
-              <p className="text-sm text-green-600 dark:text-green-500 text-center">Accesso limitato agli appunti selezionati</p>
+              <h3 className="font-semibold text-green-800 dark:text-green-400">
+                3 Materie
+              </h3>
+              <p className="text-sm text-green-600 dark:text-green-500 text-center">
+                Accesso limitato agli appunti selezionati
+              </p>
             </div>
             <div className="flex flex-col items-center p-4 rounded-lg bg-green-50/50 dark:bg-green-950/20">
               <Bot className="w-8 h-8 text-green-600 mb-2" />
-              <h3 className="font-semibold text-green-800 dark:text-green-400">AI Limitata</h3>
-              <p className="text-sm text-green-600 dark:text-green-500 text-center">Crediti AI limitati a poche conversazioni</p>
+              <h3 className="font-semibold text-green-800 dark:text-green-400">
+                AI Limitata
+              </h3>
+              <p className="text-sm text-green-600 dark:text-green-500 text-center">
+                Crediti AI limitati a poche conversazioni
+              </p>
             </div>
           </div>
         </div>
@@ -377,9 +416,13 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
             {/* Subject Selection - Takes 2 columns on large screens */}
             <div className="lg:col-span-2">
               <div className="mb-4">
-                <h2 className="text-2xl font-bold mb-2">Scegli le tue materie</h2>
+                <h2 className="text-2xl font-bold mb-2">
+                  Scegli le tue materie
+                </h2>
                 <p className="text-muted-foreground">
-                  Seleziona fino a {maxTrialSubjects} materie per la tua prova gratuita. Potrai sempre aggiungerne altre passando al piano Premium.
+                  Seleziona fino a {maxTrialSubjects} materie per la tua prova
+                  gratuita. Potrai sempre aggiungerne altre passando al piano
+                  Premium.
                 </p>
               </div>
               <SubjectSelector
@@ -395,7 +438,10 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
             {/* Trial Summary - Takes 1 column, sticky */}
             <div className="lg:col-span-1">
               <div className="sticky top-8">
-                <Card id="trial-card" className="shadow-xl bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-green-200 dark:border-green-800">
+                <Card
+                  id="trial-card"
+                  className="shadow-xl bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-green-200 dark:border-green-800"
+                >
                   <CardHeader className="pb-4">
                     <CardTitle className="text-xl font-semibold flex items-center gap-2 text-green-800 dark:text-green-400">
                       <Star className="w-5 h-5" />
@@ -404,7 +450,9 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                     <CardDescription className="text-green-600 dark:text-green-500">
                       {selectedSubjects.length === 0
                         ? "Seleziona le materie per iniziare"
-                        : `${selectedSubjects.length} di ${maxTrialSubjects} materi${
+                        : `${
+                            selectedSubjects.length
+                          } di ${maxTrialSubjects} materi${
                             selectedSubjects.length === 1 ? "a" : "e"
                           } selezionat${
                             selectedSubjects.length === 1 ? "a" : "e"
@@ -418,12 +466,20 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                         {/* Trial Details */}
                         <div className="space-y-3">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-green-700 dark:text-green-400">Durata</span>
-                            <span className="font-semibold text-green-800 dark:text-green-300">2 settimane</span>
+                            <span className="text-sm text-green-700 dark:text-green-400">
+                              Durata
+                            </span>
+                            <span className="font-semibold text-green-800 dark:text-green-300">
+                              2 settimane
+                            </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-green-700 dark:text-green-400">Costo</span>
-                            <span className="font-semibold text-green-800 dark:text-green-300">Gratis</span>
+                            <span className="text-sm text-green-700 dark:text-green-400">
+                              Costo
+                            </span>
+                            <span className="font-semibold text-green-800 dark:text-green-300">
+                              Gratis
+                            </span>
                           </div>
                         </div>
 
@@ -482,7 +538,8 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                           <Star className="w-8 h-8 text-green-600" />
                         </div>
                         <p className="text-green-600 dark:text-green-500 text-sm">
-                          Seleziona fino a {maxTrialSubjects} materie per iniziare la tua prova gratuita
+                          Seleziona fino a {maxTrialSubjects} materie per
+                          iniziare la tua prova gratuita
                         </p>
                       </div>
                     )}
@@ -537,7 +594,8 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
         {/* Bottom CTA */}
         <div className="mt-16 text-center">
           <p className="text-muted-foreground mb-4">
-            Alla fine della prova potrai passare al piano Premium per accedere a tutti i contenuti
+            Alla fine della prova potrai passare al piano Premium per accedere a
+            tutti i contenuti
           </p>
           <Button variant="outline" onClick={() => router.push("/pricing")}>
             Scopri il piano Premium
@@ -556,7 +614,11 @@ export function FreeTrialPricingPage({ subjects }: FreeTrialPricingPageProps) {
                     {selectedSubjects.length === 1 ? "a" : "e"}
                   </div>
                 </div>
-                <Button onClick={handleScrollToTrial} variant="secondary" className="flex items-center gap-2 min-w-[140px] bg-green-600 hover:bg-green-700 text-white border-0">
+                <Button
+                  onClick={handleScrollToTrial}
+                  variant="secondary"
+                  className="flex items-center gap-2 min-w-[140px] bg-green-600 hover:bg-green-700 text-white border-0"
+                >
                   Continua
                   <ChevronDown className="w-4 h-4" />
                 </Button>

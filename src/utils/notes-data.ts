@@ -148,6 +148,7 @@ export const getNoteBySlug = cache(
           n_pages: notesTable.n_pages,
           slug: notesTable.slug,
           created_at: notesTable.created_at,
+          free_trial: notesTable.free_trial,
           is_favorite: flaggedNotesTable.id,
         })
         .from(notesTable)
@@ -181,6 +182,7 @@ export const getNoteBySlug = cache(
         slug: note.slug || "",
         created_at: note.created_at,
         is_favorite: !!note.is_favorite,
+        free_trial: !!note.free_trial,
       };
     } catch (error) {
       console.error("Error fetching note by slug:", error);

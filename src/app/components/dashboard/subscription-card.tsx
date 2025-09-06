@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Crown } from "lucide-react";
+import { Crown, Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { DashboardSubscriptionData } from "@/types/dashboardTypes";
 
@@ -17,7 +17,9 @@ export function SubscriptionCard({ subscriptionData }: SubscriptionCardProps) {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/api/user/subscription-status", { cache: "no-store" });
+        const res = await fetch("/api/user/subscription-status", {
+          cache: "no-store",
+        });
         if (res.ok) {
           const data = await res.json();
           setIsFreeTrial(!!data?.isFreeTrial);
@@ -45,28 +47,33 @@ export function SubscriptionCard({ subscriptionData }: SubscriptionCardProps) {
 
   return (
     <div className="w-full md:w-auto rounded-2xl border bg-card/80 backdrop-blur-sm shadow-md px-4 py-3">
-      <div className="flex items-center gap-3">
-        <Crown className="h-5 w-5 text-amber-600" />
-        <div className="min-w-0">
-          {isFreeTrial ? (
-            <>
-              <p className="text-sm font-semibold leading-tight">Prova gratuita</p>
-              <div className="text-xs text-muted-foreground">
-                {typeof daysLeft === "number" ? `${daysLeft} giorni rimanenti` : `2 settimane`}
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-semibold leading-tight">Piano Premium</p>
-              {subjectsCount !== null && (
-                <div className="text-xs text-muted-foreground">
-                  {subjectsCount} materie attive
-                </div>
-              )}
-            </>
-          )}
+      {isFreeTrial ? (
+        <div className="min-w-0 flex items-center gap-3">
+          <Sparkles className="h-5 w-5 text-green-600" />
+          <div>
+            <p className="text-sm font-semibold leading-tight">
+              Prova gratuita
+            </p>
+            <div className="text-xs text-muted-foreground">
+              {typeof daysLeft === "number"
+                ? `${daysLeft} giorni rimanenti`
+                : `2 settimane`}
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="min-w-0 flex items-center gap-3">
+          <Crown className="h-5 w-5 text-amber-600" />
+          <div>
+            <p className="text-sm font-semibold leading-tight">Piano Premium</p>
+            {subjectsCount !== null && (
+              <div className="text-xs text-muted-foreground">
+                {subjectsCount} materie attive
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

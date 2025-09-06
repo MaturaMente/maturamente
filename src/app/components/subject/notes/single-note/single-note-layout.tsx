@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import type { Note } from "@/types/notesTypes";
 import { PDFComponent } from "./single-note-components";
 import { useStudySession } from "./use-study-session";
@@ -13,14 +14,15 @@ import PdfChat from "@/app/components/chat/pdf-chat";
 
 interface SingleNoteLayoutProps {
   note: Note;
+  isFreeTrialUser?: boolean;
 }
 
-export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
+export function SingleNoteLayout({
+  note,
+  isFreeTrialUser = false,
+}: SingleNoteLayoutProps) {
   const [isFavorite, setIsFavorite] = useState(note.is_favorite);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-  const [isDescriptionTruncatable, setIsDescriptionTruncatable] =
-    useState(false);
   const [isMobileFullscreen, setIsMobileFullscreen] = useState(false);
   const [isDesktopFullscreen, setIsDesktopFullscreen] = useState(false);
   const descriptionRef = useRef<HTMLParagraphElement | null>(null);
@@ -34,6 +36,8 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
     noteId: note.id,
     enabled: true,
   });
+
+  const chatBlocked = isFreeTrialUser && note.free_trial === false;
 
   // Parse title to extract main title and subtitle
   const parseTitle = (title: string) => {
@@ -111,7 +115,7 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="border-b md:p-8 p-4">
+      <div className="border-b md:p-8 p-4 flex flex-col md:gap-4 gap-2">
         {/* Back button */}
         <div className="mb-2">
           <Button
@@ -156,22 +160,11 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
                 <p
                   ref={descriptionRef}
                   className={cn(
-                    "text-muted-foreground text-sm md:text-base break-words",
-                    !isDescriptionExpanded && "line-clamp-2"
+                    "text-muted-foreground text-sm md:text-base break-words line-clamp-2 hover:line-clamp-none"
                   )}
                 >
                   {note.description}
                 </p>
-                {(isDescriptionTruncatable || isDescriptionExpanded) && (
-                  <button
-                    onClick={() =>
-                      setIsDescriptionExpanded(!isDescriptionExpanded)
-                    }
-                    className="text-primary text-sm hover:underline mt-1 focus:outline-none"
-                  >
-                    {isDescriptionExpanded ? "Leggi di meno" : "Leggi di più"}
-                  </button>
-                )}
               </div>
             )}
           </div>
@@ -194,7 +187,11 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
                 <FileText className="h-4 w-4" />
                 PDF
               </TabsTrigger>
-              <TabsTrigger value="chat" className="flex items-center gap-2">
+              <TabsTrigger
+                value="chat"
+                className="flex items-center gap-2"
+                disabled={chatBlocked}
+              >
                 <Bot className="h-4 w-4" />
                 Chat
               </TabsTrigger>
@@ -221,7 +218,21 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
             className="flex-1 mt-2 data-[state=active]:flex data-[state=active]:flex-col"
           >
             <div className="flex-1 rounded-lg border overflow-hidden min-h-0">
-              <PdfChat />
+              {chatBlocked ? (
+                <div className="w-full h-full flex items-center justify-center p-8 text-center">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      La chat AI di questo appunto è disponibile solo con il
+                      piano Premium.
+                    </p>
+                    <Link href="/pricing">
+                      <Button className="text-white">Passa al Premium</Button>
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <PdfChat />
+              )}
             </div>
           </TabsContent>
         </Tabs>
@@ -252,7 +263,21 @@ export function SingleNoteLayout({ note }: SingleNoteLayoutProps) {
         {/* Right section - AI Chat */}
         <div className="w-1/3 border-l bg-background flex flex-col h-screen">
           <div className="flex-1 overflow-hidden">
-            <PdfChat />
+            {chatBlocked ? (
+              <div className="w-full h-full flex items-center justify-center p-8 text-center">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    La chat AI di questo appunto è disponibile solo con il piano
+                    Premium.
+                  </p>
+                  <Link href="/pricing">
+                    <Button className="text-white">Passa al Premium</Button>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <PdfChat />
+            )}
           </div>
         </div>
       </div>
