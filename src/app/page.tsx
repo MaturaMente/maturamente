@@ -7,19 +7,22 @@ import {
 } from "./components/shared/seo/structured-data";
 
 export const metadata: Metadata = {
-  title: "MaturaMente",
+  title:
+    "MaturaMente - Lo strumento più avanzato per la tua preparazione liceale",
   description:
-    "Benvenuto su MaturaMente, la piattaforma educativa completa per studenti di scuole superiori. Accedi a teoria, esercizi interattivi, simulazioni e AI tutor per tutte le materie scolastiche, dalla prima alla quinta superiore.",
+    "MaturaMente è lo strumento più avanzato per accompagnarti durante tutto il liceo. Con AI tutor personalizzato, teoria strutturata, esercizi interattivi e simulazioni per tutte le materie, trasformiamo il tuo modo di studiare rendendolo più efficace e coinvolgente.",
   openGraph: {
-    title: "MaturaMente - Preparazione Maturità Matematica Online",
+    title:
+      "MaturaMente - Lo strumento più avanzato per la tua preparazione liceale",
     description:
-      "Benvenuto su MaturaMente, la piattaforma educativa completa per studenti di scuole superiori. Teoria, esercizi, simulazioni e AI tutor per tutte le materie.",
+      "Lo strumento più avanzato per la tua preparazione liceale. Con AI tutor personalizzato, teoria, esercizi e simulazioni per tutte le materie, trasformiamo il tuo modo di studiare.",
     url: "/",
   },
   twitter: {
-    title: "MaturaMente - Preparazione Maturità Matematica Online",
+    title:
+      "MaturaMente - Lo strumento più avanzato per la tua preparazione liceale",
     description:
-      "Benvenuto su MaturaMente, la piattaforma educativa per studenti di scuole superiori.",
+      "Lo strumento più avanzato per la tua preparazione liceale con AI tutor personalizzato. Studio intelligente e risultati eccellenti.",
   },
   alternates: {
     canonical: "/",
@@ -33,14 +36,14 @@ export default function Home() {
       <WebsiteStructuredData
         name="MaturaMente"
         url="https://maturamente.it"
-        description="La piattaforma educativa completa per studenti di scuole superiori. Teoria, esercizi interattivi, simulazioni e AI tutor per tutte le materie scolastiche, dalla prima alla quinta superiore."
+        description="Lo strumento più avanzato per la preparazione liceale con AI che accompagna gli studenti italiani durante tutto il percorso scolastico. Offre apprendimento personalizzato, teoria strutturata, esercizi interattivi e simulazioni per tutte le materie."
         logo="/opengraph-image.png"
         sameAs={[]}
       />
       <OrganizationStructuredData
         name="MaturaMente"
         url="https://maturamente.it"
-        description="Piattaforma educativa completa per studenti di scuole superiori con contenuti per tutte le materie scolastiche."
+        description="Lo strumento educativo più avanzato che utilizza l'intelligenza artificiale per supportare gli studenti del liceo durante tutto il loro percorso scolastico con apprendimento personalizzato e intelligente."
         logo="/opengraph-image.png"
         contactPoint={{
           email: "maturamente.help@gmail.com",
@@ -54,9 +57,9 @@ export default function Home() {
       <EducationalOrganizationStructuredData
         name="MaturaMente"
         url="https://maturamente.it"
-        description="Piattaforma educativa specializzata nel supporto scolastico per studenti di scuole superiori italiane con contenuti per tutte le materie."
+        description="Lo strumento educativo più innovativo con AI tutor che offre un'esperienza di apprendimento personalizzata per studenti del liceo, coprendo l'intero percorso scolastico e la preparazione alla Maturità."
         logo="/opengraph-image.png"
-        educationalCredentialAwarded="Supporto Scolastico Completo"
+        educationalCredentialAwarded="Supporto Scolastico Personalizzato con AI"
         hasCredential={[
           "Matematica",
           "Fisica",
