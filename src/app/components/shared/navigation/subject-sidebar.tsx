@@ -159,7 +159,7 @@ export default function SubjectSidebar({
       return "Prova gratuita";
     }
     if (subscriptionStatus.isActive) {
-      return "Piano Premium"
+      return "Piano Premium";
     }
     return "Nessun piano attivo";
   })();

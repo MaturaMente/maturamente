@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import PdfViewer from "@/app/components/shared/renderer/pdf-renderer";
+import PdfViewerWithTrialLimits from "@/app/components/shared/renderer/pdf-viewer-with-trial-limits";
 import { MessageCircle, AlertCircle } from "lucide-react";
 import type { Note } from "@/types/notesTypes";
 import { LoadingSpinner } from "@/app/components/shared/loading/skeletons/loading-spinner";
@@ -13,6 +13,8 @@ interface PDFComponentProps {
   note: Note;
   mobileFullscreen?: boolean;
   onToggleMobileFullscreen?: () => void;
+  isFreeTrialUser?: boolean;
+  maxAllowedPages?: number;
 }
 
 interface ChatComponentProps {
@@ -24,6 +26,8 @@ export function PDFComponent({
   note,
   mobileFullscreen,
   onToggleMobileFullscreen,
+  isFreeTrialUser = false,
+  maxAllowedPages = 3,
 }: PDFComponentProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,11 +57,14 @@ export function PDFComponent({
 
       setSignedUrl(data.signedUrl);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      const errorMessage =
+        err instanceof Error ? err.message : "An error occurred";
       setError(errorMessage);
-      
+
       // Only log unexpected errors to console, not free trial restrictions
-      if (!/non è disponibile|non.*disponibile|Questa risorsa/.test(errorMessage)) {
+      if (
+        !/non è disponibile|non.*disponibile|Questa risorsa/.test(errorMessage)
+      ) {
         console.error("Error fetching signed URL:", err);
       }
     } finally {
@@ -90,7 +97,8 @@ export function PDFComponent({
   }
 
   if (error) {
-    const isTrialRestriction = /non è disponibile|non.*disponibile|Questa risorsa/.test(error);
+    const isTrialRestriction =
+      /non è disponibile|non.*disponibile|Questa risorsa/.test(error);
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="text-center p-8">
@@ -105,7 +113,10 @@ export function PDFComponent({
               <Button className="text-white">Passa al Premium</Button>
             </Link>
           ) : (
-            <button onClick={fetchSignedUrl} className="text-sm text-primary hover:underline">
+            <button
+              onClick={fetchSignedUrl}
+              className="text-sm text-primary hover:underline"
+            >
               Riprova
             </button>
           )}
@@ -126,13 +137,15 @@ export function PDFComponent({
 
   return (
     <div className="w-full h-full">
-      <PdfViewer
+      <PdfViewerWithTrialLimits
         pdfUrl={signedUrl}
         className="w-full h-full"
         height="100%"
         initialScale={1.2}
         mobileFullscreen={mobileFullscreen}
         onToggleMobileFullscreen={onToggleMobileFullscreen}
+        isFreeTrialUser={isFreeTrialUser}
+        maxAllowedPages={maxAllowedPages}
       />
     </div>
   );

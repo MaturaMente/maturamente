@@ -209,6 +209,8 @@ export function SingleNoteLayout({
                 onToggleMobileFullscreen={() =>
                   setIsMobileFullscreen((p) => !p)
                 }
+                isFreeTrialUser={isFreeTrialUser}
+                maxAllowedPages={3}
               />
             </div>
           </TabsContent>
@@ -256,6 +258,8 @@ export function SingleNoteLayout({
               note={note}
               mobileFullscreen={isDesktopFullscreen}
               onToggleMobileFullscreen={() => setIsDesktopFullscreen((p) => !p)}
+              isFreeTrialUser={isFreeTrialUser}
+              maxAllowedPages={3}
             />
           </div>
         </div>
