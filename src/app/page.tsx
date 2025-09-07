@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Landing from "./components/landing/index";
-import { 
-  WebsiteStructuredData, 
+import {
+  WebsiteStructuredData,
   OrganizationStructuredData,
-  EducationalOrganizationStructuredData 
+  EducationalOrganizationStructuredData,
 } from "./components/shared/seo/structured-data";
 
 export const metadata: Metadata = {
@@ -44,10 +44,10 @@ export default function Home() {
         logo="/opengraph-image.png"
         contactPoint={{
           email: "maturamente.help@gmail.com",
-          contactType: "Customer Service"
+          contactType: "Customer Service",
         }}
         address={{
-          addressCountry: "IT"
+          addressCountry: "IT",
         }}
         sameAs={[]}
       />
@@ -57,7 +57,17 @@ export default function Home() {
         description="Piattaforma educativa specializzata nel supporto scolastico per studenti di scuole superiori italiane con contenuti per tutte le materie."
         logo="/opengraph-image.png"
         educationalCredentialAwarded="Supporto Scolastico Completo"
-        hasCredential={["Matematica", "Fisica", "Scienze", "Italiano", "Storia", "Filosofia", "Inglese", "Chimica", "Biologia"]}
+        hasCredential={[
+          "Matematica",
+          "Fisica",
+          "Scienze",
+          "Italiano",
+          "Storia",
+          "Filosofia",
+          "Inglese",
+          "Chimica",
+          "Biologia",
+        ]}
         sameAs={[]}
       />
       <Landing />
