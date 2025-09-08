@@ -50,7 +50,10 @@ export function ImagePreview({
   }
 
   return (
-    <div className={cn("relative", className)} style={containerStyle}>
+    <div
+      className={cn("relative items-center flex", className)}
+      style={containerStyle}
+    >
       {isLoading && (
         <div
           className="absolute inset-0 bg-gray-100 dark:bg-gray-800 rounded-md flex items-center justify-center"

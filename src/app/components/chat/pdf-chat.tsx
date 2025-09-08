@@ -94,6 +94,9 @@ export default function PdfChat() {
   const cancelEdit = () => {
     setEditingMessageId(null);
     setEditingValue("");
+    // Clear any pending states when cancelling edit
+    setIsThinking(false);
+    setPendingAssistantId(null);
   };
 
   const saveEdit = async () => {
@@ -114,13 +117,23 @@ export default function PdfChat() {
     const assistantAfter = messages
       .slice(editedIndex + 1)
       .find((m) => m.role === "assistant");
+
+    // Clear editing state first
+    setEditingMessageId(null);
+    setEditingValue("");
+
     if (assistantAfter) {
       setIsThinking(true);
       setPendingAssistantId(assistantAfter.id);
-      regenerate({ messageId: assistantAfter.id });
+      // Add a small delay to allow loading text to show before regeneration starts
+      setTimeout(() => {
+        regenerate({ messageId: assistantAfter.id });
+      }, 100);
+    } else {
+      // if no assistant answer yet, clear any pending states and allow new messages
+      setIsThinking(false);
+      setPendingAssistantId(null);
     }
-
-    cancelEdit();
   };
 
   const regenerateWithNote = (assistantId: string) => {
@@ -139,12 +152,25 @@ export default function PdfChat() {
       }
       return before;
     });
-    regenerate({ messageId: assistantId });
+    // Add a small delay to allow loading text to show before regeneration starts
+    setTimeout(() => {
+      regenerate({ messageId: assistantId });
+    }, 100);
   };
 
   const usePrompt = (text: string) => {
     setInput(text);
   };
+
+  // Enhanced stop function that also clears loading states
+  const enhancedStop = () => {
+    stop();
+    setIsThinking(false);
+    setPendingAssistantId(null);
+  };
+
+  // Check if there are pending operations
+  const hasPendingOperations = isThinking || pendingAssistantId !== null;
 
   useEffect(() => {
     if (isThinking && (status === "streaming" || status === "error")) {
@@ -261,7 +287,9 @@ export default function PdfChat() {
                     <div
                       key={message.id}
                       className={`flex ${
-                        isUser ? "justify-end md:max-w-2/3" : "justify-start w-full"
+                        isUser
+                          ? "justify-end md:max-w-2/3"
+                          : "justify-start w-full"
                       }`}
                     >
                       <div
@@ -400,7 +428,7 @@ export default function PdfChat() {
               })
             )}
             {isThinking && status !== "streaming" && !pendingAssistantId ? (
-                <div className="flex justify-start w-full">
+              <div className="flex justify-start w-full">
                 <div className="px-4 text-foreground w-full">
                   <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-muted-foreground" />
@@ -432,7 +460,7 @@ export default function PdfChat() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (status !== "ready") return;
+              if (status !== "ready" || hasPendingOperations) return;
               if (input.trim()) {
                 setIsThinking(true);
                 sendMessage({ text: input, metadata: { noteSlug } });
@@ -484,7 +512,7 @@ export default function PdfChat() {
                         date: new Date(),
                       })}
                     />
-                    {status === "ready" ? (
+                    {status === "ready" && !hasPendingOperations ? (
                       <Button
                         type="submit"
                         size="icon"
@@ -503,7 +531,7 @@ export default function PdfChat() {
                         size="icon"
                         variant="secondary"
                         className="h-10 w-10 rounded-full"
-                        onClick={() => stop()}
+                        onClick={enhancedStop}
                       >
                         <Square className="h-5 w-5" />
                       </Button>

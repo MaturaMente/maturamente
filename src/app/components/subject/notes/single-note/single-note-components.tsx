@@ -14,7 +14,6 @@ interface PDFComponentProps {
   mobileFullscreen?: boolean;
   onToggleMobileFullscreen?: () => void;
   isFreeTrialUser?: boolean;
-  maxAllowedPages?: number;
 }
 
 interface ChatComponentProps {
@@ -27,7 +26,6 @@ export function PDFComponent({
   mobileFullscreen,
   onToggleMobileFullscreen,
   isFreeTrialUser = false,
-  maxAllowedPages = 3,
 }: PDFComponentProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -145,7 +143,6 @@ export function PDFComponent({
         mobileFullscreen={mobileFullscreen}
         onToggleMobileFullscreen={onToggleMobileFullscreen}
         isFreeTrialUser={isFreeTrialUser}
-        maxAllowedPages={maxAllowedPages}
       />
     </div>
   );

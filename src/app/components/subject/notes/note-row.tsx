@@ -30,12 +30,12 @@ export function NoteRow({
   const handleToggleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Don't allow favoriting premium notes for free trial users
     if (isFreeTrial && isPremium) {
       return;
     }
-    
+
     if (onToggleFavorite && !isLoading) {
       onToggleFavorite(note.id, !note.is_favorite);
     }
@@ -98,8 +98,8 @@ export function NoteRow({
               disabled={isLoading || isFavoriteDisabled}
               className={cn(
                 "flex-shrink-0 p-1 rounded-full transition-colors",
-                isFavoriteDisabled 
-                  ? "cursor-not-allowed opacity-30" 
+                isFavoriteDisabled
+                  ? "cursor-not-allowed opacity-30"
                   : "dark:hover:bg-gray-800"
               )}
               aria-label={

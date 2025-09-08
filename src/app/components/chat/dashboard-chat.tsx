@@ -50,7 +50,10 @@ import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FilesManagement from "@/app/components/files/files-management";
 import { toast } from "sonner";
-import { SubscriptionPopup, useSubscriptionPopup } from "@/app/components/subscription/subscription-popup";
+import {
+  SubscriptionPopup,
+  useSubscriptionPopup,
+} from "@/app/components/subscription/subscription-popup";
 
 type UINote = {
   id: string;
@@ -180,7 +183,11 @@ export default function DashboardChat() {
   const firstName = (session?.user?.name || "").split(" ")[0] || null;
   const [isFreeTrial, setIsFreeTrial] = useState(false);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
-  const { isSubscriptionPopupOpen, showSubscriptionPopup, hideSubscriptionPopup } = useSubscriptionPopup();
+  const {
+    isSubscriptionPopupOpen,
+    showSubscriptionPopup,
+    hideSubscriptionPopup,
+  } = useSubscriptionPopup();
 
   useEffect(() => {
     setIsStreaming(status === "streaming");
@@ -196,12 +203,14 @@ export default function DashboardChat() {
     async function fetchSubscription() {
       try {
         setCheckingSubscription(true);
-        const res = await fetch("/api/user/subscription-status", { cache: "no-store" });
+        const res = await fetch("/api/user/subscription-status", {
+          cache: "no-store",
+        });
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) setIsFreeTrial(!!(data?.isFreeTrial && data?.isActive));
-      } catch {}
-      finally {
+      } catch {
+      } finally {
         if (!cancelled) setCheckingSubscription(false);
       }
     }
@@ -239,6 +248,10 @@ export default function DashboardChat() {
   const cancelEdit = () => {
     setEditingMessageId(null);
     setEditingValue("");
+    // Clear any pending states when cancelling edit
+    setIsThinking(false);
+    setIsRetrieving(false);
+    setPendingAssistantId(null);
   };
 
   const saveEdit = async () => {
@@ -265,13 +278,31 @@ export default function DashboardChat() {
     const assistantAfter = messages
       .slice(editedIndex + 1)
       .find((m) => m.role === "assistant");
-    if (assistantAfter) {
-      regenerate({ messageId: assistantAfter.id });
-    } else {
-      // if no assistant answer yet, do nothing
-    }
 
-    cancelEdit();
+    // Clear editing state first
+    setEditingMessageId(null);
+    setEditingValue("");
+
+    if (assistantAfter) {
+      // Set loading states before regenerating
+      if (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) {
+        setIsRetrieving(true);
+        setIsThinking(false);
+      } else {
+        setIsThinking(true);
+        setIsRetrieving(false);
+      }
+      setPendingAssistantId(assistantAfter.id);
+      // Add a small delay to allow loading text to show before regeneration starts
+      setTimeout(() => {
+        regenerate({ messageId: assistantAfter.id });
+      }, 100);
+    } else {
+      // if no assistant answer yet, clear any pending states and allow new messages
+      setIsThinking(false);
+      setIsRetrieving(false);
+      setPendingAssistantId(null);
+    }
   };
 
   const openNotesOverlay = async () => {
@@ -413,7 +444,10 @@ export default function DashboardChat() {
       }
       return before;
     });
-    regenerate({ messageId: assistantId });
+    // Add a small delay to allow loading text to show before regeneration starts
+    setTimeout(() => {
+      regenerate({ messageId: assistantId });
+    }, 100);
   };
 
   const usePrompt = (text: string) => {
@@ -432,6 +466,18 @@ export default function DashboardChat() {
     if (!canCollapse) setChipsExpanded(false);
   }, [selectedNoteSlugs, selectedFileSources, notes, uploadedFiles]);
 
+  // Enhanced stop function that also clears loading states
+  const enhancedStop = () => {
+    stop();
+    setIsThinking(false);
+    setIsRetrieving(false);
+    setPendingAssistantId(null);
+  };
+
+  // Check if there are pending operations
+  const hasPendingOperations =
+    isThinking || isRetrieving || pendingAssistantId !== null;
+
   useEffect(() => {
     if (isRetrieving && (status === "streaming" || status === "error")) {
       setIsRetrieving(false);
@@ -442,7 +488,7 @@ export default function DashboardChat() {
     if (status === "streaming" || status === "ready" || status === "error") {
       setPendingAssistantId(null);
     }
-  }, [status, isRetrieving]);
+  }, [status, isRetrieving, isThinking]);
 
   // Auto-resize textarea height up to a max and detect multiline
   useEffect(() => {
@@ -558,7 +604,7 @@ export default function DashboardChat() {
         ) : (
           <div
             className={cn(
-              "mx-auto w-full max-w-3xl px-6 h-full pt-24 pb-[260px] space-y-2",
+              "mx-auto w-full max-w-3xl px-6 h-full pt-24 space-y-2",
               selectedNoteSlugs.length > 0 || selectedFileSources.length > 0
                 ? "pb-[260px]"
                 : "pb-[160px]"
@@ -569,7 +615,12 @@ export default function DashboardChat() {
               const messageText = extractTextFromMessage(message);
               const isLastMessage = idx === messages.length - 1;
               return (
-                <div key={message.id} className="flex justify-end w-full">
+                <div
+                  key={message.id}
+                  className={`flex justify-end w-full ${
+                    isLastMessage ? "pb-12" : ""
+                  }`}
+                >
                   <div
                     className={`flex ${
                       isUser
@@ -852,7 +903,7 @@ export default function DashboardChat() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (status !== "ready") return;
+          if (status !== "ready" || hasPendingOperations) return;
           if (input.trim()) {
             if (
               selectedNoteSlugs.length > 0 ||
@@ -1072,7 +1123,7 @@ export default function DashboardChat() {
                     })}
                   />
                 </div>
-                {status === "ready" ? (
+                {status === "ready" && !hasPendingOperations ? (
                   <Button
                     type="submit"
                     size="icon"
@@ -1087,7 +1138,7 @@ export default function DashboardChat() {
                     size="icon"
                     variant="secondary"
                     className="h-10 w-10 rounded-full"
-                    onClick={() => stop()}
+                    onClick={enhancedStop}
                   >
                     <Square className="h-5 w-5" />
                   </Button>
@@ -1499,7 +1550,9 @@ export default function DashboardChat() {
                               }
                               toggleNote(n.slug);
                             }}
-                            className={`relative flex items-start gap-3 p-3 bg-[var(--subject-color)]/2 border border-[var(--subject-color)]/10 rounded-lg hover:shadow-sm/5 hover:border-[var(--subject-color)]/30 transition-all duration-200 cursor-pointer ${isFreeTrial && !n.free_trial ? "opacity-50" : ""}`}
+                            className={`relative flex items-start gap-3 p-3 bg-[var(--subject-color)]/2 border border-[var(--subject-color)]/10 rounded-lg hover:shadow-sm/5 hover:border-[var(--subject-color)]/30 transition-all duration-200 cursor-pointer ${
+                              isFreeTrial && !n.free_trial ? "opacity-50" : ""
+                            }`}
                             style={
                               {
                                 "--subject-color": subject?.color || "#000000",
@@ -1559,22 +1612,33 @@ export default function DashboardChat() {
                         );
                       };
                       // Separate sections for free-trial users when not searching
-                      const isSearching = notesSearch.trim().length > 0 || !!noteTitle;
+                      const isSearching =
+                        notesSearch.trim().length > 0 || !!noteTitle;
                       if (isFreeTrial && !isSearching) {
-                        const freeTrialList = subjectFiltered.filter((n) => n.free_trial);
-                        const premiumList = subjectFiltered.filter((n) => !n.free_trial);
+                        const freeTrialList = subjectFiltered.filter(
+                          (n) => n.free_trial
+                        );
+                        const premiumList = subjectFiltered.filter(
+                          (n) => !n.free_trial
+                        );
                         return (
                           <div className="flex-1 overflow-auto space-y-4 pr-1">
                             <div className="flex flex-col gap-2">
-                              <div className="text-sm font-medium text-muted-foreground">APPUNTI DISPONIBILI</div>
+                              <div className="text-sm font-medium text-muted-foreground">
+                                APPUNTI DISPONIBILI
+                              </div>
                               {freeTrialList.map((n) => renderRow(n))}
                               {freeTrialList.length === 0 && (
-                                <div className="text-sm text-muted-foreground">Nessun appunto disponibile</div>
+                                <div className="text-sm text-muted-foreground">
+                                  Nessun appunto disponibile
+                                </div>
                               )}
                             </div>
                             {premiumList.length > 0 && (
                               <div className="flex flex-col gap-2">
-                                <div className="text-sm font-medium text-muted-foreground">APPUNTI PREMIUM</div>
+                                <div className="text-sm font-medium text-muted-foreground">
+                                  APPUNTI PREMIUM
+                                </div>
                                 <div className="opacity-50 flex flex-col gap-2">
                                   {premiumList.map((n) => renderRow(n))}
                                 </div>

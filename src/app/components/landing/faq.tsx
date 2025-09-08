@@ -24,11 +24,11 @@ export default function Faq({
   title = "Domande frequenti",
   items = [
     {
-      question: "MaturaMente è davvero gratuito?",
+      question: "MaturaMente è gratuita?",
       answer: (
         <>
           <p className="text-muted-foreground mb-4 max-w-[640px] text-balance">
-            Sì! Puoi iniziare subito con il piano Free, che ti dà accesso ad
+            Sì! Puoi iniziare subito con il piano di prova, che ti dà accesso ad
             appunti, teoria, esercizi e simulazioni ufficiali limitate. Nessuna
             carta di credito richiesta.
           </p>

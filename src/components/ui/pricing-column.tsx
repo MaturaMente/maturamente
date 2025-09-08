@@ -99,7 +99,8 @@ export function PricingColumn({
             size="lg"
             className={cn(
               cta.variant === "glow" && "border border-white-300",
-              cta.variant === "default" && "border-b-1 border-white-300"
+              cta.variant === "default" &&
+                "border-b-1 border-white-300 text-white"
             )}
             onClick={ctaOnClick}
           >
@@ -111,7 +112,8 @@ export function PricingColumn({
             size="lg"
             className={cn(
               cta.variant === "glow" && "border border-white-300",
-              cta.variant === "default" && "border-b-1 border-white-300"
+              cta.variant === "default" &&
+                "border-b-1 border-white-300 text-white"
             )}
             asChild
           >

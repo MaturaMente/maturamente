@@ -25,7 +25,6 @@ interface PdfViewerWithTrialLimitsProps {
   onToggleMobileFullscreen?: () => void;
   // Free trial specific props
   isFreeTrialUser?: boolean;
-  maxAllowedPages?: number;
 }
 
 // Component for the blur overlay with CTA
@@ -41,7 +40,7 @@ function BlurOverlay() {
         </div>
         <p className="text-sm text-gray-600 mb-6">
           Per visualizzare tutte le pagine di questo PDF e accedere a tutti i
-          contenuti premium, passa dal priano di prove al piano Premium.
+          contenuti premium, passa dal piano di prova al piano Premium.
         </p>
         <Link href="/pricing">
           <Button className="w-full flex items-center justify-center gap-2 text-white font-medium py-2 px-4">
@@ -62,7 +61,6 @@ export default function PdfViewerWithTrialLimits({
   mobileFullscreen,
   onToggleMobileFullscreen,
   isFreeTrialUser = false,
-  maxAllowedPages = 5,
 }: PdfViewerWithTrialLimitsProps) {
   const [fullscreen, setFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,8 +75,42 @@ export default function PdfViewerWithTrialLimits({
   const pinchStartDistanceRef = useRef<number | null>(null);
   const pinchStartScaleRef = useRef<number>(initialScale);
 
+  // Function to determine if a page should be restricted based on new rules
+  const determinePageRestriction = (
+    currentPage: number,
+    totalPages: number,
+    isFreeTrialUser: boolean
+  ): boolean => {
+    if (!isFreeTrialUser) return false;
+
+    if (totalPages >= 2 && totalPages <= 5) {
+      // For 2-5 pages: show only the first page
+      return currentPage > 1;
+    } else if (totalPages > 5) {
+      // For 5+ pages: show first two, hide next 3, show next two, hide next 3, etc.
+      // Pattern: show 2, hide 3, show 2, hide 3...
+      // Example with 10 pages: show 1-2, hide 3-5, show 6-7, hide 8-10
+
+      if (currentPage <= 2) return false; // Show pages 1-2
+
+      // For pages 3+, we need to determine the cycle
+      const pageAfterFirstTwo = currentPage - 2; // Position relative to page 3
+      const cycleLength = 5; // 3 hidden + 2 shown
+      const positionInCycle = ((pageAfterFirstTwo - 1) % cycleLength) + 1;
+
+      // In each cycle: positions 1-3 are hidden, positions 4-5 are shown
+      return positionInCycle <= 3;
+    }
+
+    return false; // For PDFs with < 2 pages, show everything
+  };
+
   // Check if current page is restricted for free trial users
-  const isPageRestricted = isFreeTrialUser && pageNum > maxAllowedPages;
+  const isPageRestricted = determinePageRestriction(
+    pageNum,
+    numPages,
+    isFreeTrialUser
+  );
 
   // Function to get proxy URL for PDFs
   const getProxyUrl = (originalUrl: string) => {
@@ -481,9 +513,7 @@ export default function PdfViewerWithTrialLimits({
             </Button>
             <span className="text-sm flex items-center gap-1">
               {pageNum} / {numPages}
-              {isFreeTrialUser && pageNum > maxAllowedPages && (
-                <Lock className="h-3 w-3 text-amber-500" />
-              )}
+              {isPageRestricted && <Lock className="h-3 w-3 text-amber-500" />}
             </span>
             <Button
               variant="ghost"

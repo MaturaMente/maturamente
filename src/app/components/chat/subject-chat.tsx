@@ -36,7 +36,10 @@ import DownloadMenuButton from "./components/download-menu-button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import MessageDocumentsDisplay from "./components/message-documents-display";
-import { SubscriptionPopup, useSubscriptionPopup } from "@/app/components/subscription/subscription-popup";
+import {
+  SubscriptionPopup,
+  useSubscriptionPopup,
+} from "@/app/components/subscription/subscription-popup";
 
 type UINote = {
   id: string;
@@ -99,7 +102,11 @@ export default function SubjectChat({ subject }: { subject?: string }) {
   const firstName = (session?.user?.name || "").split(" ")[0] || null;
   const [isFreeTrial, setIsFreeTrial] = useState(false);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
-  const { isSubscriptionPopupOpen, showSubscriptionPopup, hideSubscriptionPopup } = useSubscriptionPopup();
+  const {
+    isSubscriptionPopupOpen,
+    showSubscriptionPopup,
+    hideSubscriptionPopup,
+  } = useSubscriptionPopup();
 
   // Autoscroll: mark streaming state and notify on message updates
   useEffect(() => {
@@ -146,14 +153,16 @@ export default function SubjectChat({ subject }: { subject?: string }) {
     async function fetchSubscription() {
       try {
         setCheckingSubscription(true);
-        const res = await fetch("/api/user/subscription-status", { cache: "no-store" });
+        const res = await fetch("/api/user/subscription-status", {
+          cache: "no-store",
+        });
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) {
           setIsFreeTrial(!!(data?.isFreeTrial && data?.isActive));
         }
-      } catch {}
-      finally {
+      } catch {
+      } finally {
         if (!cancelled) setCheckingSubscription(false);
       }
     }
@@ -191,6 +200,10 @@ export default function SubjectChat({ subject }: { subject?: string }) {
   const cancelEdit = () => {
     setEditingMessageId(null);
     setEditingValue("");
+    // Clear any pending states when cancelling edit
+    setIsThinking(false);
+    setIsRetrieving(false);
+    setPendingAssistantId(null);
   };
 
   const saveEdit = async () => {
@@ -213,13 +226,31 @@ export default function SubjectChat({ subject }: { subject?: string }) {
     const assistantAfter = messages
       .slice(editedIndex + 1)
       .find((m) => m.role === "assistant");
-    if (assistantAfter) {
-      regenerate({ messageId: assistantAfter.id });
-    } else {
-      // if no assistant answer yet, do nothing
-    }
 
-    cancelEdit();
+    // Clear editing state first
+    setEditingMessageId(null);
+    setEditingValue("");
+
+    if (assistantAfter) {
+      // Set loading states before regenerating
+      if (selectedNoteSlugs.length > 0) {
+        setIsRetrieving(true);
+        setIsThinking(false);
+      } else {
+        setIsThinking(true);
+        setIsRetrieving(false);
+      }
+      setPendingAssistantId(assistantAfter.id);
+      // Add a small delay to allow loading text to show before regeneration starts
+      setTimeout(() => {
+        regenerate({ messageId: assistantAfter.id });
+      }, 100);
+    } else {
+      // if no assistant answer yet, clear any pending states and allow new messages
+      setIsThinking(false);
+      setIsRetrieving(false);
+      setPendingAssistantId(null);
+    }
   };
 
   const openNotesOverlay = async () => {
@@ -283,7 +314,10 @@ export default function SubjectChat({ subject }: { subject?: string }) {
       }
       return before;
     });
-    regenerate({ messageId: assistantId });
+    // Add a small delay to allow loading text to show before regeneration starts
+    setTimeout(() => {
+      regenerate({ messageId: assistantId });
+    }, 100);
   };
 
   const usePrompt = (text: string) => {
@@ -302,6 +336,18 @@ export default function SubjectChat({ subject }: { subject?: string }) {
     if (!canCollapse) setChipsExpanded(false);
   }, [selectedNoteSlugs, notes]);
 
+  // Enhanced stop function that also clears loading states
+  const enhancedStop = () => {
+    stop();
+    setIsThinking(false);
+    setIsRetrieving(false);
+    setPendingAssistantId(null);
+  };
+
+  // Check if there are pending operations
+  const hasPendingOperations =
+    isThinking || isRetrieving || pendingAssistantId !== null;
+
   useEffect(() => {
     if (isRetrieving && (status === "streaming" || status === "error")) {
       setIsRetrieving(false);
@@ -312,7 +358,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
     if (status === "streaming" || status === "ready" || status === "error") {
       setPendingAssistantId(null);
     }
-  }, [status, isRetrieving]);
+  }, [status, isRetrieving, isThinking]);
 
   // Auto-resize textarea height up to a max and detect multiline
   useEffect(() => {
@@ -450,36 +496,33 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                           isUser ? "flex-row-reverse" : ""
                         }`}
                       >
-                                              <div
-                        className={`group relative flex flex-col ${
-                          isUser ? "items-end" : "items-start"
-                        }`}
-                      >
-                        {/* Display selected documents for user messages */}
-                        {isUser &&
-                          (message as any)?.metadata?.selectedNoteSlugs &&
-                          (message as any).metadata.selectedNoteSlugs
-                            .length > 0 && (
-                            <MessageDocumentsDisplay
-                              message={message}
-                              notes={notes}
-                              subjects={
-                                currentSubjectData
-                                  ? [currentSubjectData]
-                                  : []
-                              }
-                              uploadedFiles={{}}
-                              maxInitialDisplay={1}
-                            />
-                          )}
                         <div
-                          className={`${
-                            isUser
-                              ? "p-4 rounded-2xl bg-[var(--subject-color)]/95 dark:text-foreground text-primary-foreground"
-                              : "px-4 bg-none text-foreground w-full"
+                          className={`group relative flex flex-col ${
+                            isUser ? "items-end" : "items-start"
                           }`}
                         >
-
+                          {/* Display selected documents for user messages */}
+                          {isUser &&
+                            (message as any)?.metadata?.selectedNoteSlugs &&
+                            (message as any).metadata.selectedNoteSlugs.length >
+                              0 && (
+                              <MessageDocumentsDisplay
+                                message={message}
+                                notes={notes}
+                                subjects={
+                                  currentSubjectData ? [currentSubjectData] : []
+                                }
+                                uploadedFiles={{}}
+                                maxInitialDisplay={1}
+                              />
+                            )}
+                          <div
+                            className={`${
+                              isUser
+                                ? "p-4 rounded-2xl bg-[var(--subject-color)]/95 dark:text-foreground text-primary-foreground"
+                                : "px-4 bg-none text-foreground w-full"
+                            }`}
+                          >
                             {editingMessageId === message.id && isUser ? (
                               <div className="w-full">
                                 <textarea
@@ -714,7 +757,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (status !== "ready") return;
+          if (status !== "ready" || hasPendingOperations) return;
           if (input.trim()) {
             if (selectedNoteSlugs.length > 0) {
               setIsRetrieving(true);
@@ -873,7 +916,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                   />
                 </div>
                 {/* send / stop toggle */}
-                {status === "ready" ? (
+                {status === "ready" && !hasPendingOperations ? (
                   <Button
                     type="submit"
                     size="icon"
@@ -892,7 +935,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                     size="icon"
                     variant="secondary"
                     className="h-10 w-10 rounded-full"
-                    onClick={() => stop()}
+                    onClick={enhancedStop}
                   >
                     <Square className="h-5 w-5" />
                   </Button>
@@ -908,7 +951,11 @@ export default function SubjectChat({ subject }: { subject?: string }) {
         onClose={hideSubscriptionPopup}
         title="Appunto Premium"
         description="Questo contenuto è disponibile con il piano Premium."
-        features={["Chat con tutti gli appunti", "Quiz e riassunti illimitati", "Accesso completo a MaturaMente"]}
+        features={[
+          "Chat con tutti gli appunti",
+          "Quiz e riassunti illimitati",
+          "Accesso completo a MaturaMente",
+        ]}
       />
       {showNotesOverlay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4">
@@ -1034,23 +1081,35 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            if (!n.free_trial) { showSubscriptionPopup(); return; }
+                            if (!n.free_trial) {
+                              showSubscriptionPopup();
+                              return;
+                            }
                             toggleNote(n.slug);
                           }
                         }}
                         onClick={() => {
-                          if (!n.free_trial) { showSubscriptionPopup(); return; }
+                          if (!n.free_trial) {
+                            showSubscriptionPopup();
+                            return;
+                          }
                           toggleNote(n.slug);
                         }}
-                        className={`relative flex items-start gap-3 p-3  bg-[var(--subject-color)]/2 border border-[var(--subject-color)]/10 rounded-lg hover:shadow-sm/5 hover:border-[var(--subject-color)]/30 transition-all duration-200 cursor-pointer ${!n.free_trial ? "opacity-50" : ""}`}
+                        className={`relative flex items-start gap-3 p-3  bg-[var(--subject-color)]/2 border border-[var(--subject-color)]/10 rounded-lg hover:shadow-sm/5 hover:border-[var(--subject-color)]/30 transition-all duration-200 cursor-pointer ${
+                          !n.free_trial ? "opacity-50" : ""
+                        }`}
                       >
                         <div className="flex-1 min-w-0">
                           {(() => {
                             const title: string = n.title || "";
                             const sep = title.indexOf(" - ");
-                            const mainTitle = sep !== -1 ? title.slice(0, sep) : title;
-                            const subTitle = sep !== -1 ? title.slice(sep + 3) : "";
-                            const isSelected = selectedNoteSlugs.includes(n.slug);
+                            const mainTitle =
+                              sep !== -1 ? title.slice(0, sep) : title;
+                            const subTitle =
+                              sep !== -1 ? title.slice(sep + 3) : "";
+                            const isSelected = selectedNoteSlugs.includes(
+                              n.slug
+                            );
                             return (
                               <>
                                 <div className="flex items-start justify-between gap-2">
@@ -1061,9 +1120,13 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                                       <Circle className="h-6 w-6 flex-shrink-0 text-[var(--subject-color)]/70" />
                                     )}
                                     <div className="min-w-0">
-                                      <div className="font-medium line-clamp-1">{mainTitle}</div>
+                                      <div className="font-medium line-clamp-1">
+                                        {mainTitle}
+                                      </div>
                                       {subTitle && (
-                                        <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{subTitle}</div>
+                                        <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                          {subTitle}
+                                        </div>
                                       )}
                                     </div>
                                   </div>
@@ -1082,15 +1145,21 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                     return (
                       <div className="flex-1 overflow-auto space-y-4 pr-1">
                         <div className="flex flex-col gap-2">
-                          <div className="text-sm font-medium text-muted-foreground">APPUNTI DISPONIBILI</div>
+                          <div className="text-sm font-medium text-muted-foreground">
+                            APPUNTI DISPONIBILI
+                          </div>
                           {freeList.map((n) => row(n))}
                           {freeList.length === 0 && (
-                            <div className="text-sm text-muted-foreground">Nessun appunto disponibile</div>
+                            <div className="text-sm text-muted-foreground">
+                              Nessun appunto disponibile
+                            </div>
                           )}
                         </div>
                         {premiumList.length > 0 && (
                           <div className="flex flex-col gap-2">
-                            <div className="text-sm font-medium text-muted-foreground">APPUNTI PREMIUM</div>
+                            <div className="text-sm font-medium text-muted-foreground">
+                              APPUNTI PREMIUM
+                            </div>
                             <div className="opacity-50 flex flex-col gap-2">
                               {premiumList.map((n) => row(n))}
                             </div>
