@@ -296,7 +296,7 @@ export default function SettingsClient({
       <AIBudgetCard />
 
       {/* Subscription Management Section - hidden for free trial users */}
-      <SubscriptionManagement userId={id} />  
+      <SubscriptionManagement userId={id} />
 
       <Card className="border-destructive/20 bg-destructive/5">
         <CardHeader className="pb-4 sm:pb-6">
@@ -308,61 +308,63 @@ export default function SettingsClient({
         <CardContent className="space-y-6 px-4 sm:px-6 md:pb-6">
           {/* Cancel / Reactivate Subscription */}
           {!isFreeTrial && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <p className="font-medium">Gestione Abbonamento</p>
-              <p className="text-sm text-muted-foreground">
-                Cancella o riattiva il tuo abbonamento.
-              </p>
-            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <p className="font-medium">Gestione Abbonamento</p>
+                <p className="text-sm text-muted-foreground">
+                  Cancella o riattiva il tuo abbonamento.
+                </p>
+              </div>
 
-            {subscription &&
-            subscription.isActive &&
-            !subscription.willCancelAtPeriodEnd ? (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="sm:w-auto w-full mt-2 sm:mt-0 gap-2"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Cancella Abbonamento
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Cancella Abbonamento</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Avrai ancora accesso alle materie selezionate nel tuo
-                      abbonamento fino alla fine del periodo attuale.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Mantieni</AlertDialogCancel>
+              {subscription &&
+              subscription.isActive &&
+              !subscription.willCancelAtPeriodEnd ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
                     <Button
-                      onClick={handleCancelSubscription}
-                      variant="destructive"
-                      disabled={subActionLoading}
-                      className="bg-red-600 text-white"
+                      variant="outline"
+                      className="sm:w-auto w-full mt-2 sm:mt-0 gap-2"
                     >
-                      {subActionLoading
-                        ? "Annullamento..."
-                        : "Conferma Cancellazione"}
+                      <XCircle className="h-4 w-4" />
+                      Cancella Abbonamento
                     </Button>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            ) : subscription && subscription.willCancelAtPeriodEnd ? (
-              <Button
-                onClick={handleReactivateSubscription}
-                disabled={subActionLoading}
-                className="sm:w-auto w-full mt-2 sm:mt-0 gap-2 text-white"
-              >
-                <CheckCircle className="h-4 w-4" />
-                {subActionLoading ? "Riattivazione..." : "Riattiva Abbonamento"}
-              </Button>
-            ) : null}
-          </div>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancella Abbonamento</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Avrai ancora accesso alle materie selezionate nel tuo
+                        abbonamento fino alla fine del periodo attuale.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Mantieni</AlertDialogCancel>
+                      <Button
+                        onClick={handleCancelSubscription}
+                        variant="destructive"
+                        disabled={subActionLoading}
+                        className="bg-red-600 text-white"
+                      >
+                        {subActionLoading
+                          ? "Annullamento..."
+                          : "Conferma Cancellazione"}
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : subscription && subscription.willCancelAtPeriodEnd ? (
+                <Button
+                  onClick={handleReactivateSubscription}
+                  disabled={subActionLoading}
+                  className="sm:w-auto w-full mt-2 sm:mt-0 gap-2 text-white"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  {subActionLoading
+                    ? "Riattivazione..."
+                    : "Riattiva Abbonamento"}
+                </Button>
+              ) : null}
+            </div>
           )}
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

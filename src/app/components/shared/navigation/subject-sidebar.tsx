@@ -137,6 +137,10 @@ export default function SubjectSidebar({
     router.push("/pricing");
   };
 
+  const handleLogout = () => {
+    signOut({ callbackUrl: "/" });
+  };
+
   // Function to check if a link should be active based on the current pathname
   const isLinkActive = (href: string): boolean => {
     // Get the current subject slug from href (first part after /)
@@ -398,7 +402,7 @@ export default function SubjectSidebar({
 
                     <DropdownMenuSeparator />
 
-                    <DropdownMenuItem onClick={() => signOut()}>
+                    <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Esci</span>
                     </DropdownMenuItem>

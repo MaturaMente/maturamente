@@ -1,7 +1,8 @@
+import { auth } from "@/lib/auth";
 import { GeneralNavbar } from "../../components/shared/navigation/general-navbar";
-import DashboardFooter from "../../components/shared/navigation/footer";
+import { redirect } from "next/navigation";
 
-export default function DashboardMaturamenteLayout({
+export default async function DashboardMaturamenteLayout({
   children,
 }: {
   children: React.ReactNode;

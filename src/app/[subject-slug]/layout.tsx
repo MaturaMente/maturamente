@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { getUserSubjectBySlug } from "@/utils/subjects-data";
 import GeneralLayout from "@/app/components/subject/general-layout";
 import { connection } from "next/server";
+import { UnauthenticatedOverlay } from "@/app/components/auth/unauthenticated-overlay";
 
 // Force dynamic rendering for authentication
 export const dynamic = "force-dynamic";
@@ -24,9 +25,24 @@ export default async function DashboardLayout({
   // Get current user session
   const session = await auth();
 
-  // If no user session, let middleware handle the redirect
+  // If no user session, show authentication overlay
   if (!session?.user?.id) {
-    return <GeneralLayout>{children}</GeneralLayout>;
+    return (
+      <GeneralLayout>
+        <UnauthenticatedOverlay
+          title="Accedi alla materia"
+          description="Crea un account gratuito per accedere a tutti i contenuti e funzionalità di questa materia"
+          features={[
+            "Accesso completo ai contenuti",
+            "Tracciamento del progresso",
+            "Simulazioni personalizzate",
+            "Chat con il tutor AI",
+          ]}
+        >
+          {children}
+        </UnauthenticatedOverlay>
+      </GeneralLayout>
+    );
   }
 
   // Check if the subject exists for this user

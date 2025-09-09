@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import DashboardChat from "@/app/components/chat/dashboard-chat";
+import { isAuthenticated } from "@/utils/user-context";
+import { UnauthenticatedOverlay } from "@/app/components/auth/unauthenticated-overlay";
 
 export const metadata: Metadata = {
   title: "Pit - Tutor AI",
@@ -45,6 +47,27 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AiTutorPage() {
+export default async function AiTutorPage() {
+  const authenticated = await isAuthenticated();
+
+  if (!authenticated) {
+    return (
+      <div className="relative h-full">
+        <UnauthenticatedOverlay
+          title="Chatta con Pit - Tutor AI"
+          description="Accedi per utilizzare Pit, il tutor AI che ti aiuta con tutte le materie scolastiche"
+          features={[
+            "Spiegazioni personalizzate",
+            "Aiuto con i compiti",
+            "Supporto per tutte le materie",
+            "Disponibile 24/7",
+          ]}
+        >
+          <DashboardChat />
+        </UnauthenticatedOverlay>
+      </div>
+    );
+  }
+
   return <DashboardChat />;
 }
