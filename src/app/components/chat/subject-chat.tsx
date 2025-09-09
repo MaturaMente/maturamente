@@ -255,10 +255,30 @@ export default function SubjectChat({ subject }: { subject?: string }) {
         regenerate({ messageId: assistantAfter.id });
       }, 100);
     } else {
-      // if no assistant answer yet, clear any pending states and allow new messages
-      setIsThinking(false);
-      setIsRetrieving(false);
+      // No assistant message to regenerate – send a fresh request with preserved metadata
+      if (originalSelectedNoteSlugs.length > 0) {
+        setIsRetrieving(true);
+        setIsThinking(false);
+      } else {
+        setIsThinking(true);
+        setIsRetrieving(false);
+      }
       setPendingAssistantId(null);
+
+      // Remove the edited user message to avoid duplicates
+      setMessages((prev: any[]) => {
+        const idx = prev.findIndex((m) => m.id === editingMessageId);
+        if (idx === -1) return prev;
+        return prev.slice(0, idx);
+      });
+
+      // Send the edited text as a new message with original metadata
+      setTimeout(() => {
+        sendMessage({
+          text: editingValue,
+          metadata: { selectedNoteSlugs: originalSelectedNoteSlugs },
+        });
+      }, 50);
     }
   };
 
@@ -492,7 +512,12 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                 const messageText = extractTextFromMessage(message);
                 const isLastMessage = idx === messages.length - 1;
                 return (
-                  <div key={message.id} className="flex justify-end w-full">
+                  <div
+                    key={message.id}
+                    className={`flex justify-end w-full ${
+                      isLastMessage ? "pb-12" : ""
+                    }`}
+                  >
                     <div
                       className={`flex ${
                         isUser
