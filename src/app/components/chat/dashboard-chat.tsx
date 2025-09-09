@@ -256,7 +256,15 @@ export default function DashboardChat() {
 
   const saveEdit = async () => {
     if (!editingMessageId) return;
-    // update the user message locally
+
+    // Find the original message to preserve its original metadata
+    const originalMessage = messages.find((m) => m.id === editingMessageId);
+    const originalSelectedNoteSlugs =
+      (originalMessage?.metadata as any)?.selectedNoteSlugs || [];
+    const originalSelectedFileSources =
+      (originalMessage?.metadata as any)?.selectedFileSources || [];
+
+    // update the user message locally, preserving original selected notes
     setMessages((prev) =>
       prev.map((m: any) =>
         m.id === editingMessageId
@@ -265,8 +273,8 @@ export default function DashboardChat() {
               parts: [{ type: "text", text: editingValue }],
               metadata: {
                 ...(m.metadata || {}),
-                selectedNoteSlugs,
-                selectedFileSources,
+                selectedNoteSlugs: originalSelectedNoteSlugs,
+                selectedFileSources: originalSelectedFileSources,
               },
             }
           : m
@@ -284,8 +292,11 @@ export default function DashboardChat() {
     setEditingValue("");
 
     if (assistantAfter) {
-      // Set loading states before regenerating
-      if (selectedNoteSlugs.length > 0 || selectedFileSources.length > 0) {
+      // Set loading states before regenerating based on original selected notes
+      if (
+        originalSelectedNoteSlugs.length > 0 ||
+        originalSelectedFileSources.length > 0
+      ) {
         setIsRetrieving(true);
         setIsThinking(false);
       } else {
@@ -920,6 +931,9 @@ export default function DashboardChat() {
               metadata: { selectedNoteSlugs, selectedFileSources },
             });
             setInput("");
+            // Clear selected notes from askbar after sending message
+            setSelectedNoteSlugs([]);
+            setSelectedFileSources([]);
           }
         }}
         className="md:sticky fixed bottom-6 left-0 right-0 z-10 w-full bg-transparent px-6 pb-0 md:pb-3"
@@ -1082,6 +1096,9 @@ export default function DashboardChat() {
                           metadata: { selectedNoteSlugs, selectedFileSources },
                         });
                         setInput("");
+                        // Clear selected notes from askbar after sending message
+                        setSelectedNoteSlugs([]);
+                        setSelectedFileSources([]);
                       }
                     }
                   }}

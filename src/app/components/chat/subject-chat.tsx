@@ -208,14 +208,23 @@ export default function SubjectChat({ subject }: { subject?: string }) {
 
   const saveEdit = async () => {
     if (!editingMessageId) return;
-    // update the user message locally
+
+    // Find the original message to preserve its original metadata
+    const originalMessage = messages.find((m) => m.id === editingMessageId);
+    const originalSelectedNoteSlugs =
+      (originalMessage?.metadata as any)?.selectedNoteSlugs || [];
+
+    // update the user message locally, preserving original selected notes
     setMessages((prev) =>
       prev.map((m: any) =>
         m.id === editingMessageId
           ? {
               ...m,
               parts: [{ type: "text", text: editingValue }],
-              metadata: { ...(m.metadata || {}), selectedNoteSlugs },
+              metadata: {
+                ...(m.metadata || {}),
+                selectedNoteSlugs: originalSelectedNoteSlugs,
+              },
             }
           : m
       )
@@ -232,8 +241,8 @@ export default function SubjectChat({ subject }: { subject?: string }) {
     setEditingValue("");
 
     if (assistantAfter) {
-      // Set loading states before regenerating
-      if (selectedNoteSlugs.length > 0) {
+      // Set loading states before regenerating based on original selected notes
+      if (originalSelectedNoteSlugs.length > 0) {
         setIsRetrieving(true);
         setIsThinking(false);
       } else {
@@ -768,6 +777,8 @@ export default function SubjectChat({ subject }: { subject?: string }) {
             }
             sendMessage({ text: input, metadata: { selectedNoteSlugs } });
             setInput("");
+            // Clear selected notes from askbar after sending message
+            setSelectedNoteSlugs([]);
           }
         }}
         className="md:sticky fixed bottom-6 left-0 right-0 z-10 w-full bg-transparent px-6 pb-0 md:pb-3"
@@ -870,6 +881,8 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                           metadata: { selectedNoteSlugs },
                         });
                         setInput("");
+                        // Clear selected notes from askbar after sending message
+                        setSelectedNoteSlugs([]);
                       }
                     }
                   }}
