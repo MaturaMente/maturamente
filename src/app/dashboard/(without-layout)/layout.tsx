@@ -1,6 +1,4 @@
-import { auth } from "@/lib/auth";
 import { GeneralNavbar } from "../../components/shared/navigation/general-navbar";
-import { redirect } from "next/navigation";
 
 export default async function DashboardMaturamenteLayout({
   children,

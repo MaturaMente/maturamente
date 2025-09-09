@@ -309,10 +309,37 @@ export default function DashboardChat() {
         regenerate({ messageId: assistantAfter.id });
       }, 100);
     } else {
-      // if no assistant answer yet, clear any pending states and allow new messages
-      setIsThinking(false);
-      setIsRetrieving(false);
-      setPendingAssistantId(null);
+      // No assistant message to regenerate – send a fresh request with preserved metadata
+      if (
+        originalSelectedNoteSlugs.length > 0 ||
+        originalSelectedFileSources.length > 0
+      ) {
+        setIsRetrieving(true);
+        setIsThinking(false);
+      } else {
+        setIsThinking(true);
+        setIsRetrieving(false);
+      }
+
+      // Ensure we don't duplicate the user message: remove the edited user message,
+      // so the upcoming send will add a single (updated) user message
+      setMessages((prev: any[]) => {
+        const idx = prev.findIndex((m) => m.id === editingMessageId);
+        if (idx === -1) return prev;
+        // keep messages up to the one BEFORE the edited message
+        return prev.slice(0, idx);
+      });
+
+      // Send the edited message content as a new request
+      setTimeout(() => {
+        sendMessage({
+          text: editingValue,
+          metadata: {
+            selectedNoteSlugs: originalSelectedNoteSlugs,
+            selectedFileSources: originalSelectedFileSources,
+          },
+        });
+      }, 50);
     }
   };
 
@@ -1638,19 +1665,100 @@ export default function DashboardChat() {
                         const premiumList = subjectFiltered.filter(
                           (n) => !n.free_trial
                         );
+
+                        // Get recent notes that are also free trial
+                        const recentFreeTrialFiltered = (
+                          recentStudiedNotes || []
+                        )
+                          .map((recentNote) =>
+                            freeTrialList.find(
+                              (n) => n.slug === recentNote.slug
+                            )
+                          )
+                          .filter(Boolean); // Remove any notes that weren't found
+
+                        // Get non-recent free trial notes for subject grouping
+                        const recentSet = new Set(
+                          (recentStudiedNotes || []).map((r) => r.slug)
+                        );
+                        const nonRecentFreeTrialNotes = freeTrialList.filter(
+                          (n) => !recentSet.has(n.slug)
+                        );
+
+                        // Group non-recent free trial notes by subject
+                        const groupedFreeTrialBySubject =
+                          nonRecentFreeTrialNotes.reduce(
+                            (acc: any, note: any) => {
+                              const subjectId = note.subject_id || "unknown";
+                              if (!acc[subjectId]) {
+                                acc[subjectId] = [];
+                              }
+                              acc[subjectId].push(note);
+                              return acc;
+                            },
+                            {}
+                          );
+
                         return (
                           <div className="flex-1 overflow-auto space-y-4 pr-1">
-                            <div className="flex flex-col gap-2">
-                              <div className="text-sm font-medium text-muted-foreground">
-                                APPUNTI DISPONIBILI
+                            {/* Recent notes section for free trial */}
+                            {recentFreeTrialFiltered.length > 0 && (
+                              <div className="flex flex-col gap-2">
+                                <div className="text-sm font-medium text-muted-foreground">
+                                  APPUNTI RECENTI
+                                </div>
+                                {recentFreeTrialFiltered
+                                  .slice(0, 3)
+                                  .map((n) => renderRow(n))}
+                                <div className="h-px w-full bg-border my-1" />
                               </div>
-                              {freeTrialList.map((n) => renderRow(n))}
-                              {freeTrialList.length === 0 && (
+                            )}
+
+                            {/* Subject-based sections for free trial notes */}
+                            {Object.entries(groupedFreeTrialBySubject).map(
+                              ([subjectId, subjectNotes]: [string, any]) => {
+                                const subject = subjects.find(
+                                  (s) => s.id === subjectId
+                                );
+                                const subjectName =
+                                  subject?.name || "Unknown Subject";
+
+                                // Sort notes within each subject alphabetically
+                                const sortedSubjectNotes = subjectNotes.sort(
+                                  (a: any, b: any) =>
+                                    a.title?.localeCompare(b.title || "") || 0
+                                );
+
+                                return (
+                                  <div
+                                    key={subjectId}
+                                    className="flex flex-col gap-2"
+                                  >
+                                    <div className="text-sm font-medium text-muted-foreground uppercase">
+                                      {subjectName}
+                                    </div>
+                                    {sortedSubjectNotes.map((n: any) =>
+                                      renderRow(n)
+                                    )}
+                                    <div className="h-px w-full bg-border my-1" />
+                                  </div>
+                                );
+                              }
+                            )}
+
+                            {/* Show message if no free trial notes available */}
+                            {freeTrialList.length === 0 && (
+                              <div className="flex flex-col gap-2">
+                                <div className="text-sm font-medium text-muted-foreground">
+                                  APPUNTI DISPONIBILI
+                                </div>
                                 <div className="text-sm text-muted-foreground">
                                   Nessun appunto disponibile
                                 </div>
-                              )}
-                            </div>
+                              </div>
+                            )}
+
+                            {/* Premium notes section (unchanged) */}
                             {premiumList.length > 0 && (
                               <div className="flex flex-col gap-2">
                                 <div className="text-sm font-medium text-muted-foreground">

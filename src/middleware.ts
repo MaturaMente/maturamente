@@ -38,7 +38,7 @@ export default auth((req) => {
 
   // Check if this is a subject-based route (e.g., /matematica/teoria, /fisica/simulazioni)
   const subjectBasedRoutePattern =
-    /^\/[^\/]+\/(teoria|simulazioni|statistiche|tutor)/;
+    /^\/[^\/]+\/(teoria|simulazioni|statistiche|tutor|pit)/;
   const isSubjectBasedRoute = subjectBasedRoutePattern.test(pathname);
 
   const shouldAddUserHeaders =

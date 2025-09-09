@@ -200,7 +200,7 @@ export default function GeneralLayout({ children }: { children: ReactNode }) {
                   <SheetTrigger asChild className="md:hidden block">
                     <Button
                       variant="ghost"
-                      className="align-end items-end flex px-0 py-8 pl-5 h-auto"
+                      className="align-end items-end flex px-0 py-4 pl-5 h-auto"
                     >
                       <Menu style={{ width: "20px", height: "20px" }} />
                       <span className="sr-only">Menu</span>

@@ -187,7 +187,7 @@ const UserAvatarDropdown = () => {
           onClick={handleSettingsClick}
         />
       ) : null}
-      <AvatarFallback className="bg-primary">
+      <AvatarFallback className="bg-primary" onClick={handleSettingsClick}>
         {getAvatarFallback()}
       </AvatarFallback>
     </Avatar>
@@ -270,6 +270,13 @@ export function GeneralNavbar({ variant = "landing" }: NavbarProps) {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
+  // Auto-collapse mobile menu on route change (e.g., when going to settings)
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      setIsMobileMenuOpen(false);
+    }
+  }, [pathname]);
 
   const navbarClass = cn(
     "bg-white dark:bg-background shadow-md",
