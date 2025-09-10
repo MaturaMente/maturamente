@@ -11,10 +11,10 @@ import {
 import {
   LogIn,
   Sparkles,
-  TrendingUp,
-  BookMinus,
-  SquareLibrary,
   ChartNoAxesColumn,
+  Notebook,
+  Bot,
+  School,
 } from "lucide-react";
 import { signIn } from "next-auth/react";
 
@@ -30,10 +30,10 @@ export function UnauthenticatedOverlay({
   title = "Accedi per vedere i tuoi dati",
   description = "Crea un account gratuito per accedere a tutte le funzionalità di MaturaMente",
   features = [
+    "Appunti su ogni argomento",
+    "Accesso a PIT, il tuo Personal Intelligent Tutor",
+    "Sezione Maturità con teoria, esercizi e simulazioni",
     "Monitora i tuoi progressi",
-    "Salva i tuoi risultati",
-    "Statistiche dettagliate",
-    "Piani di studio personalizzati",
   ],
 }: UnauthenticatedOverlayProps) {
   const handleGoogleLogin = () => {
@@ -67,16 +67,12 @@ export function UnauthenticatedOverlay({
                 >
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                     {index === 0 && (
-                      <TrendingUp className="h-4 w-4 text-primary" />
+                      <Notebook className="h-4 w-4 text-primary" />
                     )}
-                    {index === 1 && (
-                      <SquareLibrary className="h-4 w-4 text-primary" />
-                    )}
-                    {index === 2 && (
-                      <ChartNoAxesColumn className="h-4 w-4 text-primary" />
-                    )}
+                    {index === 1 && <Bot className="h-4 w-4 text-primary" />}
+                    {index === 2 && <School className="h-4 w-4 text-primary" />}
                     {index === 3 && (
-                      <BookMinus className="h-4 w-4 text-primary" />
+                      <ChartNoAxesColumn className="h-4 w-4 text-primary" />
                     )}
                   </div>
                   <span>{feature}</span>

@@ -50,12 +50,6 @@ export default async function LeMieMateriePage() {
         <UnauthenticatedOverlay
           title="Accedi alle tue materie"
           description="Crea un account gratuito per organizzare e accedere ai tuoi appunti per materia"
-          features={[
-            "Organizza appunti per materia",
-            "Accesso rapido ai materiali",
-            "Tracciamento del progresso",
-            "Sincronizzazione su tutti i dispositivi",
-          ]}
         >
           <></>
         </UnauthenticatedOverlay>

@@ -31,10 +31,10 @@ export function AuthPopup({
   isOpen,
   onClose,
   features = [
+    "Appunti su ogni argomento",
+    "Accesso a PIT, il tuo Personal Intelligent Tutor",
+    "Sezione Maturità con teoria, esercizi e simulazioni",
     "Monitora i tuoi progressi",
-    "Salva i tuoi risultati",
-    "Statistiche dettagliate",
-    "Piani di studio personalizzati",
   ],
 }: AuthPopupProps) {
   const params = useParams();
@@ -92,7 +92,7 @@ export function AuthPopup({
             Accedi con Google
           </Button>
           <p className="text-center text-xs text-muted-foreground">
-            Inizia subito e preparati al meglio per la maturità
+            Inizia subito e preparati al meglio per il liceo
           </p>
         </div>
       </DialogContent>

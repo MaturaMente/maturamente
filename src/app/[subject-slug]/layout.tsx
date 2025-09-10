@@ -32,12 +32,6 @@ export default async function DashboardLayout({
         <UnauthenticatedOverlay
           title="Accedi alla materia"
           description="Crea un account gratuito per accedere a tutti i contenuti e funzionalità di questa materia"
-          features={[
-            "Accesso completo ai contenuti",
-            "Tracciamento del progresso",
-            "Simulazioni personalizzate",
-            "Chat con il tutor AI",
-          ]}
         >
           {children}
         </UnauthenticatedOverlay>

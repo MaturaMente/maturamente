@@ -1004,7 +1004,7 @@ export default function SubjectChat({ subject }: { subject?: string }) {
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">
                     {selectedNoteSlugs.length > 0
-                      ? `Appunti selezionati - ${selectedNoteSlugs.length}`
+                      ? `Appunti selezionati: ${selectedNoteSlugs.length}`
                       : "Appunti selezionati"}
                   </span>
                   {selectedNoteSlugs.length > 0 && (

@@ -56,12 +56,6 @@ export default async function AiTutorPage() {
         <UnauthenticatedOverlay
           title="Chatta con Pit - Tutor AI"
           description="Accedi per utilizzare Pit, il tutor AI che ti aiuta con tutte le materie scolastiche"
-          features={[
-            "Spiegazioni personalizzate",
-            "Aiuto con i compiti",
-            "Supporto per tutte le materie",
-            "Disponibile 24/7",
-          ]}
         >
           <DashboardChat />
         </UnauthenticatedOverlay>

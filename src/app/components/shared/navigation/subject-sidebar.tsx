@@ -168,6 +168,20 @@ export default function SubjectSidebar({
     return "Nessun piano attivo";
   })();
 
+  // Compute badge color classes based on subscription status
+  const planBadgeClasses = (() => {
+    // Free trial (active)
+    if (subscriptionStatus?.isFreeTrial && subscriptionStatus?.isActive) {
+      return "bg-green-100 text-green-800 border-green-200 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30";
+    }
+    // Premium (active, not free trial)
+    if (subscriptionStatus?.isActive) {
+      return "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30";
+    }
+    // No plan selected / guest / inactive
+    return "bg-foreground/5 border-foreground/10 text-foreground";
+  })();
+
   // Handle navigation with mobile menu closing
   const handleMobileItemClick = (href: string, name: string) => {
     if (onItemClick) {
@@ -365,7 +379,7 @@ export default function SubjectSidebar({
             <div className="flex items-center justify-between">
               <Badge
                 variant="outline"
-                className="px-2 py-1 text-xs bg-foreground/5 border-foreground/10 text-foreground"
+                className={cn("px-2 py-1 text-xs", planBadgeClasses)}
               >
                 {planLabel}
               </Badge>

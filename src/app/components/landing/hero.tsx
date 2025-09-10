@@ -1,7 +1,6 @@
 "use client";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ArrowRightIcon } from "lucide-react";
 import { Section } from "@/components/ui/section";
 import { Mockup } from "@/components/ui/mockup";
@@ -60,19 +59,6 @@ export default function Hero({
       priority={true}
     />
   ),
-  badge = (
-    <Link
-      href="/dashboard/pit"
-      className="flex items-center gap-1 cursor-pointer"
-    >
-      <Badge variant="outline" className="animate-appear">
-        <span className="text-muted-foreground">
-          Prova Pit, il tuo Personal Intelligent Tutor
-        </span>
-        <ArrowRightIcon className="size-3" />
-      </Badge>
-    </Link>
-  ),
   className,
 }: HeroProps) {
   const { data: session } = useSession();
@@ -88,7 +74,20 @@ export default function Hero({
     >
       <div className="max-w-container mx-auto flex flex-col gap-12 pt-24 md:pt-16 sm:gap-24">
         <div className="flex flex-col items-center justify-center gap-6 text-center sm:gap-12">
-          {badge !== false && badge}
+          <Button
+            asChild
+            variant="outline"
+            size="xs"
+            className="animate-appear cursor-pointer flex items-center gap-1 px-4 py-2 justify-center rounded-full relative z-20"
+          >
+            <Link href="/dashboard/pit">
+              <span className="text-muted-foreground text-xs">
+                Prova Pit, il tuo Personal Intelligent Tutor
+              </span>
+              <ArrowRightIcon className="size-3" />
+            </Link>
+          </Button>
+
           <h1 className="animate-appear relative z-10 inline-block text-5xl leading-tight font-semibold text-balance sm:text-6xl sm:leading-tight md:text-7xl lg:text-8xl md:leading-tight">
             <span className="dark:text-white text-blue-900 drop-shadow-2xl">
               Preparati al meglio con
@@ -97,7 +96,7 @@ export default function Hero({
               <span className="dark:text-primary text-blue-900">Matura</span>
               <span className="dark:text-blue-400 text-primary">Mente</span>
               <span
-                className="absolute w-full left-0 top-full -translate-y-1/2 h-container bg-gradient-to-r from-blue-700 to-blue-400 dark:from-blue-500 dark:to-blue-400"
+                className="absolute w-full left-0 top-full -translate-y-1/2 h-container bg-gradient-to-r from-blue-700 to-blue-400 dark:from-blue-500 dark:to-blue-400 pointer-events-none"
                 style={{
                   maskImage: `url(${underlineImage})`,
                   maskSize: "contain",

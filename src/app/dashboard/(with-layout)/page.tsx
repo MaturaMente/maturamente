@@ -378,10 +378,10 @@ function UnauthenticatedDashboard() {
       title="Accedi alla tua Dashboard"
       description="Crea un account gratuito per monitorare i tuoi progressi e personalizzare il tuo percorso di studio"
       features={[
-        "Monitora i tuoi progressi in tempo reale",
-        "Salva i risultati delle simulazioni",
-        "Statistiche dettagliate delle performance",
-        "Piano di studio personalizzato",
+        "Appunti su ogni argomento",
+        "Accesso a PIT, il tuo Personal Intelligent Tutor",
+        "Sezione Maturità con teoria, esercizi e simulazioni",
+        "Monitora i tuoi progressi",
       ]}
     >
       {sampleData}
