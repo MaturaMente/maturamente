@@ -120,10 +120,10 @@ export function NotesStatistics({
         </Card>
 
         {/* Studied Notes Card */}
-        <Card className="lg:col-span-1 relative overflow-hidden bg-gradient-to-br from-green-500/5 to-background border-green-500/20">
+        <Card className="lg:col-span-1 relative overflow-hidden bg-gradient-to-br from-[color:var(--subject-color)]/5 to-background border-[color:var(--subject-color)]/20">
           <CardHeader className="pb-3 md:pb-6">
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-              <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-green-500 flex-shrink-0" />
+              <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-[color:var(--subject-color)] flex-shrink-0" />
               <span className="truncate">Appunti Studiati</span>
             </CardTitle>
             <CardDescription className="text-xs md:text-sm">
@@ -141,7 +141,7 @@ export function NotesStatistics({
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <div className="text-xl md:text-2xl font-bold text-green-500">
+                <div className="text-xl md:text-2xl font-bold text-[color:var(--subject-color)]">
                   {studiedPercentage}%
                 </div>
                 <div className="text-xs md:text-sm text-muted-foreground">
@@ -151,7 +151,7 @@ export function NotesStatistics({
             </div>
             <Progress
               value={studiedPercentage}
-              className="h-2 [&>div]:bg-green-500 bg-green-100 dark:bg-green-900"
+              className="h-2 [&>div]:bg-[color:var(--subject-color)] bg-[color:var(--subject-color)]/10 dark:bg-[color:var(--subject-color)]/20"
             />
           </CardContent>
         </Card>
@@ -310,7 +310,11 @@ export function NotesStatistics({
 
           {/* Action Buttons */}
           <div className="flex flex-col md:flex-row gap-2 md:gap-4 pt-2">
-            <Button asChild className="w-full text-white text-sm bg-[color:var(--subject-color)] hover:bg-[color:var(--subject-color)]/90" variant="secondary">
+            <Button
+              asChild
+              className="w-full text-white text-sm bg-[color:var(--subject-color)] hover:bg-[color:var(--subject-color)]/90"
+              variant="secondary"
+            >
               <Link href={`/${subjectSlug}`}>
                 <FileText className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                 Visualizza tutti gli appunti
