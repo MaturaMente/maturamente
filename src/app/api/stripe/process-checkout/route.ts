@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, SUBSCRIPTION_PLANS, calculateCustomPrice } from "@/lib/stripe";
-import { calculateMonthlyAIBudget } from "@/utils/ai-budget/budget-management";
+import {
+  calculateMonthlyAIBudget,
+  resetCurrentPeriodAIBudgetBalance,
+} from "@/utils/ai-budget/budget-management";
+import { invalidateUserSubscriptionCache } from "@/utils/subscription-utils";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/drizzle";
 import { subscriptions, relationSubjectsUserTable } from "@/db/schema";
@@ -158,6 +162,8 @@ export async function POST(request: NextRequest) {
           updated_at: new Date(),
         })
         .where(eq(subscriptions.user_id, session.user.id));
+      // Reset AI budget balance for current period after upgrading to premium
+      await resetCurrentPeriodAIBudgetBalance(session.user.id);
     } else {
       // Create new subscription record
       await db.insert(subscriptions).values({
@@ -175,6 +181,8 @@ export async function POST(request: NextRequest) {
         cancel_at_period_end:
           (stripeSubscription as any).cancel_at_period_end || false,
       });
+      // Ensure AI budget balance is initialized and reset for the new premium subscription
+      await resetCurrentPeriodAIBudgetBalance(session.user.id);
     }
 
     // Clear existing subject access and add new ones
@@ -189,6 +197,9 @@ export async function POST(request: NextRequest) {
         subject_id: subjectId,
       });
     }
+
+    // Invalidate subscription cache to ensure fresh data on client
+    invalidateUserSubscriptionCache(session.user.id);
 
     return NextResponse.json({
       success: true,

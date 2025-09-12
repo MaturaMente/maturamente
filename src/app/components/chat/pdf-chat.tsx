@@ -23,6 +23,10 @@ import {
   Bot,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  SubscriptionPopup,
+  useSubscriptionPopup,
+} from "@/app/components/subscription/subscription-popup";
 
 export default function PdfChat() {
   const params = useParams();
@@ -37,8 +41,41 @@ export default function PdfChat() {
           ...(subject ? { "x-subject": subject } : {}),
           ...(noteSlug ? { "x-note-slug": noteSlug } : {}),
         },
+        fetch: async (url, options) => {
+          const response = await fetch(url, options);
+
+          if (response.status === 429) {
+            showSubscriptionPopup();
+            toast.error(
+              "Credito AI esaurito. Passa al piano Premium per continuare."
+            );
+          }
+
+          return response;
+        },
       }),
+      onError: (error: any) => {
+        console.log("🚨 PDF chat error:", error);
+        console.log("🚨 Error response:", error?.response);
+        console.log("🚨 Error status:", error?.response?.status);
+
+        // Check for 429 status code
+        if (error?.response?.status === 429) {
+          console.log("🚨 429 detected, showing popup");
+          showSubscriptionPopup();
+
+          // Also show a toast for immediate feedback
+          toast.error(
+            "Credito AI esaurito. Passa al piano Premium per continuare."
+          );
+        }
+      },
     });
+  const {
+    isSubscriptionPopupOpen,
+    showSubscriptionPopup,
+    hideSubscriptionPopup,
+  } = useSubscriptionPopup();
 
   const [input, setInput] = useState("");
   const {
@@ -555,6 +592,21 @@ export default function PdfChat() {
           </form>
         </div>
       </div>
+
+      {/* Premium gating popup */}
+      <SubscriptionPopup
+        isOpen={isSubscriptionPopupOpen}
+        onClose={hideSubscriptionPopup}
+        title={"Prova gratuita terminata"}
+        description={
+          "Hai esaurito il credito AI della prova gratuita. Passa al piano Premium per continuare."
+        }
+        features={[
+          "Chat con tutti gli appunti",
+          "Quiz e riassunti illimitati",
+          "Accesso completo a MaturaMente",
+        ]}
+      />
     </div>
   );
 }

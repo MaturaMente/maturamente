@@ -10,13 +10,7 @@ import {
   DialogDescription,
   DialogHeader,
 } from "@/components/ui/dialog";
-import {
-  Crown,
-  Upload,
-  MessageSquare,
-  FileText,
-  Sparkles,
-} from "lucide-react";
+import { Crown, Upload, MessageSquare, FileText, Sparkles } from "lucide-react";
 
 interface SubscriptionPopupProps {
   isOpen: boolean;
@@ -48,7 +42,13 @@ export function SubscriptionPopup({
   console.log("🔍 SubscriptionPopup render - isOpen:", isOpen);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        // Only trigger onClose when the dialog is being closed by the user
+        if (!open) onClose();
+      }}
+    >
       <DialogContent className="space-y-6 px-6 py-12 md:px-8 justify-center items-center">
         <DialogHeader className="text-center justify-center items-center">
           <div className="flex items-center justify-center mb-4">
@@ -56,14 +56,12 @@ export function SubscriptionPopup({
               <Crown className="h-6 w-6 text-amber-600" />
             </div>
           </div>
-          <DialogTitle className="text-2xl font-bold">
-            {title}
-          </DialogTitle>
+          <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
           <DialogDescription className="text-base">
             {description}
           </DialogDescription>
         </DialogHeader>
-        
+
         {/* Features list */}
         <div className="space-y-3">
           {features.map((feature, index) => (
@@ -73,7 +71,9 @@ export function SubscriptionPopup({
             >
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                 {index === 0 && <Upload className="h-4 w-4 text-primary" />}
-                {index === 1 && <MessageSquare className="h-4 w-4 text-primary" />}
+                {index === 1 && (
+                  <MessageSquare className="h-4 w-4 text-primary" />
+                )}
                 {index === 2 && <Sparkles className="h-4 w-4 text-primary" />}
                 {index === 3 && <FileText className="h-4 w-4 text-primary" />}
               </div>
@@ -109,7 +109,7 @@ export function useSubscriptionPopup() {
     console.log("🚀 Showing subscription popup");
     setIsOpen(true);
   };
-  
+
   const hideSubscriptionPopup = () => {
     console.log("❌ Hiding subscription popup");
     setIsOpen(false);

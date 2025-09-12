@@ -58,7 +58,35 @@ export default function SubjectChat({ subject }: { subject?: string }) {
         api: "/api/chat/subject",
         // pass subject as a header so every request (including regenerate) carries it
         headers: subject ? { "x-subject": subject } : undefined,
+        fetch: async (url, options) => {
+          const response = await fetch(url, options);
+
+          if (response.status === 429) {
+            showSubscriptionPopup();
+            toast.error(
+              "Credito AI esaurito. Passa al piano Premium per continuare."
+            );
+          }
+
+          return response;
+        },
       }),
+      onError: (error: any) => {
+        console.log("🚨 Subject chat error:", error);
+        console.log("🚨 Error response:", error?.response);
+        console.log("🚨 Error status:", error?.response?.status);
+
+        // Check for 429 status code
+        if (error?.response?.status === 429) {
+          console.log("🚨 429 detected, showing popup");
+          showSubscriptionPopup();
+
+          // Also show a toast for immediate feedback
+          toast.error(
+            "Credito AI esaurito. Passa al piano Premium per continuare."
+          );
+        }
+      },
     });
   const [input, setInput] = useState("");
   // Autoscroll management
@@ -987,8 +1015,10 @@ export default function SubjectChat({ subject }: { subject?: string }) {
       <SubscriptionPopup
         isOpen={isSubscriptionPopupOpen}
         onClose={hideSubscriptionPopup}
-        title="Appunto Premium"
-        description="Questo contenuto è disponibile con il piano Premium."
+        title={"Prova gratuita terminata"}
+        description={
+          "Hai esaurito il credito AI della prova gratuita. Passa al piano Premium per continuare."
+        }
         features={[
           "Chat con tutti gli appunti",
           "Quiz e riassunti illimitati",

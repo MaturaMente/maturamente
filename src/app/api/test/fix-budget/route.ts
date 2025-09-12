@@ -9,9 +9,12 @@ export async function POST(request: NextRequest) {
     const { userId } = await request.json();
 
     if (!userId) {
-      return NextResponse.json({
-        error: "userId is required"
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "userId is required",
+        },
+        { status: 400 }
+      );
     }
 
     console.log("Fixing AI budget for user:", userId);
@@ -24,9 +27,12 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (!userSubscription.length) {
-      return NextResponse.json({
-        error: "No subscription found for user"
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          error: "No subscription found for user",
+        },
+        { status: 404 }
+      );
     }
 
     const subscription = userSubscription[0];
@@ -42,27 +48,44 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(subscriptions.user_id, userId));
 
-    // Create budget balance record for current period
+    // Create budget balance record for current month (idempotent)
     const now = new Date();
     const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const periodEnd = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59
+    );
 
-    await db.insert(aiBudgetBalanceTable).values({
-      user_id: userId,
-      subscription_id: subscription.id,
-      period_start: periodStart,
-      period_end: periodEnd,
-      allocated_budget_eur: correctAiBudget.toFixed(4),
-      used_budget_usd: "0",
-      remaining_budget_eur: correctAiBudget.toFixed(4),
-    });
+    await db
+      .insert(aiBudgetBalanceTable)
+      .values({
+        user_id: userId,
+        subscription_id: subscription.id,
+        period_start: periodStart,
+        period_end: periodEnd,
+        allocated_budget_eur: correctAiBudget.toFixed(4),
+        used_budget_usd: "0",
+        remaining_budget_eur: correctAiBudget.toFixed(4),
+      })
+      .onConflictDoNothing({
+        target: [
+          aiBudgetBalanceTable.user_id,
+          aiBudgetBalanceTable.subscription_id,
+          aiBudgetBalanceTable.period_start,
+          aiBudgetBalanceTable.period_end,
+        ],
+      });
 
     console.log("Fixed AI budget:", {
       userId,
       currentPrice,
       correctAiBudget,
       periodStart,
-      periodEnd
+      periodEnd,
     });
 
     return NextResponse.json({
@@ -71,10 +94,9 @@ export async function POST(request: NextRequest) {
         subscription_monthly_ai_budget: correctAiBudget,
         budget_balance_created: true,
         period_start: periodStart,
-        period_end: periodEnd
-      }
+        period_end: periodEnd,
+      },
     });
-
   } catch (error) {
     console.error("Error fixing budget:", error);
     return NextResponse.json(

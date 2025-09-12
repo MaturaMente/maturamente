@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, SUBSCRIPTION_PLANS, calculateCustomPrice } from "@/lib/stripe";
-import { calculateMonthlyAIBudget } from "@/utils/ai-budget/budget-management";
+import {
+  calculateMonthlyAIBudget,
+  resetCurrentPeriodAIBudgetBalance,
+} from "@/utils/ai-budget/budget-management";
+import { invalidateUserSubscriptionCache } from "@/utils/subscription-utils";
 import { db } from "@/db/drizzle";
 import {
   subscriptions,
@@ -115,30 +119,17 @@ async function handleCheckoutSessionCompleted(
   // Calculate AI budget (25% of subscription price)
   const aiBudget = calculateMonthlyAIBudget(actualCustomPrice);
 
-  // Create or update subscription record
-  await db
-    .insert(subscriptions)
-    .values({
-      user_id: userId,
-      stripe_customer_id: session.customer as string,
-      stripe_subscription_id: subscription.id,
-      stripe_price_id: subscription.items.data[0].price.id,
-      status: subscription.status,
-      subject_count: actualSubjectCount,
-      custom_price: actualCustomPrice.toString(),
-      monthly_ai_budget: aiBudget.toFixed(4),
-      is_free_trial: false, // This is a premium subscription
-      current_period_start: new Date(
-        (subscription as any).current_period_start * 1000
-      ),
-      current_period_end: new Date(
-        (subscription as any).current_period_end * 1000
-      ),
-      cancel_at_period_end: (subscription as any).cancel_at_period_end,
-    })
-    .onConflictDoUpdate({
-      target: subscriptions.user_id,
-      set: {
+  // Update existing subscription for this user, or create one if none exists
+  const existing = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.user_id, userId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db
+      .update(subscriptions)
+      .set({
         stripe_customer_id: session.customer as string,
         stripe_subscription_id: subscription.id,
         stripe_price_id: subscription.items.data[0].price.id,
@@ -155,8 +146,35 @@ async function handleCheckoutSessionCompleted(
         ),
         cancel_at_period_end: (subscription as any).cancel_at_period_end,
         updated_at: new Date(),
-      },
+      })
+      .where(eq(subscriptions.user_id, userId));
+  } else {
+    await db.insert(subscriptions).values({
+      user_id: userId,
+      stripe_customer_id: session.customer as string,
+      stripe_subscription_id: subscription.id,
+      stripe_price_id: subscription.items.data[0].price.id,
+      status: subscription.status,
+      subject_count: actualSubjectCount,
+      custom_price: actualCustomPrice.toString(),
+      monthly_ai_budget: aiBudget.toFixed(4),
+      is_free_trial: false, // This is a premium subscription
+      current_period_start: new Date(
+        (subscription as any).current_period_start * 1000
+      ),
+      current_period_end: new Date(
+        (subscription as any).current_period_end * 1000
+      ),
+      cancel_at_period_end: (subscription as any).cancel_at_period_end,
     });
+  }
+
+  // After creating/updating the subscription (free trial -> premium),
+  // reset the current period AI budget balance so used is 0 and remaining matches premium budget
+  await resetCurrentPeriodAIBudgetBalance(userId);
+
+  // Invalidate subscription cache to ensure fresh data
+  invalidateUserSubscriptionCache(userId);
 
   // Add selected subjects to user's access
   const subjects = JSON.parse(selectedSubjects);
@@ -324,7 +342,7 @@ async function handleImmediateUpgradeCheckout(
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const sub = subscription as any;
-  await db
+  const updatedSubscriptions = await db
     .update(subscriptions)
     .set({
       status: subscription.status,
@@ -333,18 +351,25 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       cancel_at_period_end: sub.cancel_at_period_end || false,
       updated_at: new Date(),
     })
-    .where(eq(subscriptions.stripe_subscription_id, subscription.id));
+    .where(eq(subscriptions.stripe_subscription_id, subscription.id))
+    .returning({ user_id: subscriptions.user_id });
+
+  // Invalidate cache for the affected user
+  if (updatedSubscriptions.length > 0) {
+    invalidateUserSubscriptionCache(updatedSubscriptions[0].user_id);
+  }
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   // Update subscription status to canceled
-  await db
+  const updatedSubscriptions = await db
     .update(subscriptions)
     .set({
       status: "canceled",
       updated_at: new Date(),
     })
-    .where(eq(subscriptions.stripe_subscription_id, subscription.id));
+    .where(eq(subscriptions.stripe_subscription_id, subscription.id))
+    .returning({ user_id: subscriptions.user_id });
 
   // Remove user's subject access
   const userSubscription = await db
@@ -360,13 +385,18 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
         eq(relationSubjectsUserTable.user_id, userSubscription[0].user_id!)
       );
   }
+
+  // Invalidate cache for the affected user
+  if (updatedSubscriptions.length > 0) {
+    invalidateUserSubscriptionCache(updatedSubscriptions[0].user_id);
+  }
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   const invoiceWithSubscription = invoice as any;
   if (invoiceWithSubscription.subscription) {
     // Update subscription status to active
-    await db
+    const updatedSubscriptions = await db
       .update(subscriptions)
       .set({
         status: "active",
@@ -377,7 +407,13 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
           subscriptions.stripe_subscription_id,
           invoiceWithSubscription.subscription as string
         )
-      );
+      )
+      .returning({ user_id: subscriptions.user_id });
+
+    // Invalidate cache for the affected user
+    if (updatedSubscriptions.length > 0) {
+      invalidateUserSubscriptionCache(updatedSubscriptions[0].user_id);
+    }
 
     // Process any pending subscription changes that should take effect now
     await processPendingSubscriptionChanges(
@@ -466,12 +502,12 @@ async function processPendingSubscriptionChanges(stripeSubscriptionId: string) {
         // Update AI budget for the new period (downgrade)
         const newPrice = parseFloat(change.new_price!);
         const newAiBudget = calculateMonthlyAIBudget(newPrice);
-        
+
         console.log("Updating AI budget for downgrade:", {
           userId: userSubscription.user_id,
           newPrice,
           newAiBudget,
-          message: "Reducing budget for new billing period"
+          message: "Reducing budget for new billing period",
         });
 
         // Update subscription with new AI budget for next period

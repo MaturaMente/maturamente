@@ -10,6 +10,18 @@ import type {
   SubscriptionData,
 } from "@/types/subscriptionTypes";
 
+// Utility function to invalidate all subscription-related cache for a user
+export function invalidateUserSubscriptionCache(userId: string) {
+  try {
+    revalidateTag(`user-${userId}`);
+    revalidateTag("subscription");
+    revalidateTag("subjects");
+    console.log(`Cache invalidated for user: ${userId}`);
+  } catch (error) {
+    console.error("Error invalidating subscription cache:", error);
+  }
+}
+
 export function getUserSubscription(
   userId: string
 ): Promise<SubscriptionData | null> {
@@ -41,7 +53,10 @@ export function getSubscriptionStatus(
       }
 
       // If the most recent subscription is a canceled free trial, treat as no subscription
-      if (subscription.status === "canceled" && subscription.is_free_trial === true) {
+      if (
+        subscription.status === "canceled" &&
+        subscription.is_free_trial === true
+      ) {
         return null;
       }
 
@@ -55,8 +70,11 @@ export function getSubscriptionStatus(
 
       if (isFreeTrial) {
         // Determine trial end: use current_period_end if set, else created_at + 14 days
-        const startDate = subscription.current_period_start || subscription.created_at;
-        const trialEnd = currentPeriodEnd || new Date(startDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+        const startDate =
+          subscription.current_period_start || subscription.created_at;
+        const trialEnd =
+          currentPeriodEnd ||
+          new Date(startDate.getTime() + 14 * 24 * 60 * 60 * 1000);
         const now = new Date();
         currentPeriodEnd = trialEnd;
 
@@ -65,7 +83,12 @@ export function getSubscriptionStatus(
         } else {
           // Mark trial as active while within trial window, unless subscription was explicitly canceled
           isActive = !isSubscriptionCanceled;
-          daysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+          daysLeft = Math.max(
+            0,
+            Math.ceil(
+              (trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+            )
+          );
         }
       }
 
@@ -154,9 +177,12 @@ export function hasSubjectAccess(
 }
 
 // Update AI budget when subscription price changes
-export async function updateSubscriptionAIBudget(subscriptionId: string, newPriceEur: number) {
+export async function updateSubscriptionAIBudget(
+  subscriptionId: string,
+  newPriceEur: number
+) {
   const newBudget = calculateMonthlyAIBudget(newPriceEur);
-  
+
   await db
     .update(subscriptions)
     .set({
@@ -180,9 +206,12 @@ export async function updateSubscriptionAIBudget(subscriptionId: string, newPric
 }
 
 // Create AI budget when a new subscription is created
-export async function createInitialAIBudget(subscriptionId: string, customPriceEur: number) {
+export async function createInitialAIBudget(
+  subscriptionId: string,
+  customPriceEur: number
+) {
   const aiBudget = calculateMonthlyAIBudget(customPriceEur);
-  
+
   await db
     .update(subscriptions)
     .set({
@@ -201,7 +230,7 @@ export async function initializeExistingSubscriptionBudgets() {
   for (const subscription of activeSubscriptions) {
     const customPrice = parseFloat(subscription.custom_price.toString());
     const aiBudget = calculateMonthlyAIBudget(customPrice);
-    
+
     await db
       .update(subscriptions)
       .set({
@@ -210,6 +239,8 @@ export async function initializeExistingSubscriptionBudgets() {
       })
       .where(eq(subscriptions.id, subscription.id));
   }
-  
-  console.log(`Updated AI budgets for ${activeSubscriptions.length} active subscriptions`);
+
+  console.log(
+    `Updated AI budgets for ${activeSubscriptions.length} active subscriptions`
+  );
 }

@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
+import {
+  softRefreshSubscriptionData,
+  forcePageRefresh,
+} from "@/utils/client-cache-utils";
 
 export function CheckoutSuccessHandler() {
   const searchParams = useSearchParams();
@@ -53,12 +57,21 @@ export function CheckoutSuccessHandler() {
         setMessage(data.message);
         setSubscriptionInfo(data.subscription);
 
-        // Clean up URL after successful processing
-        setTimeout(() => {
-          router.replace("/dashboard");
-          // After URL cleanup, we can also clear the bypass for future sessions
+        // Refresh subscription data and redirect to dashboard
+        setTimeout(async () => {
           if (typeof window !== "undefined") {
             sessionStorage.removeItem("bypassSubscriptionRedirect");
+
+            // Try soft refresh first, fallback to hard refresh if it fails
+            const softRefreshSuccess = await softRefreshSubscriptionData();
+
+            if (softRefreshSuccess) {
+              // Navigate to dashboard after successful soft refresh
+              router.replace("/dashboard");
+            } else {
+              // Fallback to hard refresh if soft refresh fails
+              forcePageRefresh("/dashboard");
+            }
           }
         }, 3000);
       } else {

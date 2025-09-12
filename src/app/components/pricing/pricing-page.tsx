@@ -87,10 +87,15 @@ export function PricingPage({ subjects }: PricingPageProps) {
     const preselect = async () => {
       if (!subscriptionStatus?.isFreeTrial || !session?.user?.id) return;
       try {
-        const res = await fetch("/api/user/subject-access", { cache: "no-store" });
+        const res = await fetch("/api/user/subject-access", {
+          cache: "no-store",
+        });
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data?.selectedSubjects) && data.selectedSubjects.length > 0) {
+          if (
+            Array.isArray(data?.selectedSubjects) &&
+            data.selectedSubjects.length > 0
+          ) {
             setSelectedSubjects(data.selectedSubjects);
           }
         }
@@ -205,7 +210,11 @@ export function PricingPage({ subjects }: PricingPageProps) {
   };
 
   // If user has active subscription (but not free trial), show the subscription message
-  if (subscriptionStatus?.isActive && !subscriptionStatus?.isFreeTrial && !checkingSubscription) {
+  if (
+    subscriptionStatus?.isActive &&
+    !subscriptionStatus?.isFreeTrial &&
+    !checkingSubscription
+  ) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-primary/10 via-primary/5 to-background">
         <div className="container mx-auto px-4 py-8">
@@ -321,49 +330,52 @@ export function PricingPage({ subjects }: PricingPageProps) {
             <div className="lg:col-span-2">
               {/* Free Trial CTA */}
               {!subscriptionStatus?.isFreeTrial && (
-              <div className="mb-8">
-                <div className="rounded-xl border bg-card/60 backdrop-blur p-6 md:p-8 shadow-sm">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                    <div className="space-y-3">
-                      <div className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20 text-xs font-medium">
-                        <Star className="w-3 h-3" /> Prova gratuita
+                <div className="mb-8">
+                  <div className="rounded-xl border bg-card/60 backdrop-blur p-6 md:p-8 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                      <div className="space-y-3">
+                        <div className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20 text-xs font-medium">
+                          <Star className="w-3 h-3" /> Prova gratuita
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-xl md:text-2xl font-semibold">
+                            Inizia gratis per 2 settimane
+                          </h3>
+                          <p className="text-sm text-muted-foreground max-w-prose">
+                            Scegli fino a 3 materie e prova MaturaMente senza
+                            carta.
+                            <br />
+                            Accesso limitato agli appunti e all'AI.
+                          </p>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                      <h3 className="text-xl md:text-2xl font-semibold">Inizia gratis per 2 settimane</h3>
-                      <p className="text-sm text-muted-foreground max-w-prose">
-                        Scegli fino a 3 materie e prova MaturaMente senza carta.
-                        <br />
-                          Accesso limitato agli appunti e all'AI.
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          className="text-white"
+                          onClick={() => router.push("/free-trial-pricing")}
+                        >
+                          Inizia la prova gratuita
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        className="text-white"
-                        onClick={() => router.push("/free-trial-pricing")}
-                      >
-                        Inizia la prova gratuita
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
                     </div>
                   </div>
                 </div>
-              </div>
               )}
               <div className="space-y-6">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-semibold text-foreground">
-                  Scegli le Tue Materie
-                </h2>
-                <p className="text-muted-foreground">
-                  Seleziona le materie che vuoi studiare. Puoi modificare la tua
-                  selezione in qualsiasi momento.
-                </p>
-              </div>
-              <SubjectSelector
-                subjects={subjects}
-                selectedSubjects={selectedSubjects}
-                onSelectionChange={setSelectedSubjects}
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-semibold text-foreground">
+                    Scegli le Tue Materie
+                  </h2>
+                  <p className="text-muted-foreground">
+                    Seleziona le materie che vuoi studiare. Puoi modificare la
+                    tua selezione in qualsiasi momento.
+                  </p>
+                </div>
+                <SubjectSelector
+                  subjects={subjects}
+                  selectedSubjects={selectedSubjects}
+                  onSelectionChange={setSelectedSubjects}
                 />
               </div>
             </div>
@@ -434,10 +446,20 @@ export function PricingPage({ subjects }: PricingPageProps) {
                             Cosa è incluso:
                           </h4>
                           <div className="space-y-2">
-                            {["Teoria ed esercizi completi", "Tracciamento studio con IA", "Analisi del progresso", "Supporto prioritario"].map((feature, index) => (
-                              <div key={index} className="flex items-center gap-2 text-sm">
+                            {[
+                              "Teoria ed esercizi completi",
+                              "Tracciamento studio con IA",
+                              "Analisi del progresso",
+                              "Supporto prioritario",
+                            ].map((feature, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2 text-sm"
+                              >
                                 <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                <span className="text-muted-foreground">{feature}</span>
+                                <span className="text-muted-foreground">
+                                  {feature}
+                                </span>
                               </div>
                             ))}
                           </div>
@@ -473,7 +495,7 @@ export function PricingPage({ subjects }: PricingPageProps) {
                       >
                         {loading ? (
                           <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            <div className="w-4 h-4 border-2 text-white border-current border-t-transparent rounded-full animate-spin" />
                             Elaborazione...
                           </div>
                         ) : selectedSubjects.length === 0 ? (
@@ -508,7 +530,11 @@ export function PricingPage({ subjects }: PricingPageProps) {
                     €{totalPrice.toFixed(2)}/mese
                   </div>
                 </div>
-                <Button onClick={handleScrollToCheckout} className="flex text-white items-center gap-2 min-w-[120px]" disabled={!canProceedToCheckout}>
+                <Button
+                  onClick={handleScrollToCheckout}
+                  className="flex text-white items-center gap-2 min-w-[120px]"
+                  disabled={!canProceedToCheckout}
+                >
                   Continua
                   <ChevronDown className="w-4 h-4" />
                 </Button>

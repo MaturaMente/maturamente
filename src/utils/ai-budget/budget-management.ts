@@ -5,9 +5,9 @@ import { unstable_cache } from "next/cache";
 
 // DeepSeek API Pricing (USD per 1M tokens)
 export const DEEPSEEK_PRICING = {
-  INPUT_CACHE_HIT: 0.07,    // $0.07 per 1M input tokens (cache hit)
-  INPUT_CACHE_MISS: 0.27,   // $0.27 per 1M input tokens (cache miss)
-  OUTPUT: 1.10,             // $1.10 per 1M output tokens
+  INPUT_CACHE_HIT: 0.07, // $0.07 per 1M input tokens (cache hit)
+  INPUT_CACHE_MISS: 0.27, // $0.27 per 1M input tokens (cache miss)
+  OUTPUT: 1.1, // $1.10 per 1M output tokens
 } as const;
 
 // Exchange rate EUR to USD (you might want to fetch this dynamically)
@@ -26,9 +26,11 @@ export function calculateTokenCost(
 ): { inputCostUsd: number; outputCostUsd: number; totalCostUsd: number } {
   // Split input tokens between cached and non-cached
   const nonCachedInputTokens = Math.max(0, inputTokens - cachedInputTokens);
-  
-  const cachedInputCostUsd = (cachedInputTokens / 1_000_000) * DEEPSEEK_PRICING.INPUT_CACHE_HIT;
-  const nonCachedInputCostUsd = (nonCachedInputTokens / 1_000_000) * DEEPSEEK_PRICING.INPUT_CACHE_MISS;
+
+  const cachedInputCostUsd =
+    (cachedInputTokens / 1_000_000) * DEEPSEEK_PRICING.INPUT_CACHE_HIT;
+  const nonCachedInputCostUsd =
+    (nonCachedInputTokens / 1_000_000) * DEEPSEEK_PRICING.INPUT_CACHE_MISS;
   const inputCostUsd = cachedInputCostUsd + nonCachedInputCostUsd;
   const outputCostUsd = (outputTokens / 1_000_000) * DEEPSEEK_PRICING.OUTPUT;
   const totalCostUsd = inputCostUsd + outputCostUsd;
@@ -45,6 +47,41 @@ export function convertUsdToEur(usdAmount: number): number {
   return usdAmount / EUR_TO_USD_RATE;
 }
 
+function getCurrentMonthPeriod(now: Date = new Date()) {
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const periodEnd = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0,
+    23,
+    59,
+    59
+  );
+  return { periodStart, periodEnd };
+}
+
+function getEffectiveSubscriptionPeriod(
+  sub: {
+    current_period_start: Date | null;
+    current_period_end: Date | null;
+  },
+  now: Date = new Date()
+) {
+  const hasValidSubPeriod =
+    !!sub.current_period_start &&
+    !!sub.current_period_end &&
+    sub.current_period_start <= now &&
+    sub.current_period_end >= now;
+
+  if (hasValidSubPeriod) {
+    return {
+      periodStart: sub.current_period_start as Date,
+      periodEnd: sub.current_period_end as Date,
+    };
+  }
+  return getCurrentMonthPeriod(now);
+}
+
 // Get or create current AI budget balance for user
 export function getCurrentAIBudgetBalance(userId: string) {
   return unstable_cache(
@@ -56,20 +93,22 @@ export function getCurrentAIBudgetBalance(userId: string) {
         .limit(1);
 
       if (!subscription.length || subscription[0].status !== "active") {
-        return { 
-          hasAccess: false, 
-          remainingBudgetEur: 0, 
-          allocatedBudgetEur: 0, 
+        return {
+          hasAccess: false,
+          remainingBudgetEur: 0,
+          allocatedBudgetEur: 0,
           usedBudgetUsd: 0,
           usedBudgetEur: 0,
-          estimatedRemainingTokens: 0
+          estimatedRemainingTokens: 0,
         };
       }
 
       const sub = subscription[0];
       const now = new Date();
-      const periodStart = sub.current_period_start || now;
-      const periodEnd = sub.current_period_end || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const { periodStart, periodEnd } = getEffectiveSubscriptionPeriod(
+        sub,
+        now
+      );
 
       // Check if we have a current balance record for this period
       let balance = await db
@@ -85,11 +124,9 @@ export function getCurrentAIBudgetBalance(userId: string) {
         )
         .limit(1);
 
-      // Create new balance if none exists for current period
+      // Create missing balance row for current period (idempotent)
       if (!balance.length) {
-        const allocatedBudgetEur = parseFloat(sub.monthly_ai_budget.toString());
-        
-        const newBalance = await db
+        await db
           .insert(aiBudgetBalanceTable)
           .values({
             user_id: userId,
@@ -100,37 +137,48 @@ export function getCurrentAIBudgetBalance(userId: string) {
             used_budget_usd: "0",
             remaining_budget_eur: sub.monthly_ai_budget,
           })
-          .returning();
-        
-        // Estimate remaining tokens based on conservative pricing
-        const remainingBudgetUsd = allocatedBudgetEur * EUR_TO_USD_RATE;
-        const estimatedTokens = Math.floor(remainingBudgetUsd / (DEEPSEEK_PRICING.INPUT_CACHE_MISS / 1_000_000));
-        
-        return {
-          hasAccess: true,
-          remainingBudgetEur: allocatedBudgetEur,
-          allocatedBudgetEur: allocatedBudgetEur,
-          usedBudgetUsd: 0,
-          usedBudgetEur: 0,
-          estimatedRemainingTokens: estimatedTokens,
-        };
+          .onConflictDoNothing({
+            target: [
+              aiBudgetBalanceTable.user_id,
+              aiBudgetBalanceTable.subscription_id,
+              aiBudgetBalanceTable.period_start,
+              aiBudgetBalanceTable.period_end,
+            ],
+          });
+
+        // re-fetch to operate on the current row
+        balance = await db
+          .select()
+          .from(aiBudgetBalanceTable)
+          .where(
+            and(
+              eq(aiBudgetBalanceTable.user_id, userId),
+              eq(aiBudgetBalanceTable.subscription_id, sub.id),
+              lte(aiBudgetBalanceTable.period_start, now),
+              gte(aiBudgetBalanceTable.period_end, now)
+            )
+          )
+          .limit(1);
       }
 
-      const currentBalance = balance[0];
-      const usedBudgetUsd = parseFloat(currentBalance.used_budget_usd.toString());
+      const current = balance[0];
+      const usedBudgetUsd = parseFloat(current.used_budget_usd.toString());
       const usedBudgetEur = convertUsdToEur(usedBudgetUsd);
-      const remainingBudgetEur = parseFloat(currentBalance.remaining_budget_eur.toString());
-      
-      // Estimate remaining tokens
+      const remainingBudgetEur = parseFloat(
+        current.remaining_budget_eur.toString()
+      );
+
       const remainingBudgetUsd = remainingBudgetEur * EUR_TO_USD_RATE;
-      const estimatedTokens = Math.floor(remainingBudgetUsd / (DEEPSEEK_PRICING.INPUT_CACHE_MISS / 1_000_000));
+      const estimatedTokens = Math.floor(
+        remainingBudgetUsd / (DEEPSEEK_PRICING.INPUT_CACHE_MISS / 1_000_000)
+      );
 
       return {
         hasAccess: true,
-        remainingBudgetEur: remainingBudgetEur,
-        allocatedBudgetEur: parseFloat(currentBalance.allocated_budget_eur.toString()),
-        usedBudgetUsd: usedBudgetUsd,
-        usedBudgetEur: usedBudgetEur,
+        remainingBudgetEur,
+        allocatedBudgetEur: parseFloat(current.allocated_budget_eur.toString()),
+        usedBudgetUsd,
+        usedBudgetEur,
         estimatedRemainingTokens: estimatedTokens,
       };
     },
@@ -141,18 +189,21 @@ export function getCurrentAIBudgetBalance(userId: string) {
 
 // Check if user has enough budget for a request (estimate based on average token usage)
 export async function checkBudgetAvailability(
-  userId: string, 
+  userId: string,
   estimatedInputTokens: number = 1000,
   estimatedOutputTokens: number = 500
 ): Promise<boolean> {
   const balance = await getCurrentAIBudgetBalance(userId);
-  
+
   if (!balance.hasAccess) return false;
-  
+
   // Calculate estimated cost for this request
-  const estimatedCost = calculateTokenCost(estimatedInputTokens, estimatedOutputTokens);
+  const estimatedCost = calculateTokenCost(
+    estimatedInputTokens,
+    estimatedOutputTokens
+  );
   const estimatedCostEur = convertUsdToEur(estimatedCost.totalCostUsd);
-  
+
   return balance.remainingBudgetEur >= estimatedCostEur;
 }
 
@@ -161,13 +212,17 @@ export async function recordAIUsage(
   userId: string,
   inputTokens: number,
   outputTokens: number,
-  chatType: 'pdf' | 'subject' | 'dashboard',
-  modelUsed: string = 'deepseek-chat',
+  chatType: "pdf" | "subject" | "dashboard",
+  modelUsed: string = "deepseek-chat",
   cachedInputTokens: number = 0
 ) {
   const totalTokens = inputTokens + outputTokens;
-  const costs = calculateTokenCost(inputTokens, outputTokens, cachedInputTokens);
-  
+  const costs = calculateTokenCost(
+    inputTokens,
+    outputTokens,
+    cachedInputTokens
+  );
+
   const subscription = await db
     .select()
     .from(subscriptions)
@@ -190,8 +245,34 @@ export async function recordAIUsage(
     model_used: modelUsed,
   });
 
-  // Update budget balance
+  // Ensure a budget balance row exists for the effective period
   const now = new Date();
+  const { periodStart, periodEnd } = getEffectiveSubscriptionPeriod(
+    subscription[0],
+    now
+  );
+
+  await db
+    .insert(aiBudgetBalanceTable)
+    .values({
+      user_id: userId,
+      subscription_id: subscription[0].id,
+      period_start: periodStart,
+      period_end: periodEnd,
+      allocated_budget_eur: subscription[0].monthly_ai_budget,
+      used_budget_usd: "0",
+      remaining_budget_eur: subscription[0].monthly_ai_budget,
+    })
+    .onConflictDoNothing({
+      target: [
+        aiBudgetBalanceTable.user_id,
+        aiBudgetBalanceTable.subscription_id,
+        aiBudgetBalanceTable.period_start,
+        aiBudgetBalanceTable.period_end,
+      ],
+    });
+
+  // Update budget balance
   const balance = await db
     .select()
     .from(aiBudgetBalanceTable)
@@ -211,7 +292,7 @@ export async function recordAIUsage(
     const newUsedEur = convertUsdToEur(newUsedUsd);
     const allocatedEur = parseFloat(balance[0].allocated_budget_eur.toString());
     const newRemainingEur = Math.max(0, allocatedEur - newUsedEur);
-    
+
     await db
       .update(aiBudgetBalanceTable)
       .set({
@@ -244,7 +325,8 @@ export function getUserAIUsageStats(userId: string, days: number = 30) {
       const totalUsage = usageStats.reduce(
         (acc, usage) => ({
           totalTokens: acc.totalTokens + usage.total_tokens,
-          totalCostUsd: acc.totalCostUsd + parseFloat(usage.total_cost_usd.toString()),
+          totalCostUsd:
+            acc.totalCostUsd + parseFloat(usage.total_cost_usd.toString()),
           chatCounts: {
             ...acc.chatCounts,
             [usage.chat_type]: (acc.chatCounts[usage.chat_type] || 0) + 1,
@@ -275,7 +357,14 @@ export async function addBudgetToCurrentPeriod(
   // Get current period dates
   const now = new Date();
   const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  const periodEnd = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0,
+    23,
+    59,
+    59
+  );
 
   // Get current budget balance record directly from database
   const balance = await db
@@ -295,11 +384,15 @@ export async function addBudgetToCurrentPeriod(
   }
 
   const currentBalance = balance[0];
-  
+
   // Add the additional budget to both allocated and remaining amounts
-  const currentAllocated = parseFloat(currentBalance.allocated_budget_eur.toString());
-  const currentRemaining = parseFloat(currentBalance.remaining_budget_eur.toString());
-  
+  const currentAllocated = parseFloat(
+    currentBalance.allocated_budget_eur.toString()
+  );
+  const currentRemaining = parseFloat(
+    currentBalance.remaining_budget_eur.toString()
+  );
+
   const newAllocatedBudget = currentAllocated + additionalBudgetEur;
   const newRemainingBudget = currentRemaining + additionalBudgetEur;
 
@@ -319,12 +412,85 @@ export async function addBudgetToCurrentPeriod(
     oldAllocated: currentAllocated,
     newAllocatedBudget,
     oldRemaining: currentRemaining,
-    newRemainingBudget
+    newRemainingBudget,
   });
 
   return {
     newAllocatedBudget,
     newRemainingBudget,
-    additionalBudgetEur
+    additionalBudgetEur,
   };
+}
+
+// Reset current period balance when upgrading from free trial to premium
+// Sets used_budget_usd to 0 and aligns allocated/remaining to subscription.monthly_ai_budget
+export async function resetCurrentPeriodAIBudgetBalance(userId: string) {
+  const now = new Date();
+
+  // Get user's active subscription
+  const subscriptionRows = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.user_id, userId))
+    .limit(1);
+
+  if (!subscriptionRows.length) {
+    return { updated: false, reason: "no_subscription" } as const;
+  }
+
+  const sub = subscriptionRows[0];
+
+  // Determine effective period using subscription bounds if available
+  const { periodStart, periodEnd } = getEffectiveSubscriptionPeriod(sub, now);
+
+  // Ensure a balance row exists for this period
+  await db
+    .insert(aiBudgetBalanceTable)
+    .values({
+      user_id: userId,
+      subscription_id: sub.id,
+      period_start: periodStart,
+      period_end: periodEnd,
+      allocated_budget_eur: sub.monthly_ai_budget,
+      used_budget_usd: "0",
+      remaining_budget_eur: sub.monthly_ai_budget,
+    })
+    .onConflictDoNothing({
+      target: [
+        aiBudgetBalanceTable.user_id,
+        aiBudgetBalanceTable.subscription_id,
+        aiBudgetBalanceTable.period_start,
+        aiBudgetBalanceTable.period_end,
+      ],
+    });
+
+  // Now force reset values for the current period row
+  const currentBalance = await db
+    .select()
+    .from(aiBudgetBalanceTable)
+    .where(
+      and(
+        eq(aiBudgetBalanceTable.user_id, userId),
+        eq(aiBudgetBalanceTable.subscription_id, sub.id),
+        lte(aiBudgetBalanceTable.period_start, now),
+        gte(aiBudgetBalanceTable.period_end, now)
+      )
+    )
+    .limit(1);
+
+  if (!currentBalance.length) {
+    return { updated: false, reason: "no_current_balance" } as const;
+  }
+
+  await db
+    .update(aiBudgetBalanceTable)
+    .set({
+      allocated_budget_eur: sub.monthly_ai_budget,
+      used_budget_usd: "0",
+      remaining_budget_eur: sub.monthly_ai_budget,
+      updated_at: new Date(),
+    })
+    .where(eq(aiBudgetBalanceTable.id, currentBalance[0].id));
+
+  return { updated: true } as const;
 }

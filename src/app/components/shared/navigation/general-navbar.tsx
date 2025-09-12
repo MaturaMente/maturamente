@@ -16,9 +16,12 @@ import { Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const Logo = () => {
+const Logo = ({ href = "/" }: { href?: string }) => {
   return (
-    <Link href="/" className="relative z-20 mr-4 flex items-center px-2 py-1">
+    <Link
+      href={href}
+      className="relative z-20 mr-4 flex items-center px-2 py-1"
+    >
       <span className="font-extrabold text-xl text-blue-900 dark:text-primary">
         Matura
       </span>
@@ -299,13 +302,16 @@ export function GeneralNavbar({ variant = "landing" }: NavbarProps) {
     { href: "/dashboard/pit", label: "Pit" },
   ];
 
+  // Determine logo href based on authentication status
+  const logoHref = session ? "/dashboard" : "/";
+
   return (
     <div className="w-full fixed top-0 z-50">
       <div className="absolute w-full top-5 z-50">
         <Navbar disableShrink>
           {/* Desktop Navigation */}
           <NavBody className={navbarClass}>
-            <Logo />
+            <Logo href={logoHref} />
 
             {/* Navigation links - different for landing vs dashboard */}
             <div className="hidden md:flex items-center space-x-6">
@@ -387,7 +393,7 @@ export function GeneralNavbar({ variant = "landing" }: NavbarProps) {
           <MobileNav className={navbarClass}>
             <MobileNavHeader>
               <div className="pl-4">
-                <Logo />
+                <Logo href={logoHref} />
               </div>
               <div className="flex items-center gap-2 pr-8">
                 <ThemeToggle />
