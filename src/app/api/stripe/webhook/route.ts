@@ -356,7 +356,10 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   // Invalidate cache for the affected user
   if (updatedSubscriptions.length > 0) {
-    invalidateUserSubscriptionCache(updatedSubscriptions[0].user_id);
+    const userId = updatedSubscriptions[0].user_id;
+    if (userId) {
+      invalidateUserSubscriptionCache(userId);
+    }
   }
 }
 
@@ -388,7 +391,10 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   // Invalidate cache for the affected user
   if (updatedSubscriptions.length > 0) {
-    invalidateUserSubscriptionCache(updatedSubscriptions[0].user_id);
+    const userId = updatedSubscriptions[0].user_id;
+    if (userId) {
+      invalidateUserSubscriptionCache(userId);
+    }
   }
 }
 
@@ -412,7 +418,10 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 
     // Invalidate cache for the affected user
     if (updatedSubscriptions.length > 0) {
-      invalidateUserSubscriptionCache(updatedSubscriptions[0].user_id);
+      const userId = updatedSubscriptions[0].user_id;
+      if (userId) {
+        invalidateUserSubscriptionCache(userId);
+      }
     }
 
     // Process any pending subscription changes that should take effect now

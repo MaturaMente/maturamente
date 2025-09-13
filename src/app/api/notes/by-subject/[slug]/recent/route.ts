@@ -46,8 +46,6 @@ export async function GET(
         title: notesTable.title,
         description: notesTable.description,
         slug: notesTable.slug,
-        latest_active_at: (latestSessionsSubquery as any)
-          .latest_active_at as unknown as Date,
       })
       .from(latestSessionsSubquery)
       .innerJoin(
