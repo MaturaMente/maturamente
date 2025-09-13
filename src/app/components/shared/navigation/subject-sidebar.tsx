@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,6 +34,7 @@ import {
 import { useSession, signOut } from "next-auth/react";
 import type { UserSubject } from "@/types/subjectsTypes";
 import { getSubjectIcon } from "@/utils/subject-icons";
+import { ArrowRight as ArrowRightIcon, FileText } from "lucide-react";
 // import { getUserSubjects } from "@/utils/subjects-data";
 
 // Define the navigation link type
@@ -227,6 +228,48 @@ export default function SubjectSidebar({
       document.documentElement.style.removeProperty("--color-primary");
     }
   }, [currentSubject?.color]);
+
+  // Recent Notes (subject-scoped, live and uncached)
+  const [recentNotes, setRecentNotes] = useState<
+    { id: string; title: string; description: string; slug: string }[]
+  >([]);
+  const subjectSlug = useMemo(
+    () => currentSubject?.slug,
+    [currentSubject?.slug]
+  );
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const fetchRecent = async () => {
+      if (!subjectSlug) return;
+      try {
+        const res = await fetch(`/api/notes/by-subject/${subjectSlug}/recent`, {
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setRecentNotes(
+            Array.isArray(data.recentNotes) ? data.recentNotes : []
+          );
+        }
+      } catch (e) {
+        console.error("Failed fetching recent subject notes", e);
+      }
+    };
+
+    fetchRecent();
+
+    // Refresh on interval (light) and on window focus
+    const onFocus = () => fetchRecent();
+    window.addEventListener("focus", onFocus);
+    if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+    refreshTimerRef.current = setInterval(fetchRecent, 30_000);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+    };
+  }, [subjectSlug, pathname]);
 
   return (
     <div
@@ -496,8 +539,8 @@ export default function SubjectSidebar({
         )}
       </div>
 
-      {/* Navigation Menu */}
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      {/* Navigation Menu + Recent Notes */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 md:max-w-[244px]">
         <nav className="grid items-start gap-2 relative w-full">
           {navLinks.length === 0 ? (
             // Show loading state when navLinks is empty
@@ -586,6 +629,102 @@ export default function SubjectSidebar({
             })
           )}
         </nav>
+
+        {/* Recent Notes Section */}
+        <div className="mt-6">
+          {!collapsed && (
+            <>
+              <div className="px-2 flex flex-col w-full">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Appunti recenti
+                </p>
+                <Separator className="my-2" />
+              </div>
+              <div
+                className="px-1"
+                style={{
+                  // Use remaining vertical space intuitively; container already scrolls
+                  // but we cap the area so it doesn’t push footer off-screen when long
+                  maxHeight: "calc(100vh - 360px)",
+                  overflowY: "auto",
+                }}
+              >
+                {recentNotes.length === 0 ? (
+                  <div className="text-xs text-muted-foreground px-2 py-3">
+                    Nessun appunto recente
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentNotes.slice(0, 4).map((n) => (
+                      <Link
+                        href={`/${currentSubject?.slug}/${n.slug}`}
+                        className="inline-flex"
+                        key={n.id}
+                      >
+                        <div className="flex items-center justify-between gap-3 border rounded-md px-3 py-2 hover:shadow-xs/2 transition-colors bg-[var(--subject-color)]/2 border-[var(--subject-color)]/10 hover:border-[var(--subject-color)]/30">
+                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <span className="flex items-center justify-center">
+                              {(() => {
+                                const Icon = currentSubject
+                                  ? getSubjectIcon(currentSubject.name)
+                                  : null;
+                                return Icon ? (
+                                  <Icon
+                                    className="h-4 w-4"
+                                    style={{
+                                      color: `${
+                                        currentSubject?.color ?? "#999999"
+                                      }90`,
+                                    }}
+                                  />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                );
+                              })()}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-sm font-medium line-clamp-1">
+                                {n.title}
+                              </h4>
+                              {n.description ? (
+                                <p className="text-xs text-muted-foreground line-clamp-1">
+                                  {n.description}
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                          {/* <div className="flex-shrink-0">
+                            <Link
+                              href={`/${currentSubject?.slug}/${n.slug}`}
+                              className="inline-flex"
+                            >
+                              <span
+                                className="inline-flex items-center border text-xs px-2 py-1 rounded-md transition-colors cursor-pointer"
+                                style={{
+                                  color: currentSubject?.color,
+                                  borderColor: `${
+                                    currentSubject?.color ?? "#888888"
+                                  }33`,
+                                  backgroundColor: `${
+                                    currentSubject?.color ?? "#888888"
+                                  }0D`,
+                                }}
+                              >
+                                Visualizza
+                                <ArrowRightIcon className="ml-1 h-3.5 w-3.5" />
+                              </span>
+                            </Link>
+                          </div> */}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          {collapsed && <Separator className="my-4" />}
+        </div>
       </div>
 
       {isMobile && isMounted && (
