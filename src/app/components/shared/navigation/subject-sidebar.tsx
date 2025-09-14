@@ -631,69 +631,70 @@ export default function SubjectSidebar({
         </nav>
 
         {/* Recent Notes Section */}
-        <div className="mt-6">
-          {!collapsed && (
-            <>
-              <div className="px-2 flex flex-col w-full">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Appunti recenti
-                </p>
-                <Separator className="my-2" />
-              </div>
-              <div
-                className="px-1"
-                style={{
-                  // Use remaining vertical space intuitively; container already scrolls
-                  // but we cap the area so it doesn’t push footer off-screen when long
-                  maxHeight: "calc(100vh - 360px)",
-                  overflowY: "auto",
-                }}
-              >
-                {recentNotes.length === 0 ? (
-                  <div className="text-xs text-muted-foreground px-2 py-3">
-                    Nessun appunto recente
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {recentNotes.slice(0, 4).map((n) => (
-                      <Link
-                        href={`/${currentSubject?.slug}/${n.slug}`}
-                        className="inline-flex"
-                        key={n.id}
-                      >
-                        <div className="flex items-center justify-between gap-3 border rounded-md px-3 py-2 hover:shadow-xs/2 transition-colors bg-[var(--subject-color)]/2 border-[var(--subject-color)]/10 hover:border-[var(--subject-color)]/30">
-                          <div className="flex items-center gap-4 min-w-0 flex-1">
-                            <span className="flex items-center justify-center">
-                              {(() => {
-                                const Icon = currentSubject
-                                  ? getSubjectIcon(currentSubject.name)
-                                  : null;
-                                return Icon ? (
-                                  <Icon
-                                    className="h-4 w-4"
-                                    style={{
-                                      color: `${
-                                        currentSubject?.color ?? "#999999"
-                                      }90`,
-                                    }}
-                                  />
-                                ) : (
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
-                                );
-                              })()}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <h4 className="text-sm font-medium line-clamp-1">
-                                {n.title}
-                              </h4>
-                              {n.description ? (
-                                <p className="text-xs text-muted-foreground line-clamp-1">
-                                  {n.description}
-                                </p>
-                              ) : null}
+        {!isMobile && (
+          <div className="mt-6">
+            {!collapsed && (
+              <>
+                <div className="px-2 flex flex-col w-full">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Appunti recenti
+                  </p>
+                  <Separator className="my-2" />
+                </div>
+                <div
+                  className="px-1"
+                  style={{
+                    // Use remaining vertical space intuitively; container already scrolls
+                    // but we cap the area so it doesn’t push footer off-screen when long
+                    maxHeight: "calc(100vh - 360px)",
+                    overflowY: "auto",
+                  }}
+                >
+                  {recentNotes.length === 0 ? (
+                    <div className="text-xs text-muted-foreground px-2 py-3">
+                      Nessun appunto recente
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {recentNotes.slice(0, 4).map((n) => (
+                        <Link
+                          href={`/${currentSubject?.slug}/${n.slug}`}
+                          className="inline-flex"
+                          key={n.id}
+                        >
+                          <div className="flex items-center justify-between gap-3 border rounded-md px-3 py-2 hover:shadow-xs/2 transition-colors bg-[var(--subject-color)]/2 border-[var(--subject-color)]/10 hover:border-[var(--subject-color)]/30">
+                            <div className="flex items-center gap-4 min-w-0 flex-1">
+                              <span className="flex items-center justify-center">
+                                {(() => {
+                                  const Icon = currentSubject
+                                    ? getSubjectIcon(currentSubject.name)
+                                    : null;
+                                  return Icon ? (
+                                    <Icon
+                                      className="h-4 w-4"
+                                      style={{
+                                        color: `${
+                                          currentSubject?.color ?? "#999999"
+                                        }90`,
+                                      }}
+                                    />
+                                  ) : (
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                  );
+                                })()}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-sm font-medium line-clamp-1">
+                                  {n.title}
+                                </h4>
+                                {n.description ? (
+                                  <p className="text-xs text-muted-foreground line-clamp-1">
+                                    {n.description}
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
-                          </div>
-                          {/* <div className="flex-shrink-0">
+                            {/* <div className="flex-shrink-0">
                             <Link
                               href={`/${currentSubject?.slug}/${n.slug}`}
                               className="inline-flex"
@@ -715,16 +716,17 @@ export default function SubjectSidebar({
                               </span>
                             </Link>
                           </div> */}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-          {collapsed && <Separator className="my-4" />}
-        </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+            {collapsed && <Separator className="my-4" />}
+          </div>
+        )}
       </div>
 
       {isMobile && isMounted && (
